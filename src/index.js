@@ -1,5 +1,5 @@
 class Vod {
-  constructor(options) {}
+  constructor() {}
 
   loadSource(url) {
     console.log(url);
