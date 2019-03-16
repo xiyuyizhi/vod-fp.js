@@ -16,6 +16,7 @@
   "rules": {
     "quotes": [2, "double"],
     "class-methods-use-this": 0,
-    "no-console": 0
+    "no-console": 0,
+    "no-empty-function": 0
   }
 }
