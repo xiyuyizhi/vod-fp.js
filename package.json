@@ -8,6 +8,7 @@
   "main": "lib/vod-fp.min.js",
   "scripts": {
     "dev": "webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
+    "mux": "DEV=mux webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
     "build": "webpack --config ./scripts/webpack.product.js --display-error-details",
     "test": "mocha --watch"
   },
