@@ -1,5 +1,31 @@
-console.log('%c mux ', 'background: #222; color: #bada55');
+import ExpGolomb from './exp-golomb';
+import remux from './remux';
 
+console.log('%c mux ', 'background: #222; color: #bada55');
+// console.log = () => {};
+// console.warn = () => {};
+
+let DEBUGE_PLAY = true;
+// let DEBUGE_PLAY = false;
+
+let max = 105000;
+// let max = 800;
+let pmtId;
+let streamInfo;
+let avcData;
+let audioData;
+let avcTrack = {
+  samples: [],
+  inputTimeScale: 90000,
+  timescale: 90000,
+  id: 1, // video
+  duration: 10,
+  type: 'video',
+  sequenceNumber: 0
+};
+let sampleOrder = '';
+let avcSample = null;
+let pesCount = 0;
 function convertStrToBuffer(str) {
   return new Uint8Array(str.split('').map(x => x.charCodeAt(0)));
 }
@@ -11,6 +37,30 @@ function converBufferToStr(buffer) {
   });
   return temp.join('');
 }
+
+let mediaSource;
+let videoBuffer;
+
+function bufferManage() {
+  mediaSource = new window.MediaSource();
+  mediaSource.addEventListener('sourceopen', onSourceOpen);
+  document.querySelector('#video').src = URL.createObjectURL(mediaSource);
+}
+
+function onSourceOpen() {
+  console.log('readyState:', mediaSource.readyState);
+  videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
+  videoBuffer.addEventListener('updateend', function(_) {
+    console.log('buffer update end');
+    mediaSource.endOfStream();
+    // document.querySelector('#video').play();
+  });
+  videoBuffer.addEventListener('error', e => {
+    console.log(e);
+  });
+}
+
+bufferManage();
 
 document.querySelector('#upload').addEventListener('change', e => {
   const [file] = e.target.files;
@@ -45,31 +95,53 @@ function mux(buffer) {
   }
   window.bf = buffer;
   console.log(buffer);
-  console.log('监测ts流第一个同步字节的位置: ', _probe(buffer));
 
-  for (let i = 0; i < 200; i++) {
+  const syncOffset = _probe(buffer);
+  console.log('监测ts流第一个同步字节的位置: ', syncOffset);
+
+  let len = buffer.byteLength;
+  len = len - ((len - syncOffset) % 188);
+  // reset avcData for new ts stream
+  avcData = null;
+  for (let i = syncOffset, j = 0; j < max, i < len; ) {
     let payload;
     let header;
     let adaptions;
     let adaptionsOffset = 0;
-    header = parseTsHeaderInfo(buffer.subarray(188 * i, 188 * i + 4));
+    header = parseTsHeaderInfo(buffer.subarray(i, i + 4));
     // console.log(buffer.subarray(188 * i, 188 * 32));
     // console.log(`packet ${i + 1}: `, header);
     // console.log(`packet ${i + 1} header: `, _tsPacketHeader(buffer, 188 * i));
-    payload = _tsPacketPayload(buffer, 188 * i + 4, 188 * (i + 1));
+    payload = _tsPacketPayload(buffer, i + 4, i + 188);
     // console.log('payload :', payload);
     if (header.adaptationFiledControl === 3) {
-      console.warn('detect adaptationFiled');
+      // console.warn('detect adaptationFiled');
       adaptions = parseAdaptationFiled(payload);
       adaptionsOffset = adaptions.adaptationLength;
-      console.log(adaptions);
+      // console.log(adaptions);
     }
     parsePayload(payload, adaptionsOffset, header);
+    i += 188;
+    j++;
+  }
+  //还剩最后一个pes没解析
+  if (avcData && avcData.data.length) {
+    pesCount++;
+    const pes = parsePES(avcData, 0);
+    console.log('last video PES data: ', pes);
+    console.log('video pes count: ', pesCount);
+    parseAVC(pes);
+  }
+  if (DEBUGE_PLAY) {
+    const bff = remux(avcTrack);
+    setTimeout(() => {
+      videoBuffer.appendBuffer(bff);
+    }, 100);
   }
 }
 
 function _probe(data) {
-  const len = Math.min(1000, data.length - 3 * 188);
+  const len = Math.min(1000, data.byteLength - 3 * 188);
   for (let i = 0; i < len; i++) {
     if (
       data[i] === 0x47 &&
@@ -138,10 +210,6 @@ function parseAdaptationFiled(payload) {
   };
 }
 
-let pmtId;
-let streamInfo;
-let avcData;
-let audioData;
 function parsePayload(payload, offset, header) {
   /**
    * https://en.wikipedia.org/wiki/Program-specific_information
@@ -177,18 +245,22 @@ function parsePayload(payload, offset, header) {
 
   if (streamInfo && header.pid === streamInfo.video) {
     if (header.payloadStartIndicator === 1) {
+      pesCount++;
       // first start payload
       if (avcData) {
-        console.log('video PES data: ', parsePES(avcData, 0));
+        const pes = parsePES(avcData, 0);
+        console.log('video PES data: ', pes);
+        window.pes = pes;
+        parseAVC(pes);
       }
       // console.log(avcData);
       avcData = { data: [], size: 0 };
     }
     if (avcData) {
       // normal payload
-      let temp = payload.subarray(offset, 188 - 4);
+      let temp = payload.subarray(offset);
       avcData.data.push(temp);
-      avcData.size += temp.length;
+      avcData.size += temp.byteLength;
     }
   }
 }
@@ -234,10 +306,10 @@ function parsePMT(payload, offset) {
     offset += 2;
     switch (stremType) {
       case '0x1b':
-        result['video'] = ePid;
+        result.video = ePid;
         break;
       case '0x0f':
-        result['audio'] = ePid;
+        result.audio = ePid;
         break;
       default:
     }
@@ -283,12 +355,12 @@ function parsePES(stream, offset) {
     // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
     let payloadStartOffset = pesHdrLen + 6 + 3;
     stream.size -= payloadStartOffset;
-
+    console.log(stream.size, stream.data.length);
     // reassemble PES packet
     let pesData = new Uint8Array(stream.size);
-    let i;
+    let i = 0;
     for (let j = 0, dataLen = stream.data.length; j < dataLen; j++) {
-      frag = stream.data[j];
+      let frag = stream.data[j];
       let len = frag.byteLength;
       if (payloadStartOffset) {
         if (payloadStartOffset > len) {
@@ -307,13 +379,19 @@ function parsePES(stream, offset) {
     }
     if (pesLen) {
       // payload size : remove PES header + PES extension
-      pesLen -= pesHdrLen + 3;
+      pesLen = pesLen - pesHdrLen - 3;
     }
-    return { data: pesData, pts, dts, len: pesLen };
-  } else {
-    console.error(`parse pes error,pscp = ${pscp}`);
-    console.log(stream.data, stream.size, offset);
+    return {
+      data: pesData,
+      pts,
+      dts,
+      len: pesLen,
+      tsPacket: stream.data
+    };
   }
+  console.error(`parse pes error,pscp = ${pscp}`);
+  console.log(stream.data, stream.size, offset);
+
   return null;
 }
 
@@ -332,7 +410,7 @@ function parsePESHeader(payload, offset, pdtsFlag) {
   }
   offset += 5;
   if (pdtsFlag === 3) {
-    //have dts
+    // have dts
     dts =
       (payload[offset] & 0x0e) * 536870912 + // 1 << 29
       (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
@@ -352,7 +430,246 @@ function parsePESHeader(payload, offset, pdtsFlag) {
       );
       pts = dts;
     }
+  } else {
+    dts = pts;
   }
   console.log('pts,dts: ', pts, dts);
   return { pts, dts };
+}
+
+function parseAVCNALu(pes) {
+  /**
+   * https://en.wikipedia.org/wiki/Network_Abstraction_Layer
+   * ISO-14496-10 7.3.1
+   *
+   *  forbidden_zero_bit  1bit
+   *  nal_ref_idc  2bit
+   *  nal_unit_type 5bit
+   */
+  console.warn('parse avc Nal units');
+  const buffer = pes.data;
+  const len = buffer.byteLength;
+  let i = 0;
+  let lastUnitStart = 0;
+  let units = [];
+  while (i <= len - 4) {
+    let codePrefix3 = (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
+    let codePrefix4 =
+      (buffer[i] << 24) |
+      (buffer[i + 1] << 16) |
+      (buffer[i + 2] << 8) |
+      buffer[i + 3];
+    if (codePrefix4 === 0x00000001 || codePrefix3 === 0x000001) {
+      let is3Or4 = codePrefix4 === 1 ? 4 : 3;
+      if (i !== 0) {
+        let nalUnit = buffer.subarray(lastUnitStart, i);
+        units.push({
+          data: nalUnit,
+          nalIdc: (nalUnit[0] & 0x60) >> 5,
+          nalType: nalUnit[0] & 0x1f
+        });
+        if ((nalUnit[0] & 0x1f) === 5) {
+          console.error('detect IDR');
+        }
+      }
+      lastUnitStart = i + is3Or4;
+      i += is3Or4 - 1;
+    }
+    i++;
+  }
+  if (lastUnitStart) {
+    let last = buffer.subarray(lastUnitStart);
+    units.push({
+      data: last,
+      nalIdc: (last[0] & 0x60) >> 5,
+      nalType: last[0] & 0x1f
+    });
+    if ((last[0] & 0x1f) === 5) {
+      console.error('detect IDR');
+    }
+  }
+  if (units.length === 0) {
+    // 这个pes中不存在Nal unit,则可能上一个pes的Nal unit还没结束
+    // todo: 把这个pes舔到上一个pes的最后一个nal unit中
+    console.log('%c pes中不存在 Nal  unit', 'background: #red; color: #ffffff');
+  }
+  console.log(units);
+  return units;
+}
+
+function parseAVC(pes) {
+  /**
+   * nal_unit_type
+   * 1 : non-IDR picture
+   * 2-4 : slice data partition
+   * 5 : IDR picture I帧
+   * 6 : SEI
+   * 7 : SPS
+   * 8 : PPS
+   * 9 : access unit delimiter | AUD
+   */
+  const nalUnits = parseAVCNALu(pes);
+  pes.data = null;
+  let spsFound = false;
+  let createAVCSample = function(key, pts, dts, debug) {
+    return { key: key, pts: pts, dts: dts, units: [] };
+  };
+  nalUnits.forEach(unit => {
+    switch (unit.nalType) {
+      case 9:
+        if (avcSample) {
+          //下一采样【下一帧】开始了，要把这一个采样入track
+          console.log('access units order: ', sampleOrder);
+          sampleOrder = '';
+          pushAvcSample(avcSample);
+          console.log(avcTrack);
+        }
+        sampleOrder += '|AUD ';
+        avcSample = createAVCSample(false, pes.pts, pes.dts);
+        break;
+      case 5:
+        sampleOrder += '->IDR ';
+        let sliceType = new ExpGolomb(unit.data).readSliceType();
+        console.error('IDR sliceType: ', sliceType);
+        if (!avcSample) {
+          avcSample = createAVCSample(true, pes.pts, pes.dts);
+        }
+        avcSample.frame = true;
+        avcSample.key = true;
+        // if (avcTrack.idrFound) {
+        //   avcSample.frame = false;
+        // }
+        // avcTrack.idrFound = true;
+        break;
+      case 1:
+        sampleOrder += '->NDR ';
+        if (!avcSample) {
+          avcSample = createAVCSample(true, pes.pts, pes.dts);
+        }
+        // if (unit.nalIdc !== 0) {
+        // }
+        avcSample.frame = true;
+        // 判断是否为关键帧
+        // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
+        if (spsFound && unit.data.length > 4) {
+          let sliceType = new ExpGolomb(unit.data).readSliceType();
+          console.log('sliceType: ', sliceType);
+          if (
+            sliceType === 2 ||
+            sliceType === 4 ||
+            sliceType === 7 ||
+            sliceType === 9
+          ) {
+            avcSample.key = true;
+          }
+        }
+        break;
+      case 7:
+        spsFound = true;
+        sampleOrder += '->SPS ';
+        parseSPS(unit);
+        break;
+      case 8:
+        sampleOrder += '->PPS ';
+        if (!avcTrack.pps) {
+          avcTrack.pps = [unit.data];
+        }
+        break;
+      default:
+        sampleOrder += `->unknow ${unit.nalType}`;
+        console.error(`unknow ${unit.nalType}`);
+    }
+    if (avcSample && [1, 5, 6, 7, 8].includes(unit.nalType)) {
+      let units = avcSample.units;
+      units.push(unit);
+    }
+  });
+}
+
+function pushAvcSample(sample) {
+  if (sample.units.length && sample.frame) {
+    if (sample.key === true || (avcTrack.sps && avcTrack.samples.length)) {
+      avcTrack.samples.push(sample);
+    }
+  }
+}
+
+function parseSPS(unit) {
+  if (!avcTrack.sps) {
+    let expGolombDecoder = new ExpGolomb(unit.data);
+    let config = expGolombDecoder.readSPS();
+    avcTrack.width = config.width;
+    avcTrack.height = config.height;
+    avcTrack.pixelRatio = config.pixelRatio;
+    avcTrack.sps = [unit.data];
+    let codecarray = unit.data.subarray(1, 4);
+    let codecstring = 'avc1.';
+    for (let i = 0; i < 3; i++) {
+      let h = codecarray[i].toString(16);
+      if (h.length < 2) {
+        h = '0' + h;
+      }
+
+      codecstring += h;
+    }
+    avcTrack.codec = codecstring;
+  }
+}
+
+function discardEPB(data) {
+  let length = data.byteLength,
+    EPBPositions = [],
+    i = 1,
+    newLength,
+    newData;
+
+  // Find all `Emulation Prevention Bytes`
+  while (i < length - 2) {
+    if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0x03) {
+      EPBPositions.push(i + 2);
+      i += 2;
+    } else {
+      i++;
+    }
+  }
+
+  // If no Emulation Prevention Bytes were found just return the original
+  // array
+  if (EPBPositions.length === 0) {
+    return data;
+  }
+
+  // Create a new array to hold the NAL unit data
+  newLength = length - EPBPositions.length;
+  newData = new Uint8Array(newLength);
+  let sourceIndex = 0;
+
+  for (i = 0; i < newLength; sourceIndex++, i++) {
+    if (sourceIndex === EPBPositions[0]) {
+      // Skip this byte
+      sourceIndex++;
+      // Remove this position index
+      EPBPositions.shift();
+    }
+    newData[i] = data[sourceIndex];
+  }
+  return newData;
+}
+
+function insertSampleInOrder(arr, data) {
+  let len = arr.length;
+  if (len > 0) {
+    if (data.pts >= arr[len - 1].pts) {
+      arr.push(data);
+    } else {
+      for (let pos = len - 1; pos >= 0; pos--) {
+        if (data.pts < arr[pos].pts) {
+          arr.splice(pos, 0, data);
+          break;
+        }
+      }
+    }
+  } else {
+    arr.push(data);
+  }
 }
