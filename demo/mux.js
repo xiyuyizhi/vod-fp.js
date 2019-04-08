@@ -355,7 +355,6 @@ function parsePES(stream, offset) {
     // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
     let payloadStartOffset = pesHdrLen + 6 + 3;
     stream.size -= payloadStartOffset;
-    console.log(stream.size, stream.data.length);
     // reassemble PES packet
     let pesData = new Uint8Array(stream.size);
     let i = 0;
@@ -447,12 +446,14 @@ function parseAVCNALu(pes) {
    *  nal_unit_type 5bit
    */
   console.warn('parse avc Nal units');
+  // console.log(pes.data);
   const buffer = pes.data;
   const len = buffer.byteLength;
   let i = 0;
   let lastUnitStart = 0;
   let units = [];
-  while (i <= len - 4) {
+  let nalStartInPesStart = true;
+  let getNalStartIndex = i => {
     let codePrefix3 = (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
     let codePrefix4 =
       (buffer[i] << 24) |
@@ -460,8 +461,22 @@ function parseAVCNALu(pes) {
       (buffer[i + 2] << 8) |
       buffer[i + 3];
     if (codePrefix4 === 0x00000001 || codePrefix3 === 0x000001) {
-      let is3Or4 = codePrefix4 === 1 ? 4 : 3;
-      if (i !== 0) {
+      return {
+        index: i,
+        is3Or4: codePrefix4 === 1 ? 4 : 3
+      };
+    }
+    return { index: -1 };
+  };
+
+  if (getNalStartIndex(0).index === -1) {
+    nalStartInPesStart = false;
+  }
+  while (i <= len - 4) {
+    let { index, is3Or4 } = getNalStartIndex(i);
+    if (index !== -1) {
+      //去除 pes中nal unit不是开始于第一字节的 开始那部分数据[也可以把这部分数据添加到上一个pes的最后一个nal unit 中]
+      if (index !== 0 && nalStartInPesStart) {
         let nalUnit = buffer.subarray(lastUnitStart, i);
         units.push({
           data: nalUnit,
@@ -472,12 +487,13 @@ function parseAVCNALu(pes) {
           console.error('detect IDR');
         }
       }
-      lastUnitStart = i + is3Or4;
-      i += is3Or4 - 1;
+      lastUnitStart = index + is3Or4;
+      i = index + is3Or4 - 1;
+      nalStartInPesStart = true;
     }
     i++;
   }
-  if (lastUnitStart) {
+  if (lastUnitStart && lastUnitStart < len) {
     let last = buffer.subarray(lastUnitStart);
     units.push({
       data: last,
@@ -491,7 +507,7 @@ function parseAVCNALu(pes) {
   if (units.length === 0) {
     // 这个pes中不存在Nal unit,则可能上一个pes的Nal unit还没结束
     // todo: 把这个pes舔到上一个pes的最后一个nal unit中
-    console.log('%c pes中不存在 Nal  unit', 'background: #red; color: #ffffff');
+    console.log('%c pes中不存在 Nal  unit', 'background: #000; color: #ffffff');
   }
   console.log(units);
   return units;
@@ -546,8 +562,8 @@ function parseAVC(pes) {
         if (!avcSample) {
           avcSample = createAVCSample(true, pes.pts, pes.dts);
         }
-        // if (unit.nalIdc !== 0) {
-        // }
+        if (unit.nalIdc !== 0) {
+        }
         avcSample.frame = true;
         // 判断是否为关键帧
         // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
