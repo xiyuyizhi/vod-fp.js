@@ -9,9 +9,9 @@
   "scripts": {
     "dev": "DEV=player PORT=9000 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
     "mux": "DEV=mux PORT=9001 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
-    "build_mux": "BUILD=mux webpack --config ./scripts/webpack.product.js --display-error-details",
-    "build_player": "BUILD=player webpack --config ./scripts/webpack.product.js --display-error-details",
-    "build_util": "BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build:mux": "BUILD=mux webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build:player": "BUILD=player webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build:util": "BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details",
     "test": "mocha --watch"
   },
   "husky": {

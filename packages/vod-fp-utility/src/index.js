@@ -1,3 +1,5 @@
-export default () => {
-  console.log('vod-fp-utility');
+const utility = () => {
+  console.log('vod-fp-utility!');
 };
+
+export { utility };

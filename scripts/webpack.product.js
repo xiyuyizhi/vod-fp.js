@@ -1,6 +1,4 @@
 const path = require('path');
-const webpack = require('webpack');
-const WebpackDevServer = require('webpack-dev-server');
 const TerserPlugin = require('terser-webpack-plugin');
 
 const ROOT = process.cwd();
@@ -13,6 +11,7 @@ const config = {
     filename: path.join(ROOT, PACKAGE_ROOT, 'src/index.js')
   },
   output: {
+    libraryTarget: 'umd',
     path: path.join(ROOT, PACKAGE_ROOT, 'lib/'),
     filename: `vod-fp-${process.env.BUILD}.min.js`
   },

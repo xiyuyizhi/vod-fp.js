@@ -14,6 +14,12 @@ const config = {
     path: path.join(ROOT, 'dist'),
     filename: 'bundle.js'
   },
+  resolve: {
+    alias: {
+      'vod-fp-utility': 'vod-fp-utility/src',
+      'vod-fp-mux': 'vod-fp-mux/src'
+    }
+  },
   module: {
     strictExportPresence: true,
     rules: [
