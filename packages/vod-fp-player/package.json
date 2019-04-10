@@ -1,0 +1,23 @@
+{
+  "name": "vod-fp-player",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/xiyuyizhi/vod-fp.js.git"
+  },
+  "devDependencies": {
+    "vod-fp-mux": "0.0.1",
+    "vod-fp-utility": "0.0.1"
+  },
+  "author": "xiyuyizhi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xiyuyizhi/vod-fp.js/issues"
+  },
+  "homepage": "https://github.com/xiyuyizhi/vod-fp.js#readme"
+}

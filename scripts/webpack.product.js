@@ -4,16 +4,17 @@ const WebpackDevServer = require('webpack-dev-server');
 const TerserPlugin = require('terser-webpack-plugin');
 
 const ROOT = process.cwd();
+const PACKAGE_ROOT = `packages/vod-fp-${process.env.BUILD}/`;
 
 const config = {
   mode: 'production',
   devtool: 'source-map',
   entry: {
-    filename: path.join(ROOT, 'src/index.js')
+    filename: path.join(ROOT, PACKAGE_ROOT, 'src/index.js')
   },
   output: {
-    path: path.join(ROOT, 'lib/'),
-    filename: 'vod-fp.min.js'
+    path: path.join(ROOT, PACKAGE_ROOT, 'lib/'),
+    filename: `vod-fp-${process.env.BUILD}.min.js`
   },
   optimization: {
     minimizer: [
@@ -47,7 +48,7 @@ const config = {
     rules: [
       {
         test: /\.js$/,
-        include: [/src/],
+        include: [/vod-fp-mux/, /vod-fp-player/, /vod-fp-utility/, /src/],
         loader: require.resolve('babel-loader')
       }
     ]

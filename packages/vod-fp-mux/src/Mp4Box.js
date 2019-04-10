@@ -243,11 +243,11 @@ class MP4 {
   }
 
   static box(type) {
-    let payload = Array.prototype.slice.call(arguments, 1),
-      size = 8,
-      i = payload.length,
-      len = i,
-      result;
+    let payload = Array.prototype.slice.call(arguments, 1);
+    let size = 8;
+    let i = payload.length;
+    let len = i;
+    let result;
     // calculate the total size we need to allocate
     while (i--) {
       size += payload[i].byteLength;
@@ -356,14 +356,13 @@ class MP4 {
         MP4.DINF,
         MP4.stbl(track)
       );
-    } else {
-      return MP4.box(
-        MP4.types.minf,
-        MP4.box(MP4.types.vmhd, MP4.VMHD),
-        MP4.DINF,
-        MP4.stbl(track)
-      );
     }
+    return MP4.box(
+      MP4.types.minf,
+      MP4.box(MP4.types.vmhd, MP4.VMHD),
+      MP4.DINF,
+      MP4.stbl(track)
+    );
   }
 
   static moof(sn, baseMediaDecodeTime, track) {
@@ -373,12 +372,13 @@ class MP4 {
       MP4.traf(track, baseMediaDecodeTime)
     );
   }
+
   /**
    * @param tracks... (optional) {array} the tracks associated with this movie
    */
   static moov(tracks) {
-    let i = tracks.length,
-      boxes = [];
+    let i = tracks.length;
+    let boxes = [];
 
     while (i--) {
       boxes[i] = MP4.trak(tracks[i]);
@@ -393,8 +393,8 @@ class MP4 {
   }
 
   static mvex(tracks) {
-    let i = tracks.length,
-      boxes = [];
+    let i = tracks.length;
+    let boxes = [];
 
     while (i--) {
       boxes[i] = MP4.trex(tracks[i]);
@@ -525,18 +525,17 @@ class MP4 {
   }
 
   static sdtp(track) {
-    let samples = track.samples || [],
-      bytes = new Uint8Array(4 + samples.length),
-      flags,
-      i;
+    let samples = track.samples || [];
+    let bytes = new Uint8Array(4 + samples.length);
+    let flags;
+    let i;
     // leave the full box header (4 bytes) all zero
     // write the sample table
     for (i = 0; i < samples.length; i++) {
       flags = samples[i].flags;
-      bytes[i + 4] =
-        (flags.dependsOn << 4) |
-        (flags.isDependedOn << 2) |
-        flags.hasRedundancy;
+      bytes[i + 4] = (flags.dependsOn << 4)
+        | (flags.isDependedOn << 2)
+        | flags.hasRedundancy;
     }
 
     return MP4.box(MP4.types.sdtp, bytes);
@@ -554,11 +553,11 @@ class MP4 {
   }
 
   static avc1(track) {
-    let sps = [],
-      pps = [],
-      i,
-      data,
-      len;
+    let sps = [];
+    let pps = [];
+    let i;
+    let data;
+    let len;
     // assemble the SPSs
 
     for (i = 0; i < track.sps.length; i++) {
@@ -582,27 +581,27 @@ class MP4 {
     }
 
     let avcc = MP4.box(
-        MP4.types.avcC,
-        new Uint8Array(
-          [
-            0x01, // version
-            sps[3], // profile
-            sps[4], // profile compat
-            sps[5], // level
-            0xfc | 3, // lengthSizeMinusOne, hard-coded to 4 bytes
-            0xe0 | track.sps.length // 3bit reserved (111) + numOfSequenceParameterSets
-          ]
-            .concat(sps)
-            .concat([
-              track.pps.length // numOfPictureParameterSets
-            ])
-            .concat(pps)
-        )
-      ), // "PPS"
-      width = track.width,
-      height = track.height,
-      hSpacing = track.pixelRatio[0],
-      vSpacing = track.pixelRatio[1];
+      MP4.types.avcC,
+      new Uint8Array(
+        [
+          0x01, // version
+          sps[3], // profile
+          sps[4], // profile compat
+          sps[5], // level
+          0xfc | 3, // lengthSizeMinusOne, hard-coded to 4 bytes
+          0xe0 | track.sps.length // 3bit reserved (111) + numOfSequenceParameterSets
+        ]
+          .concat(sps)
+          .concat([
+            track.pps.length // numOfPictureParameterSets
+          ])
+          .concat(pps)
+      )
+    ); // "PPS"
+    let width = track.width;
+    let height = track.height;
+    let hSpacing = track.pixelRatio[0];
+    let vSpacing = track.pixelRatio[1];
 
     return MP4.box(
       MP4.types.avc1,
@@ -841,18 +840,17 @@ class MP4 {
       }
 
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
-    } else {
-      return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));
     }
+    return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));
   }
 
   static tkhd(track) {
-    let id = track.id,
-      duration = track.duration * track.timescale,
-      width = track.width,
-      height = track.height,
-      upperWordDuration = Math.floor(duration / (UINT32_MAX + 1)),
-      lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
+    let id = track.id;
+    let duration = track.duration * track.timescale;
+    let width = track.width;
+    let height = track.height;
+    let upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
+    let lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
     return MP4.box(
       MP4.types.tkhd,
       new Uint8Array([
@@ -957,14 +955,14 @@ class MP4 {
   }
 
   static traf(track, baseMediaDecodeTime) {
-    let sampleDependencyTable = MP4.sdtp(track),
-      id = track.id,
-      upperWordBaseMediaDecodeTime = Math.floor(
-        baseMediaDecodeTime / (UINT32_MAX + 1)
-      ),
-      lowerWordBaseMediaDecodeTime = Math.floor(
-        baseMediaDecodeTime % (UINT32_MAX + 1)
-      );
+    let sampleDependencyTable = MP4.sdtp(track);
+    let id = track.id;
+    let upperWordBaseMediaDecodeTime = Math.floor(
+      baseMediaDecodeTime / (UINT32_MAX + 1)
+    );
+    let lowerWordBaseMediaDecodeTime = Math.floor(
+      baseMediaDecodeTime % (UINT32_MAX + 1)
+    );
     return MP4.box(
       MP4.types.traf,
       MP4.box(
@@ -999,13 +997,13 @@ class MP4 {
       ),
       MP4.trun(
         track,
-        sampleDependencyTable.length +
-        16 + // tfhd
-        20 + // tfdt
-        8 + // traf header
-        16 + // mfhd
-        8 + // moof header
-          8
+        sampleDependencyTable.length
+        + 16 // tfhd
+        + 20 // tfdt
+        + 8 // traf header
+        + 16 // mfhd
+        + 8 // moof header
+          + 8
       ), // mdat header
       sampleDependencyTable
     );
@@ -1055,16 +1053,16 @@ class MP4 {
   }
 
   static trun(track, offset) {
-    let samples = track.samples || [],
-      len = samples.length,
-      arraylen = 12 + 16 * len,
-      array = new Uint8Array(arraylen),
-      i,
-      sample,
-      duration,
-      size,
-      flags,
-      cts;
+    let samples = track.samples || [];
+    let len = samples.length;
+    let arraylen = 12 + 16 * len;
+    let array = new Uint8Array(arraylen);
+    let i;
+    let sample;
+    let duration;
+    let size;
+    let flags;
+    let cts;
     offset += 8 + arraylen;
     array.set(
       [
@@ -1100,10 +1098,10 @@ class MP4 {
           (size >>> 8) & 0xff,
           size & 0xff, // sample_size
           (flags.isLeading << 2) | flags.dependsOn,
-          (flags.isDependedOn << 6) |
-            (flags.hasRedundancy << 4) |
-            (flags.paddingValue << 1) |
-            flags.isNonSync,
+          (flags.isDependedOn << 6)
+            | (flags.hasRedundancy << 4)
+            | (flags.paddingValue << 1)
+            | flags.isNonSync,
           flags.degradPrio & (0xf0 << 8),
           flags.degradPrio & 0x0f, // sample_flags
           (cts >>> 24) & 0xff,
@@ -1122,8 +1120,8 @@ class MP4 {
       MP4.init();
     }
 
-    let movie = MP4.moov(tracks),
-      result;
+    let movie = MP4.moov(tracks);
+    let result;
     result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);
     result.set(MP4.FTYP);
     result.set(movie, MP4.FTYP.byteLength);

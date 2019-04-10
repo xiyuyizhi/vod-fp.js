@@ -2,34 +2,36 @@
 // console.log = window.log;
 
 import MP4 from './Mp4Box';
-console.log('%c remux ', 'background: #222; color: #bada55');
 
-const remuxlog = {
-  log: console.log
+const logger = {
+  log: console.log.bind(console)
 };
 
+let nextAvcDts = 0;
+let _initDts = 0;
+
 function remux(avcTrack) {
-  let CONSOLE_TYPE = () => 'remux';
   let initSegment = MP4.initSegment([avcTrack]);
-  remuxlog.log(avcTrack);
-  // remuxlog.log('initSegment: ', initSegment);
+  logger.log('avcTrack', avcTrack);
+  // logger.log('initSegment: ', initSegment);
   let samples = avcTrack.samples;
   let nbSamples = samples.length;
-  let initPts = avcTrack.samples[0].pts;
-  let initDts = avcTrack.samples[0].dts;
+  if (!_initDts) {
+    _initDts = avcTrack.samples[0].dts;
+  }
   samples.forEach(sample => {
-    sample.pts = ptsNormalize(sample.pts - initDts);
-    sample.dts = ptsNormalize(sample.dts - initDts);
+    sample.pts = ptsNormalize(sample.pts - _initDts, nextAvcDts);
+    sample.dts = ptsNormalize(sample.dts - _initDts, nextAvcDts);
   });
-  // remuxlog.log(samples);
-  //按dts排序
-  samples.sort(function(a, b) {
+  // logger.log(samples);
+  // 按dts排序
+  samples.sort(function (a, b) {
     const deltadts = a.dts - b.dts;
     const deltapts = a.pts - b.pts;
     return deltadts || deltapts;
   });
 
-  console.log(samples);
+  console.log('samples', samples);
 
   let sample = samples[0];
   let firstDTS = Math.max(sample.dts, 0);
@@ -39,14 +41,14 @@ function remux(avcTrack) {
   let lastDTS = Math.max(sample.dts, 0);
   let lastPTS = Math.max(sample.pts, 0, lastDTS);
 
-  let nbNalu = 0,
-    accessUnitsLen = 0;
+  let nbNalu = 0;
+  let accessUnitsLen = 0;
   for (let i = 0; i < nbSamples; i++) {
     // compute total/avc sample length and nb of NAL units
-    let sample = samples[i],
-      units = sample.units,
-      nbUnits = units.length,
-      sampleLen = 0;
+    let sample = samples[i];
+    let units = sample.units;
+    let nbUnits = units.length;
+    let sampleLen = 0;
     for (let j = 0; j < nbUnits; j++) {
       sampleLen += units[j].data.length;
     }
@@ -68,15 +70,15 @@ function remux(avcTrack) {
   let compositionTimeOffset;
   let mp4Samples = [];
   for (let i = 0; i < nbSamples; i++) {
-    let avcSample = samples[i],
-      avcSampleUnits = avcSample.units,
-      mp4SampleLength = 0,
-      compositionTimeOffset;
+    let avcSample = samples[i];
+    let avcSampleUnits = avcSample.units;
+    let mp4SampleLength = 0;
+    let compositionTimeOffset;
     // convert NALU bitstream to MP4 format (prepend NALU with size field)
     for (let j = 0, nbUnits = avcSampleUnits.length; j < nbUnits; j++) {
-      let unit = avcSampleUnits[j],
-        unitData = unit.data,
-        unitDataLen = unit.data.byteLength;
+      let unit = avcSampleUnits[j];
+      let unitData = unit.data;
+      let unitDataLen = unit.data.byteLength;
       view.setUint32(offset, unitDataLen);
       offset += 4;
       mdat.set(unitData, offset);
@@ -106,12 +108,13 @@ function remux(avcTrack) {
       }
     });
   }
-  console.log(mp4Samples);
+  console.log('mp4Samples', mp4Samples);
+  nextAvcDts = lastDTS + mp4SampleDuration;
   avcTrack.samples = mp4Samples;
   let moof = MP4.moof(avcTrack.sequenceNumber++, firstDTS, avcTrack);
   // avcTrack.samples = [];
-  // remuxlog.log(moof);
-  // remuxlog.log(mdat);
+  // logger.log(moof);
+  // logger.log(mdat);
   const bf = new Uint8Array(
     initSegment.byteLength + moof.byteLength + mdat.byteLength
   );

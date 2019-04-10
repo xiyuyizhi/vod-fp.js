@@ -16,11 +16,11 @@ class ExpGolomb {
 
   // ():void
   loadWord() {
-    let data = this.data,
-      bytesAvailable = this.bytesAvailable,
-      position = data.byteLength - bytesAvailable,
-      workingBytes = new Uint8Array(4),
-      availableBytes = Math.min(4, bytesAvailable);
+    let data = this.data;
+    let bytesAvailable = this.bytesAvailable;
+    let position = data.byteLength - bytesAvailable;
+    let workingBytes = new Uint8Array(4);
+    let availableBytes = Math.min(4, bytesAvailable);
     if (availableBytes === 0) {
       throw new Error('no bytes available');
     }
@@ -51,8 +51,8 @@ class ExpGolomb {
 
   // (size:int):uint
   readBits(size) {
-    let bits = Math.min(this.bitsAvailable, size), // :uint
-      valu = this.word >>> (32 - bits); // :uint
+    let bits = Math.min(this.bitsAvailable, size); // :uint
+    let valu = this.word >>> (32 - bits); // :uint
     if (size > 32) {
       console.error('Cannot read more than 32 bits at a time');
     }
@@ -67,9 +67,8 @@ class ExpGolomb {
     bits = size - bits;
     if (bits > 0 && this.bitsAvailable) {
       return (valu << bits) | this.readBits(bits);
-    } else {
-      return valu;
     }
+    return valu;
   }
 
   // ():uint
@@ -114,9 +113,8 @@ class ExpGolomb {
     if (0x01 & valu) {
       // the number is odd if the low order bit is set
       return (1 + valu) >>> 1; // add 1 to make it even, and divide by 2
-    } else {
-      return -1 * (valu >>> 1); // divide by two then make it negative
     }
+    return -1 * (valu >>> 1); // divide by two then make it negative
   }
 
   // Some convenience functions
@@ -134,6 +132,7 @@ class ExpGolomb {
   readUShort() {
     return this.readBits(16);
   }
+
   // ():int
   readUInt() {
     return this.readBits(32);
@@ -147,10 +146,10 @@ class ExpGolomb {
    * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
    */
   skipScalingList(count) {
-    let lastScale = 8,
-      nextScale = 8,
-      j,
-      deltaScale;
+    let lastScale = 8;
+    let nextScale = 8;
+    let j;
+    let deltaScale;
     for (j = 0; j < count; j++) {
       if (nextScale !== 0) {
         deltaScale = this.readEG();
@@ -170,27 +169,27 @@ class ExpGolomb {
    * associated video frames.
    */
   readSPS() {
-    let frameCropLeftOffset = 0,
-      frameCropRightOffset = 0,
-      frameCropTopOffset = 0,
-      frameCropBottomOffset = 0,
-      profileIdc,
-      profileCompat,
-      levelIdc,
-      numRefFramesInPicOrderCntCycle,
-      picWidthInMbsMinus1,
-      picHeightInMapUnitsMinus1,
-      frameMbsOnlyFlag,
-      scalingListCount,
-      i,
-      readUByte = this.readUByte.bind(this),
-      readBits = this.readBits.bind(this),
-      readUEG = this.readUEG.bind(this),
-      readBoolean = this.readBoolean.bind(this),
-      skipBits = this.skipBits.bind(this),
-      skipEG = this.skipEG.bind(this),
-      skipUEG = this.skipUEG.bind(this),
-      skipScalingList = this.skipScalingList.bind(this);
+    let frameCropLeftOffset = 0;
+    let frameCropRightOffset = 0;
+    let frameCropTopOffset = 0;
+    let frameCropBottomOffset = 0;
+    let profileIdc;
+    let profileCompat;
+    let levelIdc;
+    let numRefFramesInPicOrderCntCycle;
+    let picWidthInMbsMinus1;
+    let picHeightInMapUnitsMinus1;
+    let frameMbsOnlyFlag;
+    let scalingListCount;
+    let i;
+    let readUByte = this.readUByte.bind(this);
+    let readBits = this.readBits.bind(this);
+    let readUEG = this.readUEG.bind(this);
+    let readBoolean = this.readBoolean.bind(this);
+    let skipBits = this.skipBits.bind(this);
+    let skipEG = this.skipEG.bind(this);
+    let skipUEG = this.skipUEG.bind(this);
+    let skipScalingList = this.skipScalingList.bind(this);
 
     readUByte();
     profileIdc = readUByte(); // profile_idc
@@ -200,15 +199,15 @@ class ExpGolomb {
     skipUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don't need
     if (
-      profileIdc === 100 ||
-      profileIdc === 110 ||
-      profileIdc === 122 ||
-      profileIdc === 244 ||
-      profileIdc === 44 ||
-      profileIdc === 83 ||
-      profileIdc === 86 ||
-      profileIdc === 118 ||
-      profileIdc === 128
+      profileIdc === 100
+      || profileIdc === 110
+      || profileIdc === 122
+      || profileIdc === 244
+      || profileIdc === 44
+      || profileIdc === 83
+      || profileIdc === 86
+      || profileIdc === 118
+      || profileIdc === 128
     ) {
       let chromaFormatIdc = readUEG();
       if (chromaFormatIdc === 3) {
@@ -330,14 +329,14 @@ class ExpGolomb {
     }
     return {
       width: Math.ceil(
-        (picWidthInMbsMinus1 + 1) * 16 -
-          frameCropLeftOffset * 2 -
-          frameCropRightOffset * 2
+        (picWidthInMbsMinus1 + 1) * 16
+          - frameCropLeftOffset * 2
+          - frameCropRightOffset * 2
       ),
       height:
-        (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
-        (frameMbsOnlyFlag ? 2 : 4) *
-          (frameCropTopOffset + frameCropBottomOffset),
+        (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16
+        - (frameMbsOnlyFlag ? 2 : 4)
+          * (frameCropTopOffset + frameCropBottomOffset),
       pixelRatio: pixelRatio
     };
   }

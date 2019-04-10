@@ -1,15 +1,17 @@
 {
   "name": "vod-fp",
   "version": "0.0.1",
-  "description": "MSE-EME player (hls & dash & fmp4) , write with functional style",
+  "description": "MSE-EME player (hls & fmp4) , write with functional style",
   "directories": {
     "test": "tests"
   },
   "main": "lib/vod-fp.min.js",
   "scripts": {
-    "dev": "webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
-    "mux": "DEV=mux webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
-    "build": "webpack --config ./scripts/webpack.product.js --display-error-details",
+    "dev": "DEV=player PORT=9000 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
+    "mux": "DEV=mux PORT=9001 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
+    "build_mux": "BUILD=mux webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build_player": "BUILD=player webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build_util": "BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details",
     "test": "mocha --watch"
   },
   "husky": {
@@ -20,12 +22,14 @@
   "lint-staged": {
     "linters": {
       "*.js": [
-        "eslint --fix src",
+        "eslint --fix packages/**/src/**.js",
         "git add"
       ]
     },
     "ignore": [
-      "**/test/**.js"
+      "node_modules/**/**.js",
+      "scripts/**.js",
+      "packages/**/test/**.js"
     ]
   },
   "repository": {
@@ -55,6 +59,7 @@
     "eslint-config-airbnb-base": "^13.1.0",
     "html-webpack-plugin": "^3.2.0",
     "husky": "^1.3.1",
+    "lerna": "^3.0.0-beta.21",
     "lint-staged": "^8.1.5",
     "mocha": "^6.0.2",
     "terser-webpack-plugin": "^1.2.3",

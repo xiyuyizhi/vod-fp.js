@@ -1,63 +1,42 @@
-const path = require("path");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const ROOT = process.cwd();
-
-const getEntry = () => {
-  if (process.env.DEV === "mux") {
-    return {
-      filename: path.join(ROOT, "demo/mux.js")
-    };
-  }
-  return {
-    filename: path.join(ROOT, "demo/index.js")
-  };
-};
+const PACKAGE_ROOT = `packages/vod-fp-${process.env.DEV}/`;
 
 const config = {
-  mode: "development",
-  devtool: "cheap-module-source-map",
-  entry: getEntry(),
+  mode: 'development',
+  devtool: 'cheap-module-source-map',
+  entry: {
+    filename: path.join(ROOT, PACKAGE_ROOT, 'demo/demo.js')
+  },
   output: {
-    path: path.join(ROOT, "dist"),
-    filename: "bundle.js"
+    path: path.join(ROOT, 'dist'),
+    filename: 'bundle.js'
   },
   module: {
     strictExportPresence: true,
     rules: [
       {
         test: /\.js$/,
-        include: [/demo/, /src/],
-        loader: require.resolve("babel-loader")
+        include: [
+          new RegExp(path.join(PACKAGE_ROOT, '/demo/')),
+          new RegExp(path.join(PACKAGE_ROOT, '/src/'))
+        ],
+        loader: require.resolve('babel-loader')
       }
     ]
   },
   plugins: [
     new HtmlWebpackPlugin({
-      inject: false,
-      template: "demo/build.html",
-      filename: "build.html"
-    }),
-    geneTemps()
+      template: path.join(ROOT, PACKAGE_ROOT, 'demo/demo.html'),
+      filename: 'index.html'
+    })
   ],
   devServer: {
-    contentBase: [path.join(ROOT, "dist"), path.join(ROOT, "lib")],
     compress: true,
-    port: 9000
+    port: process.env.PORT
   }
 };
-
-function geneTemps() {
-  if (process.env.DEV === "mux") {
-    return new HtmlWebpackPlugin({
-      template: "demo/mux.html",
-      filename: "mux.html"
-    });
-  }
-  return new HtmlWebpackPlugin({
-    template: "demo/index.html",
-    filename: "index.html"
-  });
-}
 
 module.exports = config;

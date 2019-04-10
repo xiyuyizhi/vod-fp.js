@@ -14,9 +14,11 @@
     "node": true
   },
   "rules": {
-    "quotes": [2, "double"],
+    "quotes": [2, "single"],
     "class-methods-use-this": 0,
     "no-console": 0,
-    "no-empty-function": 0
+    "no-empty-function": 0,
+    "no-bitwise": 0,
+    "no-plusplus": 0
   }
 }
