@@ -120,7 +120,7 @@ const combinePair = args => {
   return { [key]: value };
 };
 
-const findCodecsIndex = findIndex(item => !!item['codecs']);
+const findCodecsIndex = findIndex(item => !!item.codecs);
 
 const adaptCodecs = attrPairs => {
   let index = findCodecsIndex(attrPairs);
@@ -218,9 +218,10 @@ const combinePlayListM3u8 = list => {
   };
   list.forEach(item => {
     if (item.extinf) {
-      let duration, name;
+      let duration;
+      let name;
       if (Array.isArray(item.extinf)) {
-        //存在两个属性[duration,name]
+        // 存在两个属性[duration,name]
         [duration, name] = item.extinf;
       } else {
         duration = item.extinf;
@@ -231,7 +232,10 @@ const combinePlayListM3u8 = list => {
       if (name) {
         seg.name = name;
       }
-      level.segments.push(seg);
+      level.segments.push({
+        id: level.segments.length,
+        ...seg
+      });
       return;
     }
     if (item.url) {

@@ -33,28 +33,28 @@ let pesCount = 0;
 
 export default mux;
 
-function reset() {
+function reset(sequenceNumber) {
   avcData = null;
   avcTrack.samples = [];
-  avcTrack.sequenceNumber += 1;
+  avcTrack.sequenceNumber = sequenceNumber;
   sampleOrder = '';
   avcSample = null;
   pesCount = 0;
 }
 
-function mux(buffer) {
+function mux(buffer, sequenceNumber) {
   let bf = buffer;
   if (buffer instanceof ArrayBuffer) {
     bf = new Uint8Array(buffer);
   }
-  reset();
+  reset(sequenceNumber);
   const syncOffset = _probe(buffer);
   logger.log('监测ts流第一个同步字节的位置: ', syncOffset);
 
   let len = buffer.byteLength;
   len -= (len - syncOffset) % 188;
   // reset avcData for new ts stream
-  for (let i = syncOffset, j = 0; i < len;) {
+  for (let i = syncOffset, j = 0; i < len; ) {
     let payload;
     let header;
     let adaptions;
@@ -86,6 +86,7 @@ function mux(buffer) {
     const bff = remux(avcTrack);
     mux.emit('MUX_DATA', bff);
   } catch (e) {
+    console.log(e);
     mux.emit('MUX_DATA', []);
   }
 }
@@ -111,9 +112,9 @@ function _probe(data) {
   const len = Math.min(1000, data.byteLength - 3 * 188);
   for (let i = 0; i < len; i++) {
     if (
-      data[i] === 0x47
-      && data[i + 188] === 0x47
-      && data[i + 188 * 2] === 0x47
+      data[i] === 0x47 &&
+      data[i + 188] === 0x47 &&
+      data[i + 188 * 2] === 0x47
     ) {
       return i;
     }
@@ -299,9 +300,10 @@ function parsePES(stream, offset) {
   let dts;
   const firstPayload = stream.data[0];
   // logger.log(offset, firstPayload);
-  const pscp = (firstPayload[offset] << 16)
-    | (firstPayload[offset + 1] << 8)
-    | firstPayload[offset + 2];
+  const pscp =
+    (firstPayload[offset] << 16) |
+    (firstPayload[offset + 1] << 8) |
+    firstPayload[offset + 2];
   if (pscp === 0x000001) {
     logger.warn('parse PES');
     offset += 3;
@@ -363,11 +365,12 @@ function parsePES(stream, offset) {
 function parsePESHeader(payload, offset, pdtsFlag) {
   let pts;
   let dts;
-  pts = (payload[offset] & 0x0e) * 536870912 // 1 << 29
-    + (payload[offset + 1] & 0xff) * 4194304 // 1 << 22
-    + (payload[offset + 2] & 0xfe) * 16384 // 1 << 14
-    + (payload[offset + 3] & 0xff) * 128 // 1 << 7
-    + (payload[offset + 4] & 0xfe) / 2;
+  pts =
+    (payload[offset] & 0x0e) * 536870912 + // 1 << 29
+    (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
+    (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
+    (payload[offset + 3] & 0xff) * 128 + // 1 << 7
+    (payload[offset + 4] & 0xfe) / 2;
   if (pts > 4294967295) {
     // decrement 2^33
     pts -= 8589934592;
@@ -375,11 +378,12 @@ function parsePESHeader(payload, offset, pdtsFlag) {
   offset += 5;
   if (pdtsFlag === 3) {
     // have dts
-    dts = (payload[offset] & 0x0e) * 536870912 // 1 << 29
-      + (payload[offset + 1] & 0xff) * 4194304 // 1 << 22
-      + (payload[offset + 2] & 0xfe) * 16384 // 1 << 14
-      + (payload[offset + 3] & 0xff) * 128 // 1 << 7
-      + (payload[offset + 4] & 0xfe) / 2;
+    dts =
+      (payload[offset] & 0x0e) * 536870912 + // 1 << 29
+      (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
+      (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
+      (payload[offset + 3] & 0xff) * 128 + // 1 << 7
+      (payload[offset + 4] & 0xfe) / 2;
     // check if greater than 2^32 -1
     if (dts > 4294967295) {
       // decrement 2^33
@@ -419,10 +423,11 @@ function parseAVCNALu(pes) {
   let nalStartInPesStart = true;
   let getNalStartIndex = i => {
     let codePrefix3 = (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
-    let codePrefix4 = (buffer[i] << 24)
-      | (buffer[i + 1] << 16)
-      | (buffer[i + 2] << 8)
-      | buffer[i + 3];
+    let codePrefix4 =
+      (buffer[i] << 24) |
+      (buffer[i + 1] << 16) |
+      (buffer[i + 2] << 8) |
+      buffer[i + 3];
     if (codePrefix4 === 0x00000001 || codePrefix3 === 0x000001) {
       return {
         index: i,
@@ -486,7 +491,7 @@ function parseAVC(pes) {
   const nalUnits = parseAVCNALu(pes);
   pes.data = null;
   let spsFound = false;
-  let createAVCSample = function (key, pts, dts, debug) {
+  let createAVCSample = function(key, pts, dts, debug) {
     return {
       key: key,
       pts: pts,
@@ -527,10 +532,10 @@ function parseAVC(pes) {
         if (spsFound && unit.data.length > 4) {
           let sliceType = new ExpGolomb(unit.data).readSliceType();
           if (
-            sliceType === 2
-            || sliceType === 4
-            || sliceType === 7
-            || sliceType === 9
+            sliceType === 2 ||
+            sliceType === 4 ||
+            sliceType === 7 ||
+            sliceType === 9
           ) {
             avcSample.key = true;
           }

@@ -1,6 +1,24 @@
 import mux from '../src/mux';
-import './m3u8-parser';
+import parser from './m3u8-parser';
 console.log('%c mux start!', 'background: #222; color: #bada55');
+
+const m3u8Url = `https://valipl-vip.cp31.ott.cibntv.net/697592E07F03D718B85622366/03000600005CADA9030A6E461BDD7F0440B1FC-C6F3-4839-B1F7-ECA7FD27FD25-1-114.m3u8?ccode=0502&duration=2671&expire=18000&psid=6fad2f287c4648686e4d72618b8cd935&ups_client_netip=68ee94e1&ups_ts=1555252011&ups_userid=1081877852&utid=2NqjFNAU4T8CAW%2FB3Q8Z7twU&vid=XNDEzMTk5NDI2OA&vkey=A8b27ccdb28f2e6f702cf0af04be8b877&sm=1&operate_type=1`;
+
+function getPlayList(m3u8Url) {
+  return fetch(m3u8Url)
+    .then(res => res.text())
+    .then(res => {
+      let playlist = parser(res, new URL(m3u8Url).origin);
+      if (playlist.error) {
+        console.error('error:', playlist.msg);
+      }
+      return playlist;
+    });
+}
+
+function getStream(url) {
+  return fetch(url).then(res => res.arrayBuffer());
+}
 
 let logger = {
   log: (...rest) => {
@@ -38,6 +56,7 @@ function attachMedia() {
   mediaSource.addEventListener('sourceopen', onSourceOpen);
   document.querySelector('#video').src = URL.createObjectURL(mediaSource);
 }
+let pending = [];
 
 function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
@@ -45,99 +64,46 @@ function onSourceOpen() {
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   videoBuffer.addEventListener('updateend', function(_) {
     logger.log('buffer update end');
-    mediaSource.endOfStream();
+    if (pending.length) {
+      videoBuffer.appendBuffer(pending.shift());
+    } else {
+      mediaSource.endOfStream();
+    }
   });
   videoBuffer.addEventListener('error', e => {
     logger.log(e);
   });
 }
 
-document.querySelector('#upload').addEventListener('change', e => {
-  const [file] = e.target.files;
-  e.target.value = '';
-  const reader = new FileReader();
-  reader.onload = e => {
-    const buffer = new Uint8Array(e.target.result);
-    let index = uploadSegmentsList();
-    setLocal(`bfs_${index}`, converBufferToStr(buffer));
-  };
-  reader.readAsArrayBuffer(file);
+attachMedia();
+
+mux.on('MUX_DATA', buff => {
+  if (!buff.length) return;
+  if (!videoBuffer.updating) {
+    videoBuffer.appendBuffer(buff);
+  } else {
+    pending.push(buff);
+  }
 });
 
-function setLocal(key, val) {
-  localStorage.setItem(key, val);
-}
-
-function getLocal(key) {
-  return localStorage.getItem(key);
-}
-
-function uploadSegmentsList() {
-  let segList = getLocal('segs');
-  if (segList) {
-    segList = segList.split('_');
-    segList.push(segList.length + 1);
-  } else {
-    segList = ['1'];
-  }
-  setLocal('segs', segList.join('_'));
-  return segList.length;
-}
-
-function getSegmentsList() {
-  let segList = getLocal('segs');
-  return segList ? segList.split('_') : [];
-}
-
-let loadedStatus = [];
-
-function doAppend() {
-  let currentHandleSegId = 0;
-  function appendBuffer(buff) {
-    setTimeout(() => {
-      if (videoBuffer.updating) {
-        appendBuffer(buff);
-      } else {
-        videoBuffer.appendBuffer(buff);
-        loadedStatus[currentHandleSegId] = true;
-        doAppend.state = PROCESS_STATE.IDLE;
-      }
-    }, 20);
-  }
-
-  mux.on('MUX_DATA', buff => {
-    if (!videoBuffer.updating) {
-      videoBuffer.appendBuffer(buff);
-      loadedStatus[currentHandleSegId] = true;
-      doAppend.state = PROCESS_STATE.IDLE;
-    } else {
-      appendBuffer(buff);
-    }
+function loadstream(segment) {
+  loadstream.loading = true;
+  getStream(segment.url).then(buffer => {
+    loadstream.loading = false;
+    segment.loaded = true;
+    mux(new Uint8Array(buffer), segment.id);
   });
+}
 
-  let muxSegmentTimer = setInterval(() => {
-    if (doAppend.state !== PROCESS_STATE.MUXING) {
-      let segPlayList = getSegmentsList();
-      let segId;
-      for (let i of segPlayList) {
-        if (!loadedStatus[i]) {
-          segId = i;
-          break;
-        }
-      }
-      if (!segId) return;
-      const localBf = getLocal(`bfs_${segId}`);
-      if (!localBf) return;
-      currentHandleSegId = segId;
-      doAppend.state = PROCESS_STATE.MUXING;
-      logger.log(
-        `%c do mux on seg ${segId}`,
-        'background: #222; color: #bada55'
-      );
-      mux(convertStrToBuffer(localBf));
-    }
+function startTimer(segments) {
+  setInterval(() => {
+    let current = segments.filter(x => !x.loaded)[0];
+    if (current.id > 10 || loadstream.loading) return;
+    loadstream(current);
   }, 100);
 }
 
-attachMedia();
-doAppend();
+getPlayList(m3u8Url).then(pl => {
+  console.log(pl);
+  startTimer(pl.segments);
+});
