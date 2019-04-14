@@ -1,5 +1,5 @@
 import mux from '../src/mux';
-
+import './m3u8-parser';
 console.log('%c mux start!', 'background: #222; color: #bada55');
 
 let logger = {
@@ -43,7 +43,7 @@ function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
-  videoBuffer.addEventListener('updateend', function (_) {
+  videoBuffer.addEventListener('updateend', function(_) {
     logger.log('buffer update end');
     mediaSource.endOfStream();
   });
