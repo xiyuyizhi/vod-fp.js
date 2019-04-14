@@ -2,8 +2,6 @@ import mux from '../src/mux';
 import parser from './m3u8-parser';
 console.log('%c mux start!', 'background: #222; color: #bada55');
 
-const m3u8Url = `https://valipl-vip.cp31.ott.cibntv.net/697592E07F03D718B85622366/03000600005CADA9030A6E461BDD7F0440B1FC-C6F3-4839-B1F7-ECA7FD27FD25-1-114.m3u8?ccode=0502&duration=2671&expire=18000&psid=6fad2f287c4648686e4d72618b8cd935&ups_client_netip=68ee94e1&ups_ts=1555252011&ups_userid=1081877852&utid=2NqjFNAU4T8CAW%2FB3Q8Z7twU&vid=XNDEzMTk5NDI2OA&vkey=A8b27ccdb28f2e6f702cf0af04be8b877&sm=1&operate_type=1`;
-
 function getPlayList(m3u8Url) {
   return fetch(m3u8Url)
     .then(res => res.text())
@@ -98,12 +96,26 @@ function loadstream(segment) {
 function startTimer(segments) {
   setInterval(() => {
     let current = segments.filter(x => !x.loaded)[0];
-    if (current.id > 10 || loadstream.loading) return;
+    if (current.id > 2 || loadstream.loading) return;
     loadstream(current);
   }, 100);
 }
 
-getPlayList(m3u8Url).then(pl => {
-  console.log(pl);
-  startTimer(pl.segments);
+let url = localStorage.getItem('url');
+if (url) {
+  getPlayList(url).then(pl => {
+    console.log(pl);
+    startTimer(pl.segments);
+  });
+}
+document.querySelector('#url').addEventListener('change', e => {
+  url = e.target.value;
+  localStorage.setItem('url', url);
+});
+document.querySelector('#load').addEventListener('click', e => {
+  if (!url) return;
+  getPlayList(url).then(pl => {
+    console.log(pl);
+    startTimer(pl.segments);
+  });
 });
