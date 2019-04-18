@@ -85,18 +85,16 @@ const Error = {
 
 const valid = m3u8 => m3u8.indexOf('#EXTM3U') !== -1;
 
-const isMaster = m3u8 =>
-  m3u8.indexOf('EXT-X-STREAM-INF') !== -1 &&
-  m3u8.indexOf('#EXT-X-ENDLIST') === -1;
+const isMaster = m3u8 => m3u8.indexOf('EXT-X-STREAM-INF') !== -1
+  && m3u8.indexOf('#EXT-X-ENDLIST') === -1;
 
 const isTag = line => line.trim().indexOf('#') === 0;
 
-const splitLines = m3u8 =>
-  m3u8
-    .split(/\n/)
-    .filter(x => Boolean(x))
-    .filter(x => (/#/.test(x) ? /#EXT/.test(x) : true))
-    .map(line => line.replace(/("|')/g, ''));
+const splitLines = m3u8 => m3u8
+  .split(/\n/)
+  .filter(x => Boolean(x))
+  .filter(x => (/#/.test(x) ? /#EXT/.test(x) : true))
+  .map(line => line.replace(/("|')/g, ''));
 
 const keyFormat = key => {
   const matched = key.match(TAG_PATTERN);
@@ -105,8 +103,8 @@ const keyFormat = key => {
   }
   const [head, ...rest] = splitByAcross(key);
   return (
-    head.toLowerCase() +
-    rest.map(item => item[0] + item.slice(1).toLowerCase()).join('')
+    head.toLowerCase()
+    + rest.map(item => item[0] + item.slice(1).toLowerCase()).join('')
   );
 };
 

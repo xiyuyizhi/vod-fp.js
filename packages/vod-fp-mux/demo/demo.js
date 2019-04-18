@@ -1,5 +1,6 @@
 import mux from '../src/mux';
 import parser from './m3u8-parser';
+import './mp4-mux';
 console.log('%c mux start!', 'background: #222; color: #bada55');
 
 function getPlayList(m3u8Url) {
@@ -60,7 +61,7 @@ function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
-  videoBuffer.addEventListener('updateend', function(_) {
+  videoBuffer.addEventListener('updateend', function (_) {
     logger.log('buffer update end');
     if (pending.length) {
       videoBuffer.appendBuffer(pending.shift());
@@ -93,12 +94,16 @@ function loadstream(segment) {
   });
 }
 
+
+let maxLoadCount = 1;
 function startTimer(segments) {
+  return;
   setInterval(() => {
     let current = segments.filter(x => !x.loaded)[0];
-    if (current.id > 2 || loadstream.loading) return;
+    if (current.id > maxLoadCount || loadstream.loading) return;
+    console.log(`--------current segment ${current.id}-------------`);
     loadstream(current);
-  }, 100);
+  }, 1000);
 }
 
 let url = localStorage.getItem('url');
@@ -114,6 +119,7 @@ document.querySelector('#url').addEventListener('change', e => {
 });
 document.querySelector('#load').addEventListener('click', e => {
   if (!url) return;
+  videoBuffer.remove(0, Infinity);
   getPlayList(url).then(pl => {
     console.log(pl);
     startTimer(pl.segments);
