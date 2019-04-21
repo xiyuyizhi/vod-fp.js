@@ -533,9 +533,10 @@ class MP4 {
     // write the sample table
     for (i = 0; i < samples.length; i++) {
       flags = samples[i].flags;
-      bytes[i + 4] = (flags.dependsOn << 4)
-        | (flags.isDependedOn << 2)
-        | flags.hasRedundancy;
+      bytes[i + 4] =
+        (flags.dependsOn << 4) |
+        (flags.isDependedOn << 2) |
+        flags.hasRedundancy;
     }
 
     return MP4.box(MP4.types.sdtp, bytes);
@@ -606,6 +607,7 @@ class MP4 {
     return MP4.box(
       MP4.types.avc1,
       new Uint8Array([
+        // visualSampleEntry
         0x00,
         0x00,
         0x00, // reserved
@@ -685,9 +687,9 @@ class MP4 {
         0x11,
         0x11
       ]), // pre_defined = -1
-      avcc,
+      avcc, // avcconfigbox
       MP4.box(
-        MP4.types.btrt,
+        MP4.types.btrt, // mpeg4bitRatebox
         new Uint8Array([
           0x00,
           0x1c,
@@ -997,13 +999,13 @@ class MP4 {
       ),
       MP4.trun(
         track,
-        sampleDependencyTable.length
-        + 16 // tfhd
-        + 20 // tfdt
-        + 8 // traf header
-        + 16 // mfhd
-        + 8 // moof header
-          + 8
+        sampleDependencyTable.length +
+        16 + // tfhd
+        20 + // tfdt
+        8 + // traf header
+        16 + // mfhd
+        8 + // moof header
+          8
       ), // mdat header
       sampleDependencyTable
     );
@@ -1098,10 +1100,10 @@ class MP4 {
           (size >>> 8) & 0xff,
           size & 0xff, // sample_size
           (flags.isLeading << 2) | flags.dependsOn,
-          (flags.isDependedOn << 6)
-            | (flags.hasRedundancy << 4)
-            | (flags.paddingValue << 1)
-            | flags.isNonSync,
+          (flags.isDependedOn << 6) |
+            (flags.hasRedundancy << 4) |
+            (flags.paddingValue << 1) |
+            flags.isNonSync,
           flags.degradPrio & (0xf0 << 8),
           flags.degradPrio & 0x0f, // sample_flags
           (cts >>> 24) & 0xff,

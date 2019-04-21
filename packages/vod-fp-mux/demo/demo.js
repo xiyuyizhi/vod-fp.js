@@ -61,7 +61,7 @@ function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
-  videoBuffer.addEventListener('updateend', function (_) {
+  videoBuffer.addEventListener('updateend', function(_) {
     logger.log('buffer update end');
     if (pending.length) {
       videoBuffer.appendBuffer(pending.shift());
@@ -94,8 +94,7 @@ function loadstream(segment) {
   });
 }
 
-
-let maxLoadCount = 1;
+let maxLoadCount = 0;
 function startTimer(segments) {
   return;
   setInterval(() => {
@@ -119,7 +118,9 @@ document.querySelector('#url').addEventListener('change', e => {
 });
 document.querySelector('#load').addEventListener('click', e => {
   if (!url) return;
-  videoBuffer.remove(0, Infinity);
+  if (videoBuffer.buffered.length) {
+    videoBuffer.remove(0, Infinity);
+  }
   getPlayList(url).then(pl => {
     console.log(pl);
     startTimer(pl.segments);
