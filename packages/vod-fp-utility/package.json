@@ -4,11 +4,17 @@
   "description": "",
   "main": "lib/vod-fp-utility.min.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "BABEL_ENV=test mocha test/fp.js  --require @babel/register --watch"
   },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/xiyuyizhi/vod-fp.js.git"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.2.0",
+    "@babel/preset-env": "^7.2.0",
+    "@babel/register": "^7.0.0",
+    "mocha": "^6.0.2"
   },
   "author": "xiyuyizhi",
   "license": "ISC",

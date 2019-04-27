@@ -26,6 +26,8 @@ const config = {
       {
         test: /\.js$/,
         include: [
+          /vod-fp-mux/,
+          /vod-fp-utility/,
           new RegExp(path.join(PACKAGE_ROOT, '/demo/')),
           new RegExp(path.join(PACKAGE_ROOT, '/src/'))
         ],
@@ -41,6 +43,7 @@ const config = {
   ],
   devServer: {
     compress: true,
+    disableHostCheck: true,
     port: process.env.PORT
   }
 };

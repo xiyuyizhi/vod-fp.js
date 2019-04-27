@@ -17,6 +17,7 @@ logger.warn = () => {};
 let pmtId;
 let streamInfo;
 let avcData;
+let restNaluBuffer = null; // 暂存pes开头那些属于上一个 pes最后一个nalu 的数据
 let audioData;
 let avcTrack = {
   samples: [],
@@ -57,19 +58,19 @@ function mux(buffer, sequenceNumber) {
   for (let i = syncOffset, j = 0; i < len; ) {
     let payload;
     let header;
-    let adaptions;
     let adaptionsOffset = 0;
     header = parseTsHeaderInfo(buffer.subarray(i, i + 4));
     // logger.log(buffer.subarray(188 * i, 188 * 32));
     // logger.log(`packet ${i + 1}: `, header);
     // logger.log(`packet ${i + 1} header: `, _tsPacketHeader(buffer, 188 * i));
-    payload = _tsPacketPayload(buffer, i + 4, i + 188);
+    payload = buffer.subarray(i + 4, i + 188);
     // logger.log('payload :', payload);
-    if (header.adaptationFiledControl === 3) {
-      // logger.warn('detect adaptationFiled');
-      adaptions = parseAdaptationFiled(payload);
-      adaptionsOffset = adaptions.adaptationLength;
-      // logger.log(adaptions);
+    if (
+      header.adaptationFiledControl === 3 ||
+      header.adaptationFiledControl === 2
+    ) {
+      adaptionsOffset = parseAdaptationFiled(payload) + 1;
+      // logger.warn('detect adaptationFiled', adaptionsOffset);
     }
     parsePayload(payload, adaptionsOffset, header);
     i += 188;
@@ -80,13 +81,12 @@ function mux(buffer, sequenceNumber) {
     const pes = parsePES(avcData, 0);
     logger.log('last video PES data: ', pes);
     logger.log('video pes count: ', pesCount);
-    parseAVC(pes);
+    parseAVC(pes, true);
   }
   try {
     const bff = remux(avcTrack);
     mux.emit('MUX_DATA', bff);
   } catch (e) {
-    console.log(e);
     mux.emit('MUX_DATA', []);
   }
 }
@@ -128,9 +128,6 @@ function _tsPacketHeader(data, start) {
     .map(x => x.toString(2))
     .map(x => _paddingLeft(x, 8 - x.length, '0'));
 }
-function _tsPacketPayload(data, start, end) {
-  return data.subarray(start, end);
-}
 
 function _paddingLeft(origin, count, val) {
   if (count) {
@@ -145,7 +142,7 @@ function parseTsHeaderInfo(data) {
    * 第二字节:
    *    bit1 :Transport Error Indicator (TEI) & 0x80
    *    bit2 : Payload Unit Start Indicator   & 0x40
-   *    bit3 : Transport Priority             & 0x20
+   *    bit3 : Transport               & 0x20
    * rest+第三字节:  pid    & 0x1f << 8 + 第三字节
    * 第四字节:
    *    bit1-2 : Transport Scrambling Control  & 0xc0
@@ -173,9 +170,7 @@ function parseAdaptationFiled(payload) {
    *  第一字节 : Adaptation Field Length
    */
   const adaptationLength = payload[0];
-  return {
-    adaptationLength: Math.min(adaptationLength, 188 - 4) + 1
-  };
+  return Math.min(adaptationLength, 188 - 5);
 }
 
 function parsePayload(payload, offset, header) {
@@ -183,7 +178,7 @@ function parsePayload(payload, offset, header) {
    * https://en.wikipedia.org/wiki/Program-specific_information
    *
    * |---Adaptation Filed(option)---|--payload--|
-   * PSI:
+   * PSI:[PAT PMT CAT]
    *    第一字节 : pointer field  0 or not
    *    N * 0xFF : Pointer filler bytes 【pointer field 为 0 时不存在】
    * payload 针对PAT:
@@ -198,15 +193,17 @@ function parsePayload(payload, offset, header) {
    *    .共10 bytes
    */
   if (header.payloadStartIndicator === 1 && header.pid == 0) {
-    offset += 1 + payload[offset]; // table start position
+    logger.warn('parse PAT');
+    const pointerFiledLen = 1 + payload[offset];
+    offset = offset + pointerFiledLen; // table start position
     pmtId = ((payload[offset + 10] & 0x1f) << 8) | payload[offset + 11];
     const pNum = (payload[offset + 8] << 8) | payload[offset + 9];
-    logger.warn('parse PAT');
     logger.log('program number: ' + pNum, ',pmtId: ' + pmtId);
     return;
   }
   if (header.payloadStartIndicator === 1 && header.pid === pmtId) {
-    offset += 1 + payload[offset]; // table start position
+    const pointerFiledLen = 1 + payload[offset];
+    offset = offset + pointerFiledLen; // table start position
     streamInfo = parsePMT(payload, offset);
     return;
   }
@@ -421,7 +418,7 @@ function parseAVCNALu(pes) {
   let lastUnitStart = 0;
   let units = [];
   let nalStartInPesStart = true;
-  let getNalStartIndex = i => {
+  let getNalUStartIndex = i => {
     let codePrefix3 = (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
     let codePrefix4 =
       (buffer[i] << 24) |
@@ -437,13 +434,13 @@ function parseAVCNALu(pes) {
     return { index: -1 };
   };
 
-  if (getNalStartIndex(0).index === -1) {
+  if (getNalUStartIndex(0).index === -1) {
     nalStartInPesStart = false;
   }
   while (i <= len - 4) {
-    let { index, is3Or4 } = getNalStartIndex(i);
+    let { index, is3Or4 } = getNalUStartIndex(i);
     if (index !== -1) {
-      // 去除 pes中nal unit不是开始于第一字节的 开始那部分数据[也可以把这部分数据添加到上一个pes的最后一个nal unit 中]
+      // 去除 pes中nal unit不是开始于第一字节的那部分数据 [把这部分数据添加到上一个采样的最后一个nal unit 中]
       if (index !== 0 && nalStartInPesStart) {
         let nalUnit = buffer.subarray(lastUnitStart, i);
         units.push({
@@ -455,8 +452,12 @@ function parseAVCNALu(pes) {
           logger.error('detect IDR');
         }
       }
+      if (!nalStartInPesStart) {
+        //属于最新一个采样最后一个nal
+        restNaluBuffer = buffer.subarray(0, index);
+      }
       lastUnitStart = index + is3Or4;
-      i = index + is3Or4 - 1;
+      i = lastUnitStart;
       nalStartInPesStart = true;
     }
     i++;
@@ -477,7 +478,7 @@ function parseAVCNALu(pes) {
   return units;
 }
 
-function parseAVC(pes) {
+function parseAVC(pes, lastPes) {
   /**
    * nal_unit_type
    * 1 : non-IDR picture
@@ -499,6 +500,38 @@ function parseAVC(pes) {
       units: []
     };
   };
+
+  /**
+   * case:
+   *
+   * 1.  idr帧非开始于分片开头
+   *    |                       分片                                  |
+   *    |         pes         |      pes   |      pes   |      pes   |
+   *    |ndr...sps | pps | idr|  aud | ndr |  aud | ndr |  aud | ndr |
+   *    |------delete  -------|
+   *
+   * 2. 对 分片最后一个pes的特殊处理,解析完 nalu后就 add sample
+   *
+   */
+
+  const paddingAndPushSample = () => {
+    if (restNaluBuffer) {
+      const units = avcSample.units;
+      if (units.length) {
+        const saved = units[units.length - 1].data;
+        const newUnit = new Uint8Array(
+          saved.byteLength + restNaluBuffer.byteLength
+        );
+        newUnit.set(saved, 0);
+        newUnit.set(restNaluBuffer, saved.byteLength);
+        units[units.length - 1].data = newUnit;
+      }
+      restNaluBuffer = null;
+    }
+    pushAvcSample(avcSample);
+    avcSample = null;
+  };
+
   nalUnits.forEach(unit => {
     switch (unit.nalType) {
       case 9:
@@ -506,7 +539,7 @@ function parseAVC(pes) {
           // 下一采样【下一帧】开始了，要把这一个采样入track
           logger.log('access units order: ', sampleOrder);
           sampleOrder = '';
-          pushAvcSample(avcSample);
+          paddingAndPushSample();
         }
         sampleOrder += '|AUD ';
         avcSample = createAVCSample(false, pes.pts, pes.dts);
@@ -518,6 +551,7 @@ function parseAVC(pes) {
         }
         avcSample.frame = true;
         avcSample.key = true;
+        avcTrack.key = true;
         break;
       case 1:
         sampleOrder += '->NDR ';
@@ -554,12 +588,17 @@ function parseAVC(pes) {
         break;
       default:
         sampleOrder += `->unknow ${unit.nalType}`;
+        logger.warn(`unknow ${unit.nalType}`);
     }
     if (avcSample && [1, 5, 6, 7, 8].includes(unit.nalType)) {
       let units = avcSample.units;
       units.push(unit);
     }
   });
+
+  if (lastPes) {
+    paddingAndPushSample();
+  }
 }
 
 function pushAvcSample(sample) {
@@ -585,7 +624,6 @@ function parseSPS(unit) {
       if (h.length < 2) {
         h = '0' + h;
       }
-
       codecstring += h;
     }
     avcTrack.codec = codecstring;

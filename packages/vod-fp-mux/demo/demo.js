@@ -3,11 +3,22 @@ import parser from './m3u8-parser';
 import './mp4-mux';
 console.log('%c mux start!', 'background: #222; color: #bada55');
 
+window.serializeBuffer = () => {
+  const buffered = document.querySelector('video').buffered;
+  if (!buffered.length) return;
+  let arr = [];
+  for (let i = 0; i < buffered.length; i++) {
+    arr.push([buffered.start(i), buffered.end(i)]);
+  }
+  console.log(arr.map(x => `[${x.join(',')}]`).join('----'));
+};
+
 function getPlayList(m3u8Url) {
   return fetch(m3u8Url)
     .then(res => res.text())
     .then(res => {
-      let playlist = parser(res, new URL(m3u8Url).origin);
+      let playlist = parser(res);
+      console.log(playlist);
       if (playlist.error) {
         console.error('error:', playlist.msg);
       }
@@ -54,6 +65,9 @@ function attachMedia() {
   window.mediaSource = mediaSource;
   mediaSource.addEventListener('sourceopen', onSourceOpen);
   document.querySelector('#video').src = URL.createObjectURL(mediaSource);
+  document.querySelector('video').addEventListener('waiting', e => {
+    e.target.currentTime += 0.01;
+  });
 }
 let pending = [];
 
@@ -79,6 +93,10 @@ attachMedia();
 mux.on('MUX_DATA', buff => {
   if (!buff.length) return;
   if (!videoBuffer.updating) {
+    // const a = document.createElement('a');
+    // a.href = URL.createObjectURL(new Blob([buff]))
+    // a.download = 'tsTomp4_1.mp4'
+    // a.click();
     videoBuffer.appendBuffer(buff);
   } else {
     pending.push(buff);
@@ -94,21 +112,21 @@ function loadstream(segment) {
   });
 }
 
+let startLoadId = 0;
 let maxLoadCount = 0;
 function startTimer(segments) {
-  return;
+  // return;
   setInterval(() => {
-    let current = segments.filter(x => !x.loaded)[0];
+    let current = segments.filter(x => !x.loaded && x.id >= startLoadId)[0];
     if (current.id > maxLoadCount || loadstream.loading) return;
     console.log(`--------current segment ${current.id}-------------`);
     loadstream(current);
-  }, 1000);
+  }, 100);
 }
 
 let url = localStorage.getItem('url');
 if (url) {
   getPlayList(url).then(pl => {
-    console.log(pl);
     startTimer(pl.segments);
   });
 }
@@ -122,7 +140,6 @@ document.querySelector('#load').addEventListener('click', e => {
     videoBuffer.remove(0, Infinity);
   }
   getPlayList(url).then(pl => {
-    console.log(pl);
     startTimer(pl.segments);
   });
 });

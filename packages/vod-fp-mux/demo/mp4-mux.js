@@ -3,6 +3,8 @@
  *  Carriage of NAL unit structured video in the ISO Base Media File Format
  */
 
+const MAX_UINT32_COUNT = Math.pow(2, 32);
+
 const converBufferToStr = bf => {
   let s = '';
   for (let i = 0; i < bf.byteLength; i++) {
@@ -96,7 +98,7 @@ document.querySelector('#mp4Upload').addEventListener('change', e => {
   reader.onload = e => {
     const buffer = e.target.result;
     const bfStr = converBufferToStr(new Uint8Array(buffer));
-    localStorage.setItem('mp4', bfStr);
+    // localStorage.setItem('mp4', bfStr);
     parse(buffer);
   };
   reader.readAsArrayBuffer(file);
@@ -122,6 +124,7 @@ Object.keys(Mp4_Types).forEach(type => {
  */
 function parse(buffer) {
   console.log(`--------mp4 parser,${buffer.byteLength}-----------`);
+  console.log(buffer);
   parseBox(new Uint8Array(buffer));
 }
 
@@ -156,6 +159,9 @@ function parseBox(buffer) {
         case 'tkhd':
           box.data = parseTrckHeader(box.payload);
           break;
+        case 'mdhd':
+          box.data = parseMdhd(box.payload);
+          break;
         case 'hdlr':
           box.data = parseHdlr(box.payload);
           break;
@@ -179,7 +185,7 @@ function parseBox(buffer) {
           box.data = parseBtrt(box.payload);
           break;
         case 'pssh':
-          parsePssh(box.payload);
+          box.data = parsePssh(box.payload);
           break;
         default:
           console.warn('unknow resolve ', box.type);
@@ -197,7 +203,7 @@ function parseBox(buffer) {
 
 function splitBox(buffer, offset = 0) {
   let boxStore = [];
-  for (; offset < buffer.byteLength; ) {
+  for (; offset < buffer.byteLength;) {
     const len =
       buffer[offset] * (1 << 24) +
       buffer[offset + 1] * (1 << 16) +
@@ -234,7 +240,7 @@ function parseFtypBox(payload, length) {
   ftypBox.version = bf.read32bitsValue();
   bf.forward(4);
   let compatible = [];
-  for (let i = bf.offset; i < length; ) {
+  for (let i = bf.offset; i < length;) {
     ftypBox.compatible.push(converBufferToStr(payload.subarray(i, i + 4)));
     i += 4;
   }
@@ -289,7 +295,7 @@ function parseTrckHeader(payload) {
   tkhdInfo.trackId = bf.read32bitsValue();
   bf.forward(4);
   if (version === 1) {
-    tkhdInfo.duration = bf.read32bitsValue() * (1 << 32);
+    tkhdInfo.duration = bf.read32bitsValue() * MAX_UINT32_COUNT;
     bf.forward(4);
     tkhdInfo.duration += bf.read32bitsValue();
   } else {
@@ -304,6 +310,31 @@ function parseTrckHeader(payload) {
   bf = null;
 
   return tkhdInfo;
+}
+
+function parseMdhd(payload) {
+  /**
+  * Fullbox
+  * 
+  */
+  const ret = {};
+  let bf = new BytesForward(payload);
+  const version = payload[0];
+  bf.forward(4);
+  if (version === 1) {
+    bf.forward(4 * 4)
+    ret.timescale = bf.read32bitsValue();
+    bf.forward(4);
+    ret.duration = bf.read32bitsValue() * MAX_UINT32_COUNT;
+    bf.forward(4);
+    ret.duration += bf.read32bitsValue();
+  } else {
+    bf.forward(4 * 2);
+    ret.timescale = bf.read32bitsValue();
+    bf.forward(4);
+    ret.duration = bf.read32bitsValue();
+  }
+  return ret;
 }
 
 function parseHdlr(payload) {
@@ -462,7 +493,7 @@ function parseTfdt(payload) {
   let baseMediaDecodeTime = 0;
   bf.forward(4);
   if (payload[0] === 1) {
-    baseMediaDecodeTime = bf.read32bitsValue() * (1 << 32);
+    baseMediaDecodeTime = bf.read32bitsValue() * MAX_UINT32_COUNT;
     bf.forward(4);
     baseMediaDecodeTime += bf.read32bitsValue();
   } else {
@@ -534,7 +565,26 @@ function parseBtrt(payload) {
 }
 
 function parsePssh(payload) {
-  console.log(payload);
+  const ret = {};
+  const version = payload[0];
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+  ret.systemId = bf.readBytes(16);
+  bf.forward(16);
+  if (version > 0) {
+    const kidCount = bf.read32bitsValue();
+    ret.kids = [];
+    let i = 0;
+    while (i < kidCount) {
+      ret.kids.push(bf.readBytes(16));
+      bf.forward(16)
+    }
+  }
+  const dataSize = bf.read32bitsValue();
+  bf.forward(4);
+  ret.dataSize = dataSize;
+  ret.data = bf.readBytes(dataSize)
+  return ret;
 }
 
 /**

@@ -4,14 +4,25 @@
 import MP4 from './Mp4Box';
 
 const logger = {
-  log: console.log.bind(console)
+  log: console.log.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console)
 };
 
 let nextAvcDts = 0;
 let _initDts = 0;
+let mp4SampleDuration;
+let lastDelta = 0;
+let initSegmentGenerate = false;
+
 
 function remux(avcTrack) {
-  let initSegment = MP4.initSegment([avcTrack]);
+  let initSegment = new Uint8Array(0);
+  if (!initSegmentGenerate) {
+    initSegment = MP4.initSegment([avcTrack]);
+    initSegmentGenerate = true
+  }
+
   logger.log('avcTrack', avcTrack);
   // logger.log('initSegment: ', initSegment);
   let samples = avcTrack.samples;
@@ -19,11 +30,26 @@ function remux(avcTrack) {
   if (!_initDts) {
     _initDts = avcTrack.samples[0].dts;
   }
+
   samples.forEach(sample => {
+    sample.originPts = sample.pts;
+    sample.originDts = sample.dts;
     sample.pts = ptsNormalize(sample.pts - _initDts, nextAvcDts);
     sample.dts = ptsNormalize(sample.dts - _initDts, nextAvcDts);
   });
-  // logger.log(samples);
+  let delta = samples[0].dts - nextAvcDts;
+  /**
+   * preDts nextAvcDts samples[0].dts
+   */
+  if (samples[0].dts - nextAvcDts > mp4SampleDuration) {
+    console.log(samples[0].originPts, samples[0].dts, nextAvcDts, mp4SampleDuration);
+    logger.error(`两个分片之间差了 ${(samples[0].dts - nextAvcDts) / mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts) / 90000 - lastDelta} s`)
+    lastDelta = (samples[0].dts - nextAvcDts) / 90000;
+  }
+  samples.forEach(sample => {
+    sample.dts -= delta;
+    sample.pts -= delta;
+  })
   // 按dts排序
   samples.sort(function (a, b) {
     const deltadts = a.dts - b.dts;
@@ -66,7 +92,6 @@ function remux(avcTrack) {
   mdat.set(MP4.types.mdat, 4);
 
   let offset = 8;
-  let mp4SampleDuration;
   let compositionTimeOffset;
   let mp4Samples = [];
   for (let i = 0; i < nbSamples; i++) {
@@ -111,7 +136,7 @@ function remux(avcTrack) {
   console.log('mp4Samples', mp4Samples);
   nextAvcDts = lastDTS + mp4SampleDuration;
   avcTrack.samples = mp4Samples;
-  let moof = MP4.moof(avcTrack.sequenceNumber++, firstDTS, avcTrack);
+  let moof = MP4.moof(avcTrack.sequenceNumber, firstDTS, avcTrack);
   // avcTrack.samples = [];
   // logger.log(moof);
   // logger.log(mdat);
@@ -124,7 +149,7 @@ function remux(avcTrack) {
   return bf;
 }
 
-function geneSample() {}
+function geneSample() { }
 
 function ptsNormalize(value, reference) {
   let offset;

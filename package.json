@@ -7,12 +7,11 @@
   },
   "main": "lib/vod-fp.min.js",
   "scripts": {
-    "dev": "DEV=player PORT=9000 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
-    "mux": "DEV=mux PORT=9001 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
-    "build:mux": "BUILD=mux webpack --config ./scripts/webpack.product.js --display-error-details",
-    "build:player": "BUILD=player webpack --config ./scripts/webpack.product.js --display-error-details",
-    "build:util": "BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details",
-    "test": "mocha --watch"
+    "dev": " BABEL_ENV=dev DEV=player PORT=9000 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
+    "mux": " BABEL_ENV=dev DEV=mux PORT=9001 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
+    "build:mux": "BABEL_ENV=dev BUILD=mux webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build:player": "BABEL_ENV=dev BUILD=player webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build:util": "BABEL_ENV=dev BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details"
   },
   "husky": {
     "hooks": {
@@ -41,7 +40,9 @@
     "EME",
     "hls",
     "fmp4",
-    "dash"
+    "h264",
+    "fmp4",
+    "ts"
   ],
   "author": "xiyuyizhi",
   "license": "ISC",
@@ -50,9 +51,11 @@
   },
   "homepage": "https://github.com/xiyuyizhi/vod-fp.js#readme",
   "devDependencies": {
-    "@babel/core": "^7.3.4",
-    "@babel/preset-env": "^7.3.4",
+    "@babel/core": "^7.2.0",
+    "@babel/preset-env": "^7.2.0",
+    "@babel/register": "^7.0.0",
     "babel-loader": "^8.0.5",
+    "babel-eslint": "^10.0.1",
     "babel-plugin-import": "^1.11.0",
     "chai": "^4.2.0",
     "eslint": "^5.15.2",
@@ -66,8 +69,5 @@
     "webpack": "^4.29.6",
     "webpack-cli": "^3.3.0",
     "webpack-dev-server": "^3.2.1"
-  },
-  "dependencies": {
-    "babel-eslint": "^10.0.1"
   }
 }

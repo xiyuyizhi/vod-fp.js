@@ -15,6 +15,9 @@
     "mux",
     "remux"
   ],
+  "devDependencies": {
+    "vod-fp-utility": "0.0.1"
+  },
   "author": "xiyuyizhi",
   "license": "ISC",
   "bugs": {
