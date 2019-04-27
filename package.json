@@ -21,7 +21,7 @@
   "lint-staged": {
     "linters": {
       "*.js": [
-        "eslint --fix packages/**/src/**.js",
+        "eslint  packages/**/src/**.js",
         "git add"
       ]
     },
