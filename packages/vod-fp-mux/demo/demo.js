@@ -42,6 +42,7 @@ let logger = {
 
 let mediaSource;
 let videoBuffer;
+let audioBuffer;
 const PROCESS_STATE = {
   MUXING: 'MUXING',
   IDLE: 'IDLE',
@@ -69,21 +70,45 @@ function attachMedia() {
     e.target.currentTime += 0.01;
   });
 }
-let pending = [];
+let videoPending = [];
+let audioPending = [];
 
 function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
-  videoBuffer.addEventListener('updateend', function(_) {
-    logger.log('buffer update end');
-    if (pending.length) {
-      videoBuffer.appendBuffer(pending.shift());
-    } else {
+  audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
+  videoBuffer.addEventListener('updateend', function (_) {
+    logger.log('video buffer update end');
+    if (videoPending.length) {
+      videoBuffer.appendBuffer(videoPending.shift());
+    } else if (
+      !videoPending.length
+      && !audioPending.length
+      && !audioBuffer.updating
+      && !videoBuffer.updating
+    ) {
+      mediaSource.endOfStream();
+    }
+  });
+
+  audioBuffer.addEventListener('updateend', function (_) {
+    logger.log('audio buffer update end');
+    if (audioPending.length) {
+      audioBuffer.appendBuffer(audioPending.shift());
+    } else if (
+      !videoPending.length
+      && !audioPending.length
+      && !audioBuffer.updating
+      && !videoBuffer.updating
+    ) {
       mediaSource.endOfStream();
     }
   });
   videoBuffer.addEventListener('error', e => {
+    logger.log(e);
+  });
+  audioBuffer.addEventListener('error', e => {
     logger.log(e);
   });
 }
@@ -97,9 +122,11 @@ mux.on('MUX_DATA', buff => {
     // a.href = URL.createObjectURL(new Blob([buff]))
     // a.download = 'tsTomp4_1.mp4'
     // a.click();
-    videoBuffer.appendBuffer(buff);
+    videoBuffer.appendBuffer(buff[0]);
+    audioBuffer.appendBuffer(buff[1]);
   } else {
-    pending.push(buff);
+    videoPending.push(buff[0]);
+    audioPending.push(buff[1]);
   }
 });
 
@@ -113,7 +140,7 @@ function loadstream(segment) {
 }
 
 let startLoadId = 0;
-let maxLoadCount = 0;
+let maxLoadCount = 6;
 function startTimer(segments) {
   // return;
   setInterval(() => {

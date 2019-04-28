@@ -1,5 +1,5 @@
 
 
-import * as R from "./fp"
+import * as R from './fp';
 
 export { R };
