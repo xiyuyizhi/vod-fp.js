@@ -3,16 +3,17 @@ import parser from './m3u8-parser';
 import './mp4-mux';
 console.log('%c mux start!', 'background: #222; color: #bada55');
 
+let videoMedia = document.querySelector('#video');
+
 window.serializeBuffer = () => {
-  const buffered = document.querySelector('video').buffered;
-  if (!buffered.length) return;
+  const buffered = videoMedia.buffered;
+  if (!buffered.length) return [];
   let arr = [];
   for (let i = 0; i < buffered.length; i++) {
     arr.push([buffered.start(i), buffered.end(i)]);
   }
-  console.log(arr.map(x => `[${x.join(',')}]`).join('----'));
+  return arr;
 };
-
 function getPlayList(m3u8Url) {
   return fetch(m3u8Url)
     .then(res => res.text())
@@ -65,8 +66,8 @@ function attachMedia() {
   mediaSource = new window.MediaSource();
   window.mediaSource = mediaSource;
   mediaSource.addEventListener('sourceopen', onSourceOpen);
-  document.querySelector('#video').src = URL.createObjectURL(mediaSource);
-  document.querySelector('video').addEventListener('waiting', e => {
+  videoMedia.src = URL.createObjectURL(mediaSource);
+  videoMedia.addEventListener('waiting', e => {
     e.target.currentTime += 0.01;
   });
 }
@@ -78,29 +79,29 @@ function onSourceOpen() {
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
-  videoBuffer.addEventListener('updateend', function (_) {
+  videoBuffer.addEventListener('updateend', function(_) {
     logger.log('video buffer update end');
     if (videoPending.length) {
       videoBuffer.appendBuffer(videoPending.shift());
     } else if (
-      !videoPending.length
-      && !audioPending.length
-      && !audioBuffer.updating
-      && !videoBuffer.updating
+      !videoPending.length &&
+      !audioPending.length &&
+      !audioBuffer.updating &&
+      !videoBuffer.updating
     ) {
       mediaSource.endOfStream();
     }
   });
 
-  audioBuffer.addEventListener('updateend', function (_) {
+  audioBuffer.addEventListener('updateend', function(_) {
     logger.log('audio buffer update end');
     if (audioPending.length) {
       audioBuffer.appendBuffer(audioPending.shift());
     } else if (
-      !videoPending.length
-      && !audioPending.length
-      && !audioBuffer.updating
-      && !videoBuffer.updating
+      !videoPending.length &&
+      !audioPending.length &&
+      !audioBuffer.updating &&
+      !videoBuffer.updating
     ) {
       mediaSource.endOfStream();
     }
@@ -117,7 +118,7 @@ attachMedia();
 
 mux.on('MUX_DATA', buff => {
   if (!buff.length) return;
-  if (!videoBuffer.updating) {
+  if (!videoBuffer.updating && videoPending.length === 0) {
     // const a = document.createElement('a');
     // a.href = URL.createObjectURL(new Blob([buff]))
     // a.download = 'tsTomp4_1.mp4'
@@ -139,16 +140,33 @@ function loadstream(segment) {
   });
 }
 
+function getBufferedInfo() {
+  const currentTime = videoMedia.currentTime;
+  const buffered = serializeBuffer();
+  const currentBuffered = buffered.filter(
+    ([start, end]) => start <= currentTime && end > currentTime
+  )[0];
+  if (currentBuffered) {
+    return currentBuffered[1] - currentTime;
+  }
+  return 0;
+}
+
 let startLoadId = 0;
-let maxLoadCount = 6;
+let maxLoadCount = 140;
 function startTimer(segments) {
   // return;
   setInterval(() => {
     let current = segments.filter(x => !x.loaded && x.id >= startLoadId)[0];
-    if (current.id > maxLoadCount || loadstream.loading) return;
+    if (
+      current.id > maxLoadCount ||
+      loadstream.loading ||
+      getBufferedInfo() > 40
+    )
+      return;
     console.log(`--------current segment ${current.id}-------------`);
     loadstream(current);
-  }, 100);
+  }, 1000);
 }
 
 let url = localStorage.getItem('url');
