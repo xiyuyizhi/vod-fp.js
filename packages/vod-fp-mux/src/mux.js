@@ -11,8 +11,8 @@ let logger = {
   error: console.error.bind(console)
 };
 
-logger.log = () => {};
-logger.warn = () => {};
+// logger.log = () => {};
+// logger.warn = () => {};
 
 const FREQUENCIES_MAP = {
   0: 96000,
@@ -47,7 +47,6 @@ let avcTrack = {
 let aacTrack = getDefaultAACTrack();
 let sampleOrder = '';
 let avcSample = null;
-let pesCount = 0;
 
 export default mux;
 
@@ -85,22 +84,17 @@ function mux(buffer, sequenceNumber) {
   let len = buffer.byteLength;
   len -= (len - syncOffset) % 188;
   // reset avcData for new ts stream
-  for (let i = syncOffset, j = 0; i < len;) {
+  for (let i = syncOffset, j = 0; i < len; ) {
     let payload;
     let header;
     let adaptionsOffset = 0;
     header = parseTsHeaderInfo(buffer.subarray(i, i + 4));
-    // logger.log(buffer.subarray(188 * i, 188 * 32));
-    // logger.log(`packet ${i + 1}: `, header);
-    // logger.log(`packet ${i + 1} header: `, _tsPacketHeader(buffer, 188 * i));
     payload = buffer.subarray(i + 4, i + 188);
-    // logger.log('payload :', payload);
     if (
-      header.adaptationFiledControl === 3
-      || header.adaptationFiledControl === 2
+      header.adaptationFiledControl === 3 ||
+      header.adaptationFiledControl === 2
     ) {
       adaptionsOffset = parseAdaptationFiled(payload) + 1;
-      // logger.warn('detect adaptationFiled', adaptionsOffset);
     }
     parsePayload(payload, adaptionsOffset, header);
     i += 188;
@@ -109,12 +103,11 @@ function mux(buffer, sequenceNumber) {
   if (avcTrack.pesData && avcTrack.pesData.data.length) {
     const pes = parsePES(avcTrack.pesData, 0);
     logger.log('last video PES data: ', pes);
-    logger.log('video pes count: ', pesCount);
     parseAVC(pes, true);
   }
-  if (aacData && aacData.data.length) {
+  if (aacTrack.pesData && aacTrack.pesData.data.length) {
+    const pes = parsePES(aacTrack.pesData, 0);
     logger.log('last audio PES data: ', pes);
-    const pes = parsePES(avcTrack.pesData, 0);
     parseAAC(pes, true);
   }
   avcTrack.pesData = null;
@@ -123,7 +116,7 @@ function mux(buffer, sequenceNumber) {
     const { video, audio } = remux(avcTrack, aacTrack);
     mux.emit('MUX_DATA', [video, audio]);
   } catch (e) {
-    console.log(e);
+    console.log('error', e);
     mux.emit('MUX_DATA', []);
   }
 }
@@ -149,9 +142,9 @@ function _probe(data) {
   const len = Math.min(1000, data.byteLength - 3 * 188);
   for (let i = 0; i < len; i++) {
     if (
-      data[i] === 0x47
-      && data[i + 188] === 0x47
-      && data[i + 188 * 2] === 0x47
+      data[i] === 0x47 &&
+      data[i + 188] === 0x47 &&
+      data[i + 188 * 2] === 0x47
     ) {
       return i;
     }
@@ -247,7 +240,7 @@ function parsePayload(payload, offset, header) {
 
   switch (header.pid) {
     case streamInfo.video:
-      fullfillPes(
+      fullfillPesData(
         'video',
         header.payloadStartIndicator,
         avcTrack,
@@ -255,7 +248,7 @@ function parsePayload(payload, offset, header) {
       );
       break;
     case streamInfo.audio:
-      fullfillPes(
+      fullfillPesData(
         'audio',
         header.payloadStartIndicator,
         aacTrack,
@@ -267,7 +260,7 @@ function parsePayload(payload, offset, header) {
   }
 }
 
-function fullfillPes(type, starter, track, tsPayload) {
+function fullfillPesData(type, starter, track, tsPayload) {
   if (starter) {
     if (track.pesData) {
       const pes = parsePES(track.pesData, 0);
@@ -302,12 +295,9 @@ function parsePMT(payload, offset) {
    */
   logger.warn('parse PMT');
   const sectionLen = ((payload[offset + 1] & 0x0f) << 8) | payload[offset + 2];
-  logger.log('section_length: ' + sectionLen);
   const tableEnd = offset + 3 + sectionLen - 4;
   const pNum = (payload[offset + 3] << 8) | payload[offset + 4];
-  logger.log('program_number: ' + pNum);
   const pil = ((payload[offset + 10] & 0x0f) << 8) | payload[offset + 11] || 0;
-  logger.log('program_info_length: ' + pil);
   offset = offset + 11 + pil + 1; // stream_type position
   const result = {
     video: -1,
@@ -316,13 +306,10 @@ function parsePMT(payload, offset) {
   let stremType;
   while (offset < tableEnd) {
     stremType = payload[offset];
-    logger.log('stremType: ' + stremType);
     offset += 1; // ele_Pid position
     const ePid = ((payload[offset] & 0x1f) << 8) | payload[offset + 1];
-    logger.log('elementary_PID: ' + ePid);
     offset += 2; // es_info_l position
     const esil = ((payload[offset] & 0x0f) << 8) | payload[offset + 1];
-    logger.log('ES_info_length: ' + esil);
     offset += 2;
     switch (stremType) {
       case 0x1b:
@@ -352,21 +339,18 @@ function parsePES(stream, offset) {
   let dts;
   const firstPayload = stream.data[0];
   // logger.log(offset, firstPayload);
-  const pscp = (firstPayload[offset] << 16)
-    | (firstPayload[offset + 1] << 8)
-    | firstPayload[offset + 2];
+  const pscp =
+    (firstPayload[offset] << 16) |
+    (firstPayload[offset + 1] << 8) |
+    firstPayload[offset + 2];
   if (pscp === 0x000001) {
-    logger.warn('parse PES');
+    // logger.warn('parse PES');
     offset += 3;
-    logger.log('stream_id: ' + firstPayload[offset]);
     pesLen = (firstPayload[offset + 1] << 8) | firstPayload[offset + 2];
-    logger.log('pes packet length: ' + pesLen);
     offset += 4;
     const pdtsFlag = (firstPayload[offset] & 0xc0) >> 6;
-    logger.log('PTS_DTS_flags: ' + pdtsFlag);
     offset += 1;
     const pesHdrLen = firstPayload[offset];
-    logger.log('PES_header_data_length: ' + pesHdrLen);
     offset += 1;
     if (pdtsFlag) {
       ({ pts, dts } = parsePESHeader(firstPayload, offset, pdtsFlag));
@@ -416,11 +400,12 @@ function parsePES(stream, offset) {
 function parsePESHeader(payload, offset, pdtsFlag) {
   let pts;
   let dts;
-  pts = (payload[offset] & 0x0e) * 536870912 // 1 << 29
-    + (payload[offset + 1] & 0xff) * 4194304 // 1 << 22
-    + (payload[offset + 2] & 0xfe) * 16384 // 1 << 14
-    + (payload[offset + 3] & 0xff) * 128 // 1 << 7
-    + (payload[offset + 4] & 0xfe) / 2;
+  pts =
+    (payload[offset] & 0x0e) * 536870912 + // 1 << 29
+    (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
+    (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
+    (payload[offset + 3] & 0xff) * 128 + // 1 << 7
+    (payload[offset + 4] & 0xfe) / 2;
   if (pts > 4294967295) {
     // decrement 2^33
     pts -= 8589934592;
@@ -428,11 +413,12 @@ function parsePESHeader(payload, offset, pdtsFlag) {
   offset += 5;
   if (pdtsFlag === 3) {
     // have dts
-    dts = (payload[offset] & 0x0e) * 536870912 // 1 << 29
-      + (payload[offset + 1] & 0xff) * 4194304 // 1 << 22
-      + (payload[offset + 2] & 0xfe) * 16384 // 1 << 14
-      + (payload[offset + 3] & 0xff) * 128 // 1 << 7
-      + (payload[offset + 4] & 0xfe) / 2;
+    dts =
+      (payload[offset] & 0x0e) * 536870912 + // 1 << 29
+      (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
+      (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
+      (payload[offset + 3] & 0xff) * 128 + // 1 << 7
+      (payload[offset + 4] & 0xfe) / 2;
     // check if greater than 2^32 -1
     if (dts > 4294967295) {
       // decrement 2^33
@@ -449,7 +435,6 @@ function parsePESHeader(payload, offset, pdtsFlag) {
   } else {
     dts = pts;
   }
-  logger.log('pts,dts: ', pts, dts);
   return { pts, dts };
 }
 
@@ -462,8 +447,7 @@ function parseAVCNALu(pes) {
    *  nal_ref_idc  2bit
    *  nal_unit_type 5bit
    */
-  logger.warn('parse avc Nal units');
-  // logger.log(pes.data);
+  // logger.warn('parse avc Nal units');
   const buffer = pes.data;
   const len = buffer.byteLength;
   let i = 0;
@@ -472,10 +456,11 @@ function parseAVCNALu(pes) {
   let nalStartInPesStart = true;
   let getNalUStartIndex = i => {
     let codePrefix3 = (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
-    let codePrefix4 = (buffer[i] << 24)
-      | (buffer[i + 1] << 16)
-      | (buffer[i + 2] << 8)
-      | buffer[i + 3];
+    let codePrefix4 =
+      (buffer[i] << 24) |
+      (buffer[i + 1] << 16) |
+      (buffer[i + 2] << 8) |
+      buffer[i + 3];
     if (codePrefix4 === 0x00000001 || codePrefix3 === 0x000001) {
       return {
         index: i,
@@ -500,7 +485,7 @@ function parseAVCNALu(pes) {
           nalType: nalUnit[0] & 0x1f
         });
         if ((nalUnit[0] & 0x1f) === 5) {
-          logger.error('detect IDR');
+          logger.warn('detect IDR');
         }
       }
       if (!nalStartInPesStart) {
@@ -523,7 +508,6 @@ function parseAVCNALu(pes) {
   }
   if (units.length === 0) {
     // 这个pes中不存在Nal unit,则可能上一个pes的Nal unit还没结束
-    // todo: 把这个pes舔到上一个pes的最后一个nal unit中
     logger.log('%c pes中不存在 Nal  unit', 'background: #000; color: #ffffff');
   }
   return units;
@@ -543,7 +527,7 @@ function parseAVC(pes, lastPes) {
   const nalUnits = parseAVCNALu(pes);
   pes.data = null;
   let spsFound = false;
-  let createAVCSample = function (key, pts, dts, debug) {
+  let createAVCSample = function(key, pts, dts, debug) {
     return {
       key: key,
       pts: pts,
@@ -588,7 +572,6 @@ function parseAVC(pes, lastPes) {
       case 9:
         if (avcSample) {
           // 下一采样【下一帧】开始了，要把这一个采样入track
-          logger.log('access units order: ', sampleOrder);
           sampleOrder = '';
           paddingAndPushSample();
         }
@@ -617,10 +600,10 @@ function parseAVC(pes, lastPes) {
         if (spsFound && unit.data.length > 4) {
           let sliceType = new ExpGolomb(unit.data).readSliceType();
           if (
-            sliceType === 2
-            || sliceType === 4
-            || sliceType === 7
-            || sliceType === 9
+            sliceType === 2 ||
+            sliceType === 4 ||
+            sliceType === 7 ||
+            sliceType === 9
           ) {
             avcSample.key = true;
           }
@@ -788,14 +771,16 @@ function parseADTS(payload, startDts) {
       aacTrack.samplerateIndex = (payload[start] & 0x3c) >> 2;
       aacTrack.samplerate = FREQUENCIES_MAP[aacTrack.samplerateIndex];
       aacTrack.timescale = aacTrack.samplerate;
-      aacTrack.channel = ((payload[start] & 0x01) << 2) | ((payload[start + 1] & 0xc0) >> 6);
+      aacTrack.channel =
+        ((payload[start] & 0x01) << 2) | ((payload[start + 1] & 0xc0) >> 6);
       aacTrack.frameDuration = getFrameDuration(aacTrack.samplerate);
       getAudioConfig(aacTrack);
     }
     start += 1;
-    const frameLength = ((payload[start] & 0x03) << 11)
-      | (payload[start + 1] << 3)
-      | ((payload[start + 2] & 0xe0) >> 5);
+    const frameLength =
+      ((payload[start] & 0x03) << 11) |
+      (payload[start + 1] << 3) |
+      ((payload[start + 2] & 0xe0) >> 5);
     aacTrack.samples.push({
       data: payload.subarray(offset + headerSize, offset + frameLength),
       pts: startDts + aacTrack.frameDuration * frameIndex,
@@ -818,10 +803,10 @@ function getAudioConfig(aacTrack) {
     adtsExtensionSampleingIndex -= 3;
   } else {
     if (
-      audioCodec
-      && audioCodec.indexOf('mp4a.40.2') !== -1
-      && ((samplerateIndex >= 6 && aacTrack.channel === 1)
-        || (!audioCodec && aacTrack.channel === 1))
+      audioCodec &&
+      audioCodec.indexOf('mp4a.40.2') !== -1 &&
+      ((samplerateIndex >= 6 && aacTrack.channel === 1) ||
+        (!audioCodec && aacTrack.channel === 1))
     ) {
       adtsObjectType = 2;
       config = new Array(2);

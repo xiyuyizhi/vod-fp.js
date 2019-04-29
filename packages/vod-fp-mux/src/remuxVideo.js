@@ -33,7 +33,7 @@ function ptsNormalize(value, reference) {
   return value;
 }
 
-function remuxVideo(avcTrack, initSegment) {
+function remuxVideo(avcTrack, initSegment, timeOffset) {
   let samples = avcTrack.samples;
   let nbSamples = samples.length;
   if (!_initDts) {
@@ -60,10 +60,10 @@ function remuxVideo(avcTrack, initSegment) {
       mp4SampleDuration
     );
     logger.error(
-      `两个分片之间差了 ${(samples[0].dts - nextAvcDts)
-        / mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts)
-        / 90000
-        - lastDelta} s`
+      `两个分片之间差了 ${(samples[0].dts - nextAvcDts) /
+        mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts) /
+        90000 -
+        lastDelta} s`
     );
     lastDelta = (samples[0].dts - nextAvcDts) / 90000;
   }
@@ -72,13 +72,13 @@ function remuxVideo(avcTrack, initSegment) {
     sample.pts -= delta;
   });
   // 按dts排序
-  samples.sort(function (a, b) {
+  samples.sort(function(a, b) {
     const deltadts = a.dts - b.dts;
     const deltapts = a.pts - b.pts;
     return deltadts || deltapts;
   });
 
-  console.log('samples', samples);
+  logger.log('video samples', samples);
 
   let sample = samples[0];
   let firstDTS = Math.max(sample.dts, 0);

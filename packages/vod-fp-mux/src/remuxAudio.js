@@ -33,7 +33,7 @@ function ptsNormalize(value, reference) {
   return value;
 }
 
-function remuxAudio(aacTrack, initSegment) {
+function remuxAudio(aacTrack, initSegment, timeOffset) {
   if (!_audioInitDts) {
     _audioInitDts = aacTrack.samples[0].dts;
   }
@@ -50,20 +50,20 @@ function remuxAudio(aacTrack, initSegment) {
   let outputSamples = [];
   let nextAudioPts = nextAacDts;
 
-  inputSamples.forEach(function (sample) {
+  inputSamples.forEach(function(sample) {
     sample.pts = sample.dts = ptsNormalize(
       sample.pts - _audioInitDts,
-      0 * TIME_SCALE
+      timeOffset * TIME_SCALE
     );
   });
-  inputSamples = inputSamples.filter(function (sample) {
+  inputSamples = inputSamples.filter(function(sample) {
     return sample.pts >= 0;
   });
   if (inputSamples.length === 0) {
     return;
   }
 
-  for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
+  for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
     let sample = inputSamples[i];
     let delta;
     let pts = sample.pts;
@@ -159,7 +159,7 @@ function remuxAudio(aacTrack, initSegment) {
     outputSamples.push(mp4Sample);
     lastPTS = pts;
   }
-
+  logger.log('audio samples', outputSamples);
   let lastSampleDuration = 0;
   let nbSamples = outputSamples.length;
   // set last sample duration as being identical to previous sample
