@@ -1,5 +1,3 @@
+import * as F from './fp/core';
 
-
-import * as R from './fp';
-
-export { R };
+export { F };

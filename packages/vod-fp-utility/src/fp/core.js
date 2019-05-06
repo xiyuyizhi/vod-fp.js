@@ -20,7 +20,7 @@ const compose = (...fns) => {
   };
 };
 
-const map = curry((fn, list) => list.map(fn));
+const map = curry((fn, mappable) => mappable.map(fn));
 const forEach = curry((fn, list) => list.forEach(fn));
 const filter = curry((fn, list) => list.filter(fn));
 const split = curry((a, b) => b.split(a));
@@ -33,7 +33,7 @@ const splitOnce = curry((a, b) => {
 });
 
 const head = a => a[0];
-const rest = a => a.slice(1);
+const tail = a => a.slice(1);
 const identity = a => a;
 
 const splitMap = curry((fn1, fn2, list) => {
@@ -48,6 +48,8 @@ const ifElse = curry((condition, fn1, fn2, arg) => {
   return fn2(arg);
 });
 
+const prop = curry((a, b) => b[a]);
+
 const trace = a => {
   console.log(a);
   return a;
@@ -60,11 +62,12 @@ export {
   forEach,
   filter,
   head,
-  rest,
+  tail,
   identity,
   split,
   splitOnce,
   splitMap,
+  prop,
   ifElse,
   trace
 };

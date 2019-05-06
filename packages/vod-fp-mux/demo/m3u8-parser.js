@@ -2,7 +2,7 @@
  * https://tools.ietf.org/html/draft-pantos-http-live-streaming-23
  */
 
-import { R } from 'vod-fp-utility';
+import { F } from 'vod-fp-utility';
 
 const {
   curry,
@@ -11,14 +11,14 @@ const {
   forEach,
   filter,
   head,
-  rest,
+  tail,
   identity,
   split,
   splitOnce,
   splitMap,
   ifElse,
   trace
-} = R;
+} = F;
 
 const TAG_PATTERN = /EXT(?:-X-)(.+)/;
 const SPLIT_COMMA_PATTERN = /,(?:(?=[a-zA-Z-]+(?:=|"|$)))/;
@@ -105,11 +105,11 @@ const extractTag = compose(
   combinePair,
   splitMap(keyFormat, extractAttrs),
   splitOnceByColon,
-  rest
+  tail
 );
 
 const getUrl = curry((baseUrl, url) => {
-  if (!/(https|http)/.test(url)) {
+  if (!/(https?)/.test(url)) {
     return { url: baseUrl + url };
   }
   return { url };
@@ -123,7 +123,7 @@ const structureM3u8 = (m3u8, baseUrl) => {
   const getUrlWithBase = getUrl(baseUrl);
   return compose(
     map(ifElse(isTag, extractTag, getUrlWithBase)),
-    rest,
+    tail,
     splitLines
   )(m3u8);
 };
