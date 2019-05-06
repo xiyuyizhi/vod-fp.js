@@ -1,7 +1,8 @@
-import mux from '../src/mux';
+import { logger } from "../src/utils/logger"
+import { TsMux, Mp4Parser } from '../src';
 import parser from './m3u8-parser';
-import './mp4-mux';
-console.log('%c mux start!', 'background: #222; color: #bada55');
+
+logger.log('%c mux start!', 'background: #222; color: #bada55');
 
 let videoMedia = document.querySelector('#video');
 
@@ -14,14 +15,15 @@ window.serializeBuffer = () => {
   }
   return arr;
 };
+
 function getPlayList(m3u8Url) {
   return fetch(m3u8Url)
     .then(res => res.text())
     .then(res => {
       let playlist = parser(res);
-      console.log(playlist);
+      logger.log(playlist);
       if (playlist.error) {
-        console.error('error:', playlist.msg);
+        logger.error('error:', playlist.msg);
       }
       return playlist;
     });
@@ -31,15 +33,6 @@ function getStream(url) {
   return fetch(url).then(res => res.arrayBuffer());
 }
 
-let logger = {
-  log: (...rest) => {
-    console.log(...rest);
-  },
-  warn: (...rest) => {
-    console.warn(...rest);
-  },
-  error: console.error.bind(console)
-};
 
 let mediaSource;
 let videoBuffer;
@@ -54,7 +47,7 @@ function convertStrToBuffer(str) {
   return new Uint8Array(str.split('').map(x => x.charCodeAt(0)));
 }
 
-function converBufferToStr(buffer) {
+function convertBufferToStr(buffer) {
   let temp = [];
   buffer.forEach(b => {
     temp.push(String.fromCharCode(b));
@@ -79,7 +72,7 @@ function onSourceOpen() {
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
-  videoBuffer.addEventListener('updateend', function(_) {
+  videoBuffer.addEventListener('updateend', function (_) {
     logger.log('video buffer update end');
     if (videoPending.length) {
       videoBuffer.appendBuffer(videoPending.shift());
@@ -93,7 +86,7 @@ function onSourceOpen() {
     }
   });
 
-  audioBuffer.addEventListener('updateend', function(_) {
+  audioBuffer.addEventListener('updateend', function (_) {
     logger.log('audio buffer update end');
     if (audioPending.length) {
       audioBuffer.appendBuffer(audioPending.shift());
@@ -116,7 +109,7 @@ function onSourceOpen() {
 
 attachMedia();
 
-mux.on('MUX_DATA', buff => {
+TsMux.tsDemux.on('MUX_DATA', buff => {
   if (!buff.length) return;
   if (!videoBuffer.updating && videoPending.length === 0) {
     // const a = document.createElement('a');
@@ -136,7 +129,7 @@ function loadstream(segment) {
   getStream(segment.url).then(buffer => {
     loadstream.loading = false;
     segment.loaded = true;
-    mux(new Uint8Array(buffer), segment.id);
+    TsMux.tsDemux(buffer, segment.id);
   });
 }
 
@@ -164,7 +157,7 @@ function startTimer(segments) {
       getBufferedInfo() > 40
     )
       return;
-    console.log(`--------current segment ${current.id}-------------`);
+    logger.log(`--------current segment ${current.id}-------------`);
     loadstream(current);
   }, 1000);
 }
@@ -187,4 +180,24 @@ document.querySelector('#load').addEventListener('click', e => {
   getPlayList(url).then(pl => {
     startTimer(pl.segments);
   });
+});
+
+
+//-------------mp4 parse------------
+
+const localBfStr = localStorage.getItem('mp4');
+if (localBfStr) {
+  logger.log(Mp4Parser.parseMp4(convertStrToBuffer(localBfStr)));
+}
+
+document.querySelector('#mp4Upload').addEventListener('change', e => {
+  const [file] = e.target.files;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const buffer = e.target.result;
+    const bfStr = convertBufferToStr(new Uint8Array(buffer));
+    localStorage.setItem('mp4', bfStr);
+    logger.log(Mp4Parser.parseMp4(buffer));
+  };
+  reader.readAsArrayBuffer(file);
 });

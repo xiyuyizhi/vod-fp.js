@@ -1,119 +1,43 @@
 /**
- console.log('%c mux start!', 'background: #222; color: #bada55');
- *  Carriage of NAL unit structured video in the ISO Base Media File Format
+ * BOX
+ * ftyp
+ * moov
+ *    mvhd
+ *    trak
+ *        tkhd
+ *        mdia  track media box
+ *            mdhd
+ *            hdlr  handler reference box [video | sound | hint | ...]
+ *            minf  // media info box
+ *                vmhd
+ *                stbl  // sample table box
+ *                    stsd  // sample description box
+ *                        avc1
+ *                            avcC
+ *                            btrt
+ *                        mp4a
+ *                    stts   // decoding time to sample box
+ *                    ctts   // composition time to sample box
+ *                    stss   // sync sample box
+ *                    stdp   // independent and disposable samples box
+ *                 dinf   // data information box
+ *        edts  // edit box
+ *    trak
+ *    meta //metadata box
+ *    mvex  // movie extends box
+ *    pssh
+ * moof
+ *    mfhd
+ *    traf
+ * mdat
  */
+
+import { logger } from './utils/logger';
+import { BytesForward, getBoxType } from './utils/BytesForward';
 
 const MAX_UINT32_COUNT = Math.pow(2, 32);
 
-const converBufferToStr = bf => {
-  let s = '';
-  for (let i = 0; i < bf.byteLength; i++) {
-    s += String.fromCharCode(bf[i]);
-  }
-  return s;
-};
-
-const converStrToBuffer = str => {
-  const buffer = new Uint8Array(str.length);
-  for (let i = 0, len = str.length; i < len; i++) {
-    buffer[i] = str.charCodeAt(i);
-  }
-  return buffer.buffer;
-};
-
-class BytesForward {
-  constructor(buffer, offset = 0) {
-    this._offset = offset;
-    this._buffer = buffer;
-  }
-  get offset() {
-    return this._offset;
-  }
-
-  set offset(of) {
-    this._offset = of;
-  }
-
-  forward(bytes) {
-    this._offset += bytes;
-  }
-
-  getHumanValue() {
-    return converBufferToStr(
-      this._buffer.subarray(this._offset, this._offset + 4)
-    );
-  }
-  sub(length) {
-    if (length) {
-      return this._buffer.subarray(this._offset, this._offset + length);
-    }
-    return this._buffer.subarray(this._offset, length);
-  }
-
-  readBytes(count) {
-    const { _offset, _buffer } = this;
-    let arr = [];
-    for (let i = 0; i < count; i++) {
-      arr.push(_buffer[_offset + i]);
-    }
-    return arr;
-  }
-
-  read8bitsValue() {
-    return this._buffer[this._offset];
-  }
-
-  read16bitsValue() {
-    const { _offset, _buffer } = this;
-    return (_buffer[_offset] << 8) | _buffer[_offset + 1];
-  }
-  read24bitsValue() {
-    const { _offset, _buffer } = this;
-    return (
-      (_buffer[_offset] << 16) |
-      (_buffer[_offset + 1] << 8) |
-      _buffer[_offset + 12]
-    );
-  }
-
-  read32bitsValue() {
-    const { _offset, _buffer } = this;
-    return (
-      _buffer[_offset] * (1 << 24) +
-      _buffer[_offset + 1] * (1 << 16) +
-      _buffer[_offset + 2] * (1 << 8) +
-      _buffer[_offset + 3]
-    );
-  }
-}
-
-const localBfStr = localStorage.getItem('mp4');
-if (localBfStr) {
-  parse(converStrToBuffer(localBfStr));
-}
-
-document.querySelector('#mp4Upload').addEventListener('change', e => {
-  const [file] = e.target.files;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const buffer = e.target.result;
-    const bfStr = converBufferToStr(new Uint8Array(buffer));
-    // localStorage.setItem('mp4', bfStr);
-    parse(buffer);
-  };
-  reader.readAsArrayBuffer(file);
-});
-
-const Mp4_Types = {
-  ftyp: [],
-  moof: [],
-  moov: [],
-  mdat: []
-};
-
-Object.keys(Mp4_Types).forEach(type => {
-  Mp4_Types[type] = type.split('').map((x, index) => type.charCodeAt(index));
-});
+function fmp4Probe() {}
 
 /**
  *  ISO base media file format
@@ -122,101 +46,29 @@ Object.keys(Mp4_Types).forEach(type => {
  *      Brands 信息,一个 brand 是四字符codes
  *      两种类型的 brand , [major_brand,compatible_brands]
  */
-function parse(buffer) {
-  console.log(`--------mp4 parser,${buffer.byteLength}-----------`);
-  console.log(buffer);
-  parseBox(new Uint8Array(buffer));
-}
-
-function parseBox(buffer) {
-  let boxStore = splitBox(buffer);
-  function extractBoxsList(list) {
-    list.forEach(box => {
-      switch (box.type) {
-        case 'ftyp':
-        case 'styp':
-          box.data = parseFtypBox(box.payload, box.length - 8);
-          break;
-        case 'mvhd':
-          box.data = parseMvhd(box.payload, box.length);
-          break;
-        case 'moov':
-        case 'trak':
-        case 'mvex':
-        case 'mdia':
-        case 'minf':
-        case 'dinf':
-        case 'moof':
-        case 'traf':
-        case 'stbl':
-          box.data = splitBox(box.payload);
-          extractBoxsList(box.data);
-          break;
-        case 'stsd':
-          box.data = splitBox(box.payload, 8);
-          extractBoxsList(box.data);
-          break;
-        case 'tkhd':
-          box.data = parseTrckHeader(box.payload);
-          break;
-        case 'mdhd':
-          box.data = parseMdhd(box.payload);
-          break;
-        case 'hdlr':
-          box.data = parseHdlr(box.payload);
-          break;
-        case 'trex':
-          box.data = parseTrex(box.payload);
-          break;
-        case 'trun':
-          box.data = parseTrun(box.payload);
-          break;
-        case 'tfdt':
-          box.data = parseTfdt(box.payload);
-          break;
-        case 'avc1':
-          box.data = parseAvc1(box.payload);
-          extractBoxsList(box.data);
-          break;
-        case 'avcC':
-          box.data = parseAvcC(box.payload);
-          break;
-        case 'btrt':
-          box.data = parseBtrt(box.payload);
-          break;
-        case 'pssh':
-          box.data = parsePssh(box.payload);
-          break;
-        default:
-          console.warn('unknow resolve ', box.type);
-          break;
-      }
-      if (box.data) {
-        box.payload = null;
-        delete box.payload;
-      }
-    });
-  }
+function parseMp4(buffer) {
+  logger.log(`--------mp4 parser,${buffer.byteLength}-----------`);
+  const boxStore = splitBox(
+    buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer
+  );
   extractBoxsList(boxStore);
-  console.log(boxStore);
+  return boxStore;
 }
 
 function splitBox(buffer, offset = 0) {
   let boxStore = [];
-  for (; offset < buffer.byteLength;) {
+  for (; offset < buffer.byteLength; ) {
     const len =
       buffer[offset] * (1 << 24) +
       buffer[offset + 1] * (1 << 16) +
       buffer[offset + 2] * (1 << 8) +
       buffer[offset + 3];
-    if (!len) {
-      console.error('split box occur len 0');
-      return [];
+    if (len === 0) {
+      continue;
     }
     let box = extractBox(offset, offset + len, buffer);
     boxStore.push(box);
     offset += len;
-    // i += len;
   }
   return boxStore;
 }
@@ -225,9 +77,77 @@ function extractBox(start, length, buffer) {
   const box = buffer.subarray(start, length);
   return {
     length: box.byteLength,
-    type: converBufferToStr(box.subarray(4, 8)),
+    type: getBoxType(box, 4),
     payload: box.subarray(8)
   };
+}
+
+function extractBoxsList(boxList) {
+  boxList.forEach(box => {
+    switch (box.type) {
+      case 'ftyp':
+      case 'styp':
+        box.data = parseFtypBox(box.payload, box.length - 8);
+        break;
+      case 'mvhd':
+        box.data = parseMvhd(box.payload, box.length);
+        break;
+      case 'moov':
+      case 'trak':
+      case 'mvex':
+      case 'mdia':
+      case 'minf':
+      case 'dinf':
+      case 'moof':
+      case 'traf':
+      case 'stbl':
+        box.data = splitBox(box.payload);
+        extractBoxsList(box.data);
+        break;
+      case 'stsd':
+        box.data = splitBox(box.payload, 8);
+        extractBoxsList(box.data);
+        break;
+      case 'tkhd':
+        box.data = parseTrckHeader(box.payload);
+        break;
+      case 'mdhd':
+        box.data = parseMdhd(box.payload);
+        break;
+      case 'hdlr':
+        box.data = parseHdlr(box.payload);
+        break;
+      case 'trex':
+        box.data = parseTrex(box.payload);
+        break;
+      case 'trun':
+        box.data = parseTrun(box.payload);
+        break;
+      case 'tfdt':
+        box.data = parseTfdt(box.payload);
+        break;
+      case 'avc1':
+        box.data = parseAvc1(box.payload);
+        extractBoxsList(box.data);
+        break;
+      case 'avcC':
+        box.data = parseAvcC(box.payload);
+        break;
+      case 'btrt':
+        box.data = parseBtrt(box.payload);
+        break;
+      case 'pssh':
+        box.data = parsePssh(box.payload);
+        break;
+      default:
+        logger.warn('unknow box ', box.type);
+        break;
+    }
+    if (box.data) {
+      box.payload = null;
+      delete box.payload;
+    }
+  });
 }
 
 function parseFtypBox(payload, length) {
@@ -240,8 +160,8 @@ function parseFtypBox(payload, length) {
   ftypBox.version = bf.read32bitsValue();
   bf.forward(4);
   let compatible = [];
-  for (let i = bf.offset; i < length;) {
-    ftypBox.compatible.push(converBufferToStr(payload.subarray(i, i + 4)));
+  for (let i = bf.offset; i < length; ) {
+    ftypBox.compatible.push(getBoxType(payload, i));
     i += 4;
   }
   bf = null;
@@ -314,15 +234,15 @@ function parseTrckHeader(payload) {
 
 function parseMdhd(payload) {
   /**
-  * Fullbox
-  * 
-  */
+   * Fullbox
+   *
+   */
   const ret = {};
   let bf = new BytesForward(payload);
   const version = payload[0];
   bf.forward(4);
   if (version === 1) {
-    bf.forward(4 * 4)
+    bf.forward(4 * 4);
     ret.timescale = bf.read32bitsValue();
     bf.forward(4);
     ret.duration = bf.read32bitsValue() * MAX_UINT32_COUNT;
@@ -509,9 +429,9 @@ function parseAvc1(payload) {
   let bf = new BytesForward(payload);
   bf.forward(6 + 2);
   bf.forward(2 + 2 + 4 * 3);
-  // console.log('width', bf.read16bitsValue());
+  // logger.log('width', bf.read16bitsValue());
   bf.forward(2);
-  // console.log('height', bf.read16bitsValue());
+  // logger.log('height', bf.read16bitsValue());
   bf.forward(2);
   bf.forward(4 + 4 + 4 + 2 + 32 + 2 + 2);
   return splitBox(bf.sub());
@@ -577,46 +497,14 @@ function parsePssh(payload) {
     let i = 0;
     while (i < kidCount) {
       ret.kids.push(bf.readBytes(16));
-      bf.forward(16)
+      bf.forward(16);
     }
   }
   const dataSize = bf.read32bitsValue();
   bf.forward(4);
   ret.dataSize = dataSize;
-  ret.data = bf.readBytes(dataSize)
+  ret.data = bf.readBytes(dataSize);
   return ret;
 }
 
-/**
- * BOX
- * ftyp
- * moov
- *    mvhd
- *    trak
- *        tkhd
- *        mdia  track media box
- *            mdhd
- *            hdlr  handler reference box [video | sound | hint | ...]
- *            minf  // media info box
- *                vmhd
- *                stbl  // sample table box
- *                    stsd  // sample description box
- *                        avc1
- *                            avcC
- *                            btrt
- *                        mp4a
- *                    stts   // decoding time to sample box
- *                    ctts   // composition time to sample box
- *                    stss   // sync sample box
- *                    stdp   // independent and disposable samples box
- *                 dinf   // data information box
- *        edts  // edit box
- *    trak
- *    meta //metadata box
- *    mvex  // movie extends box
- *    pssh
- * moof
- *    mfhd
- *    traf
- * mdat
- */
+export { parseMp4, fmp4Probe };

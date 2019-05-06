@@ -1,18 +1,9 @@
-import ExpGolomb from './exp-golomb';
-import { remux } from './remux';
 
-let logger = {
-  log: (...rest) => {
-    console.log(...rest);
-  },
-  warn: (...rest) => {
-    console.warn(...rest);
-  },
-  error: console.error.bind(console)
-};
+import { logger } from "../utils/logger"
+import ExpGolomb from '../utils/exp-golomb';
+import tsRemux from '../remux/ts-remux';
 
-// logger.log = () => {};
-// logger.warn = () => {};
+
 
 const FREQUENCIES_MAP = {
   0: 96000,
@@ -32,28 +23,27 @@ const FREQUENCIES_MAP = {
 
 let pmtId;
 let streamInfo;
-let avcData;
-let aacData;
 let restNaluBuffer = null; // 暂存pes开头那些属于上一个 pes最后一个nalu 的数据
-let avcTrack = {
-  samples: [],
-  inputTimeScale: 90000,
-  timescale: 90000,
-  id: 1, // video
-  type: 'video',
-  sequenceNumber: 0,
-  pesData: null
-};
+let avcTrack = getDefaultAVCTrack();
 let aacTrack = getDefaultAACTrack();
-let sampleOrder = '';
 let avcSample = null;
 
-export default mux;
+function getDefaultAVCTrack() {
+  return {
+    samples: [],
+    inputTimeScale: 90000,
+    timescale: 90000,
+    id: 1, // video
+    type: 'video',
+    sequenceNumber: 0,
+    pesData: null
+  };
+}
 
 function getDefaultAACTrack() {
   return {
     samples: [],
-    id: 2,
+    id: 2, // audio
     type: 'audio',
     len: 0,
     samplerate: 0,
@@ -63,32 +53,35 @@ function getDefaultAACTrack() {
 }
 
 function reset(sequenceNumber) {
-  avcTrack.pesData = null;
-  avcTrack.samples = [];
-  avcTrack.sequenceNumber = sequenceNumber;
-  sampleOrder = '';
   avcSample = null;
+  avcTrack = getDefaultAVCTrack();
   aacTrack = getDefaultAACTrack();
+  avcTrack.sequenceNumber = sequenceNumber;
   aacTrack.sequenceNumber = sequenceNumber;
 }
 
-function mux(buffer, sequenceNumber) {
-  let bf = buffer;
+function tsProbe(buffer) {
   if (buffer instanceof ArrayBuffer) {
-    bf = new Uint8Array(buffer);
+    buffer = new Uint8Array(buffer);
+  }
+  if (probe(buffer) === -1) return false;
+  return true;
+}
+
+function tsDemux(buffer, sequenceNumber = 0) {
+  if (buffer instanceof ArrayBuffer) {
+    buffer = new Uint8Array(buffer);
   }
   reset(sequenceNumber);
-  const syncOffset = _probe(buffer);
+  const syncOffset = probe(buffer);
   logger.log('监测ts流第一个同步字节的位置: ', syncOffset);
-
   let len = buffer.byteLength;
   len -= (len - syncOffset) % 188;
-  // reset avcData for new ts stream
-  for (let i = syncOffset, j = 0; i < len; ) {
+  for (let i = syncOffset, j = 0; i < len;) {
     let payload;
     let header;
     let adaptionsOffset = 0;
-    header = parseTsHeaderInfo(buffer.subarray(i, i + 4));
+    header = parseTsHeader(buffer.subarray(i, i + 4));
     payload = buffer.subarray(i + 4, i + 188);
     if (
       header.adaptationFiledControl === 3 ||
@@ -113,7 +106,7 @@ function mux(buffer, sequenceNumber) {
   avcTrack.pesData = null;
   aacTrack.pesData = null;
   try {
-    const { video, audio } = remux(avcTrack, aacTrack);
+    const { video, audio } = tsRemux(avcTrack, aacTrack);
     mux.emit('MUX_DATA', [video, audio]);
   } catch (e) {
     console.log('error', e);
@@ -121,24 +114,24 @@ function mux(buffer, sequenceNumber) {
   }
 }
 
-mux.eventBus = {};
+tsDemux.eventBus = {};
 
-mux.on = (event, listener) => {
-  if (mux.eventBus[event]) {
-    mux.eventBus[event].push(listener);
+tsDemux.on = (event, listener) => {
+  if (tsDemux.eventBus[event]) {
+    tsDemux.eventBus[event].push(listener);
   } else {
-    mux.eventBus[event] = [listener];
+    tsDemux.eventBus[event] = [listener];
   }
 };
 
-mux.emit = (event, data) => {
-  let listeners = mux.eventBus[event];
+tsDemux.emit = (event, data) => {
+  let listeners = tsDemux.eventBus[event];
   listeners.forEach(listener => {
     listener(data);
   });
 };
 
-function _probe(data) {
+function probe(data) {
   const len = Math.min(1000, data.byteLength - 3 * 188);
   for (let i = 0; i < len; i++) {
     if (
@@ -152,21 +145,7 @@ function _probe(data) {
   return -1;
 }
 
-function _tsPacketHeader(data, start) {
-  const header = data.subarray(start, start + 4);
-  return [...header]
-    .map(x => x.toString(2))
-    .map(x => _paddingLeft(x, 8 - x.length, '0'));
-}
-
-function _paddingLeft(origin, count, val) {
-  if (count) {
-    return new Array(count).fill(val).join('') + origin;
-  }
-  return origin;
-}
-
-function parseTsHeaderInfo(data) {
+function parseTsHeader(data) {
   /** https://en.wikipedia.org/wiki/MPEG_transport_stream
    * 第一字节 0x47
    * 第二字节:
@@ -256,7 +235,7 @@ function parsePayload(payload, offset, header) {
       );
       break;
     default:
-      console.warn('unknow pid ', header.pid);
+      logger.warn('unknow pid ', header.pid);
   }
 }
 
@@ -527,7 +506,7 @@ function parseAVC(pes, lastPes) {
   const nalUnits = parseAVCNALu(pes);
   pes.data = null;
   let spsFound = false;
-  let createAVCSample = function(key, pts, dts, debug) {
+  let createAVCSample = function (key, pts, dts, debug) {
     return {
       key: key,
       pts: pts,
@@ -572,14 +551,11 @@ function parseAVC(pes, lastPes) {
       case 9:
         if (avcSample) {
           // 下一采样【下一帧】开始了，要把这一个采样入track
-          sampleOrder = '';
           paddingAndPushSample();
         }
-        sampleOrder += '|AUD ';
         avcSample = createAVCSample(false, pes.pts, pes.dts);
         break;
       case 5:
-        sampleOrder += '->IDR ';
         if (!avcSample) {
           avcSample = createAVCSample(true, pes.pts, pes.dts);
         }
@@ -588,7 +564,6 @@ function parseAVC(pes, lastPes) {
         avcTrack.key = true;
         break;
       case 1:
-        sampleOrder += '->NDR ';
         if (!avcSample) {
           avcSample = createAVCSample(true, pes.pts, pes.dts);
         }
@@ -611,17 +586,14 @@ function parseAVC(pes, lastPes) {
         break;
       case 7:
         spsFound = true;
-        sampleOrder += '->SPS ';
         parseSPS(unit);
         break;
       case 8:
-        sampleOrder += '->PPS ';
         if (!avcTrack.pps) {
           avcTrack.pps = [unit.data];
         }
         break;
       default:
-        sampleOrder += `->unknow ${unit.nalType}`;
         logger.warn(`unknow ${unit.nalType}`);
     }
     if (avcSample && [1, 5, 6, 7, 8].includes(unit.nalType)) {
@@ -692,7 +664,7 @@ function discardEPB(data) {
   newData = new Uint8Array(newLength);
   let sourceIndex = 0;
 
-  for (i = 0; i < newLength; sourceIndex++, i++) {
+  for (i = 0; i < newLength; sourceIndex++ , i++) {
     if (sourceIndex === EPBPositions[0]) {
       // Skip this byte
       sourceIndex++;
@@ -757,7 +729,7 @@ function parseADTS(payload, startDts) {
   while (offset < payload.byteLength) {
     let start = offset;
     if (!offset[start] === 255 && (offset[start + 1] & 0xf0) === 0xf0) {
-      console.warn('aac PES payload not start with adts header');
+      logger.warn('aac PES payload not start with adts header');
       offset += 1;
       continue;
     }
@@ -829,4 +801,10 @@ function getAudioConfig(aacTrack) {
 
 function getFrameDuration(samplerate) {
   return (1024 * 90000) / samplerate;
+}
+
+
+export {
+  tsDemux,
+  tsProbe
 }

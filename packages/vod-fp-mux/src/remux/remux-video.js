@@ -1,15 +1,11 @@
-import MP4 from './Mp4Box';
+import { logger } from "../utils/logger"
+import MP4 from '../utils/Mp4Box';
 
 let nextAvcDts = 0;
 let _initDts = 0;
 let lastDelta = 0;
 let mp4SampleDuration;
 
-const logger = {
-  log: console.log.bind(console),
-  warn: console.warn.bind(console),
-  error: console.error.bind(console)
-};
 
 function ptsNormalize(value, reference) {
   let offset;
@@ -61,9 +57,9 @@ function remuxVideo(avcTrack, initSegment, timeOffset) {
     );
     logger.error(
       `两个分片之间差了 ${(samples[0].dts - nextAvcDts) /
-        mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts) /
-        90000 -
-        lastDelta} s`
+      mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts) /
+      90000 -
+      lastDelta} s`
     );
     lastDelta = (samples[0].dts - nextAvcDts) / 90000;
   }
@@ -72,7 +68,7 @@ function remuxVideo(avcTrack, initSegment, timeOffset) {
     sample.pts -= delta;
   });
   // 按dts排序
-  samples.sort(function(a, b) {
+  samples.sort(function (a, b) {
     const deltadts = a.dts - b.dts;
     const deltapts = a.pts - b.pts;
     return deltadts || deltapts;

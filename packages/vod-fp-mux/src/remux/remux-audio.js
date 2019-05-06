@@ -1,11 +1,7 @@
-import MP4 from './Mp4Box';
-import AAC from './aac';
+import { logger } from "../utils/logger"
+import MP4 from '../utils/Mp4Box';
+import AAC from '../utils/aac';
 
-const logger = {
-  log: console.log.bind(console),
-  warn: console.warn.bind(console),
-  error: console.error.bind(console)
-};
 
 const TIME_SCALE = 90000;
 let nextAacDts = 0;
@@ -50,20 +46,20 @@ function remuxAudio(aacTrack, initSegment, timeOffset) {
   let outputSamples = [];
   let nextAudioPts = nextAacDts;
 
-  inputSamples.forEach(function(sample) {
+  inputSamples.forEach(function (sample) {
     sample.pts = sample.dts = ptsNormalize(
       sample.pts - _audioInitDts,
       timeOffset * TIME_SCALE
     );
   });
-  inputSamples = inputSamples.filter(function(sample) {
+  inputSamples = inputSamples.filter(function (sample) {
     return sample.pts >= 0;
   });
   if (inputSamples.length === 0) {
     return;
   }
 
-  for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
+  for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
     let sample = inputSamples[i];
     let delta;
     let pts = sample.pts;

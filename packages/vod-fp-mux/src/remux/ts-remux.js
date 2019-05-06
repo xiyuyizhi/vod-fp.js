@@ -1,16 +1,12 @@
-import MP4 from './Mp4Box';
-import { remuxVideo } from './remuxVideo';
-import { remuxAudio } from './remuxAudio';
+import { logger } from "../utils/logger"
+import MP4 from '../utils/Mp4Box';
+import { remuxVideo } from './remux-video';
+import { remuxAudio } from './remux-audio';
 
-const logger = {
-  log: console.log.bind(console),
-  warn: console.warn.bind(console),
-  error: console.error.bind(console)
-};
 
 let initSegmentGenerate = false;
 
-function remux(avcTrack, aacTrack, timeOffset) {
+function tsRemux(avcTrack, aacTrack, timeOffset) {
   logger.log('avcTrack', avcTrack);
   logger.log('aacTrack', aacTrack);
   let audioTimeOffset = timeOffset;
@@ -38,4 +34,4 @@ function remux(avcTrack, aacTrack, timeOffset) {
   };
 }
 
-export { remux };
+export default tsRemux;

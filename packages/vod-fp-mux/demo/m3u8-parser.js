@@ -109,7 +109,7 @@ const extractTag = compose(
 );
 
 const getUrl = curry((baseUrl, url) => {
-  if (!/(https?)/.test(url)) {
+  if (!/(https|http)/.test(url)) {
     return { url: baseUrl + url };
   }
   return { url };
