@@ -9,6 +9,10 @@ export default class Container {
     return new Container(value);
   }
 
+  value() {
+    return this.$value;
+  }
+
   map(f) {
     return Container.of(f(this.$value));
   }

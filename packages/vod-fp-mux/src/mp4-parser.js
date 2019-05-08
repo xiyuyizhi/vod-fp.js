@@ -155,7 +155,7 @@ function parseFtypBox(payload, length) {
   const ftypBox = {
     compatible: []
   };
-  ftypBox.major = bf.getHumanValue();
+  ftypBox.major = getBoxType(payload, 0);
   bf.forward(4);
   ftypBox.version = bf.read32bitsValue();
   bf.forward(4);
@@ -266,11 +266,8 @@ function parseHdlr(payload) {
    * int(32)[3] reserved = 0;
       string name
    */
-  let bf = new BytesForward(payload);
-  const ret = {};
-  bf.forward(4 + 4);
   return {
-    handlerType: bf.getHumanValue()
+    handlerType: getBoxType(payload, 8)
   };
 }
 
@@ -434,7 +431,7 @@ function parseAvc1(payload) {
   // logger.log('height', bf.read16bitsValue());
   bf.forward(2);
   bf.forward(4 + 4 + 4 + 2 + 32 + 2 + 2);
-  return splitBox(bf.sub());
+  return splitBox(bf.subarray());
 }
 
 function parseAvcC(payload) {
@@ -454,7 +451,7 @@ function parseAvcC(payload) {
   for (let i = 0; i < nbSps; i++) {
     const spsLen = bf.read16bitsValue();
     bf.forward(2);
-    ret.sps.push(bf.sub(spsLen));
+    ret.sps.push(bf.subarray(spsLen));
     bf.forward(spsLen);
   }
   const nbPps = bf.readBytes(1);
@@ -462,7 +459,7 @@ function parseAvcC(payload) {
   for (let i = 0; i < nbPps; i++) {
     const ppsLen = bf.read16bitsValue();
     bf.forward(2);
-    ret.pps.push(bf.sub(ppsLen));
+    ret.pps.push(bf.subarray(ppsLen));
     bf.forward(ppsLen);
   }
   bf = null;

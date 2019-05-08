@@ -1,10 +1,6 @@
 import Container from './Container';
 
 export default class Maybe extends Container {
-  constructor(value) {
-    super(value);
-  }
-
   static of(value) {
     return new Maybe(value);
   }
