@@ -1,6 +1,6 @@
-import Container from './Container';
+import Base from './Base';
 
-class Either extends Container {}
+class Either extends Base {}
 
 class Fail extends Either {
   static of(value) {
@@ -16,7 +16,7 @@ class Success extends Either {
     return new Success(value);
   }
   map(f) {
-    return Success.of(f(this.$value));
+    return Success.of(f(this._value));
   }
 }
 

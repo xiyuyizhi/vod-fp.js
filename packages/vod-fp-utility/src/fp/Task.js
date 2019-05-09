@@ -1,13 +1,17 @@
 import { compose } from './core';
+import { Fail, Success } from './Either';
+import { defer } from './_inner/defer';
+
 const STATE = {
   PENDING: 'pending',
-  FULLFILLED: 'fulfilled',
+  FULFILLED: 'fulfilled',
   REJECTED: 'rejected'
 };
 
 class Task {
   constructor(f) {
-    this.$state = STATE.PENDING;
+    this._value = STATE.PENDING;
+    this._queueCall = [];
     this.resolve = this.resolve.bind(this);
     this.reject = this.reject.bind(this);
     f.apply(null, [this.resolve, this.reject]);
@@ -17,22 +21,42 @@ class Task {
     return new Task(f);
   }
 
-  resolve(result) {
-    this.$state = STATE.FULLFILLED;
-    console.log('result...', result);
+  _reMount(target, mapList) {
+    while (mapList.length) {
+      target.map(mapList.shift());
+    }
   }
 
-  reject(err) {
-    this.$state = STATE.REJECTED;
+  _deferRun(result, Container) {
+    while (this._queueCall.length) {
+      let current = this._queueCall.shift();
+      result = current(Container.of(result));
+      if (result instanceof Task) {
+        this._reMount(result, this._queueCall.slice(0));
+        this._queueCall = [];
+      }
+    }
+  }
+
+  resolve(result) {
+    if (this._value != STATE.PENDING) return;
+    defer(() => {
+      this._value = STATE.FULFILLED;
+      this._deferRun(result, Success);
+    });
+  }
+
+  reject(result) {
+    if (this._value != STATE.PENDING) return;
+    defer(() => {
+      this._value = STATE.REJECTED;
+      this._deferRun(result, Fail);
+    });
   }
 
   map(f) {
-    return Task.of(
-      compose(
-        f,
-        this.resolve
-      )
-    );
+    this._queueCall.push(f);
+    return this;
   }
 }
 

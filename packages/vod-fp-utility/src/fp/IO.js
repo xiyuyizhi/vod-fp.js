@@ -1,6 +1,6 @@
-import Container from './Container';
+import Base from './Base';
 import { compose } from '../core';
-class IO extends Container {
+class IO extends Base {
   static of(fn) {
     return new IO(fn);
   }

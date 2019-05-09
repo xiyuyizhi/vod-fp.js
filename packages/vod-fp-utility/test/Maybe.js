@@ -1,4 +1,3 @@
-import Container from '../src/fp/Container.js';
 import Maybe from '../src/fp/Maybe.js';
 import { F } from '../src/index.js';
 

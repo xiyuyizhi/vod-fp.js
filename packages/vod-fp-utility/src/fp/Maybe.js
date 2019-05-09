@@ -1,16 +1,16 @@
-import Container from './Container';
+import Base from './Base';
 
-export default class Maybe extends Container {
+export default class Maybe extends Base {
   static of(value) {
     return new Maybe(value);
   }
 
   get isEmpty() {
-    return this.$value === undefined || this.$value === null;
+    return this._value === undefined || this._value === null;
   }
 
   map(fn) {
-    return this.isEmpty ? this : Maybe.of(fn(this.$value));
+    return this.isEmpty ? this : Maybe.of(fn(this._value));
   }
 
   toString() {

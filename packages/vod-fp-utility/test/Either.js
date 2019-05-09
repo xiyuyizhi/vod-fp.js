@@ -1,4 +1,3 @@
-import Container from '../src/fp/Container.js';
 import { Fail, Success, either } from '../src/fp/Either';
 import { F } from '../src/index.js';
 
