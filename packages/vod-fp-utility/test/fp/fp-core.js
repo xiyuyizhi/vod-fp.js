@@ -1,4 +1,4 @@
-import { F } from '../src/index.js';
+import { F } from '../../src/index.js';
 const chai = require('chai');
 chai.should();
 

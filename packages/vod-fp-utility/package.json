@@ -4,7 +4,7 @@
   "description": "",
   "main": "lib/vod-fp-utility.min.js",
   "scripts": {
-    "test": "BABEL_ENV=test mocha test  --require @babel/register --watch"
+    "test": "BABEL_ENV=test mocha test/**/**  --require @babel/register --watch"
   },
   "repository": {
     "type": "git",

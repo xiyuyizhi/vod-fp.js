@@ -1,5 +1,5 @@
-import { Fail, Success, either } from '../src/fp/Either';
-import { F } from '../src/index.js';
+import { Fail, Success, either } from '../../src/fp/Either';
+import { F } from '../../src/index.js';
 
 const chai = require('chai');
 chai.should();
