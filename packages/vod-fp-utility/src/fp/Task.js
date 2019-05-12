@@ -1,4 +1,4 @@
-import { compose } from './core';
+import { compose, map } from './core';
 import { Fail, Success } from './Either';
 import { defer } from './_inner/defer';
 
@@ -12,10 +12,10 @@ class Task {
   constructor(f) {
     this._state = STATE.PENDING;
     this._queueCall = [];
-    this._catchCall = null;
-    this.resolve = this.resolve.bind(this);
-    this.reject = this.reject.bind(this);
-    f.apply(null, [this.resolve, this.reject]);
+    this._errorCall = null;
+    this._resolve = this._resolve.bind(this);
+    this._reject = this._reject.bind(this);
+    f.apply(null, [this._resolve, this._reject]);
   }
 
   static of(f) {
@@ -34,53 +34,76 @@ class Task {
     this._queueCall = [];
   }
 
-  _reMount(target, mapList) {
+  _reMount(target, mapList, errorCall) {
     target._removeQueue();
     while (mapList.length) {
       target.map(mapList.shift());
     }
+    target._errorCall = errorCall;
   }
 
-  _deferRun(result, Container) {
+  _deferRun(result) {
+    if (!this._queueCall.length && result instanceof Fail && this._errorCall) {
+      this._errorCall(result.value());
+      return;
+    }
     while (this._queueCall.length) {
+      if (result instanceof Task) {
+        // map 中 return new Task,将剩余未执行的map function 挂到新生成的Task
+        this._reMount(
+          result,
+          [...result._queueCall, ...this._queueCall.slice(0)],
+          this._errorCall
+        );
+        this._queueCall = [];
+        this._errorCall = null;
+        continue;
+      }
       let current = this._queueCall.shift();
       try {
-        if (result instanceof Success || result instanceof Fail) {
-          result = current(result);
-        } else {
-          result = current(Container.of(result));
+        if (result instanceof Fail) {
+          if (this._errorCall) {
+            result = Success.of(this._errorCall(result.value()));
+            continue;
+          }
+          throw new Error('erro occur,but no .error() provide');
+        }
+        result = map(current, result); // return Success
+        if (
+          typeof result.value === 'function' &&
+          result.value() instanceof Task
+        ) {
+          result = result.value();
         }
       } catch (e) {
         result = Fail.of(`${e.constructor && e.constructor.name}:${e.message}`);
       }
-      if (result instanceof Task) {
-        this._reMount(result, [
-          ...result._queueCall,
-          ...this._queueCall.slice(0)
-        ]);
-        this._queueCall = [];
-      }
     }
   }
 
-  resolve(result) {
+  _resolve(result) {
     if (this._state != STATE.PENDING) return;
     defer(() => {
-      this._deferRun(result, Success);
+      this._deferRun(Success.of(result));
       this._state = STATE.FULFILLED;
     });
   }
 
-  reject(result) {
+  _reject(result) {
     if (this._state != STATE.PENDING) return;
     defer(() => {
-      this._deferRun(result, Fail);
+      this._deferRun(Fail.of(result));
       this._state = STATE.REJECTED;
     });
   }
 
   map(f) {
     this._queueCall.push(f);
+    return this;
+  }
+
+  error(f) {
+    this._errorCall = f;
     return this;
   }
 

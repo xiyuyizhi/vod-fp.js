@@ -5,7 +5,7 @@ const chai = require('chai');
 chai.should();
 const { map, prop, compose } = F;
 
-describe('test Either', () => {
+describe('Fp: test Either', () => {
   function isAgePermit(age) {
     if (age >= 18) {
       return Success.of(age);

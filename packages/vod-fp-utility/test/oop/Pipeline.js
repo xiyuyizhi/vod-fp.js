@@ -5,7 +5,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe.only('test PipeLine', function() {
+describe('OOp: test PipeLine', function() {
   let pipe1;
   let spy;
   beforeEach(() => {
@@ -33,6 +33,14 @@ describe.only('test PipeLine', function() {
     pipe1.push(1);
     spy.should.not.be.called();
     pipe1.flush();
+    spy.should.be.called();
+  });
+
+  it('Pipeline multi pipe flow', () => {
+    const pipe2 = new PipeLine();
+    pipe1.pipe(new PipeLine()).pipe(pipe2);
+    pipe2.on('data', spy);
+    pipe1.push(1);
     spy.should.be.called();
   });
 });

@@ -1,13 +1,13 @@
 import Task from '../../src/fp/Task';
-import { compose, map, split } from '../../src/fp/core';
-
+import { compose, map, split, head, trace } from '../../src/fp/core';
+import { either } from '../../src/fp/Either';
 const chai = require('chai');
 const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe('test Task', function() {
-  this.timeout(5000);
+describe('Fp: test Task', function() {
+  this.timeout(2000);
   let spy;
 
   beforeEach(() => {
@@ -19,7 +19,7 @@ describe('test Task', function() {
   });
 
   it('Task.map call', done => {
-    Task.of(resolve => resolve())
+    Task.of(resolve => resolve(1))
       .map(spy)
       .map(() => {
         spy.should.be.called();
@@ -27,15 +27,39 @@ describe('test Task', function() {
       });
   });
 
-  it('Task resolve Success', done => {
-    Task.of(resolve => resolve(1)).map(result => {
-      result.toString().should.be.equal('Success(1)');
+  it('Task resolve value', done => {
+    Task.of(resolve => resolve(1))
+      .map(result => {
+        result.should.be.equal(1);
+        done();
+      })
+      .error(() => {});
+  });
+
+  it('Task reject error', done => {
+    Task.of((resolve, reject) => reject(1))
+      .map(spy)
+      .error(err => {
+        err.should.be.equal(1);
+        spy.should.not.be.called();
+      })
+      .map(spy)
+      .map(() => {
+        spy.should.be.called();
+        done();
+      });
+  });
+
+  it('Task.resolve()', done => {
+    Task.resolve(1).map(result => {
+      result.should.be.equal(1);
       done();
     });
   });
-  it('Task reject Fail', done => {
-    Task.of((resolve, reject) => reject(1)).map(result => {
-      result.toString().should.be.equal('Fail(1)');
+
+  it('Task.reject()', done => {
+    Task.reject(1).error(err => {
+      err.should.be.equal(1);
       done();
     });
   });
@@ -43,10 +67,10 @@ describe('test Task', function() {
   it('Task resolve Another Task in map', done => {
     Task.of(resolve => resolve(1))
       .map(result => {
-        return Task.of(resolve => resolve(result.value() + 1));
+        return Task.of(resolve => resolve(result + 1));
       })
       .map(result => {
-        result.toString().should.be.equal('Success(2)');
+        result.should.be.equal(2);
         done();
       });
   });
@@ -55,12 +79,15 @@ describe('test Task', function() {
       .map(result => {
         return Task.of(resolve => {
           setTimeout(() => {
-            resolve(result.value() + 1);
-          }, 1500);
+            resolve(result + 1);
+          }, 100);
         });
       })
       .map(result => {
-        result.toString().should.be.equal('Success(2)');
+        result.should.be.equal(2);
+        done();
+      })
+      .error(err => {
         done();
       });
   });
@@ -69,12 +96,12 @@ describe('test Task', function() {
     Task.of(resolve => resolve('a'))
       .map(ret => {
         return new Task(resolve => {
-          resolve(ret.value() + 'b');
-        }).map(ret => ret.value() + 'c');
+          resolve(ret + 'b');
+        }).map(ret => ret + 'c');
       })
-      .map(ret => ret.value() + 'd')
+      .map(ret => ret + 'd')
       .map(ret => {
-        ret.value().should.be.equal('abcd');
+        ret.should.be.equal('abcd');
         done();
       });
   });
@@ -84,8 +111,10 @@ describe('test Task', function() {
       .map(result => {
         result += a;
       })
-      .map(result => {
-        result.value().should.be.equal('ReferenceError:a is not defined');
+      .map(spy)
+      .error(err => {
+        spy.should.not.be.called();
+        err.should.be.equal('ReferenceError:a is not defined');
         done();
       });
   });
@@ -100,42 +129,37 @@ describe('test Task', function() {
         add1
       )
     )(Task.of(resolve => resolve(1)));
-
     setTimeout(() => {
       spy.should.be.called();
-      done();
     }, 100);
+
+    const read = Task.of(resolve =>
+      setTimeout(() => {
+        resolve('123');
+      }, 300)
+    );
+
+    read
+      .map(split(' '))
+      .map(head)
+      .map(result => {
+        result.should.be.equal('123');
+        done();
+      });
   });
 
   it('ignore compose function when Task return Fail', done => {
     function addThrowError(v) {
       return v + a;
     }
-    map(
-      compose(
-        spy,
-        addThrowError
-      )
+    compose(
+      map(spy),
+      map(addThrowError)
     )(Task.of(resolve => resolve(1)));
-
     setTimeout(() => {
       spy.should.not.be.called();
       done();
     }, 100);
-  });
-
-  it('Task.resolve()', done => {
-    Task.resolve(1).map(result => {
-      result.value().should.be.equal(1);
-      done();
-    });
-  });
-
-  it('Task.reject()', done => {
-    Task.reject(1).map(err => {
-      err.toString().should.be.equal('Fail(1)');
-      done();
-    });
   });
 
   it('Task.cannel()', done => {

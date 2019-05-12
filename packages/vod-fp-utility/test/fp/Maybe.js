@@ -5,7 +5,7 @@ const chai = require('chai');
 chai.should();
 const { map, prop, compose } = F;
 
-describe('test Maybe', () => {
+describe('Fp: test Maybe', () => {
   it('#Maybe base flow', () => {
     Maybe.of(1)
       .toString()

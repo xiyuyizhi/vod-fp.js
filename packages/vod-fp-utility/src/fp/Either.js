@@ -1,5 +1,5 @@
 import Base from './Base';
-
+import { curry } from './core';
 class Either extends Base {}
 
 class Fail extends Either {
@@ -20,14 +20,14 @@ class Success extends Either {
   }
 }
 
-function either(fn1, fn2, e) {
-  if (e.constructor === Fail) {
+const either = curry((fn1, fn2, e) => {
+  if (e && e.constructor === Fail) {
     return fn1(e.value());
   }
-  if (e.constructor === Success) {
+  if (e && e.constructor === Success) {
     return fn2(e.value());
   }
-  throw new Error('params not contain a instance of Either');
-}
+  throw new Error('params not a Either');
+});
 
 export { Fail, Success, either };

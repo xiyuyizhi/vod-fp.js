@@ -2,7 +2,7 @@ import { F } from '../../src/index.js';
 const chai = require('chai');
 chai.should();
 
-describe('test fp base', () => {
+describe('Fp: test fp base', () => {
   it('test F.curry()', () => {
     const add = F.curry((a, b) => a + b);
     const add10 = add(10);

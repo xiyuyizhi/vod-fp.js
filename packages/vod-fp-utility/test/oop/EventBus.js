@@ -5,7 +5,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe.only('test Task', function() {
+describe('OOp: test Task', function() {
   let bus;
   let spy;
   beforeEach(() => {
