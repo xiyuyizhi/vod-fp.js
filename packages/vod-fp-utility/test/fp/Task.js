@@ -6,7 +6,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe.only('test Task', function() {
+describe('test Task', function() {
   this.timeout(5000);
   let spy;
 
@@ -18,7 +18,7 @@ describe.only('test Task', function() {
     spy = null;
   });
 
-  it('Task params function should bt called', done => {
+  it('Task.map call', done => {
     Task.of(resolve => resolve())
       .map(spy)
       .map(() => {

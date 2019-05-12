@@ -5,9 +5,23 @@ export default class Pipeline extends EventBus {
     super();
   }
 
-  pipe() {}
+  pipe(dest) {
+    this.on('data', data => {
+      dest.push(data);
+    });
+    this.on('done', source => {
+      dest.flush(source);
+    });
+    return dest;
+  }
 
-  push() {}
+  // override
+  push(data) {
+    this.emit('data', data);
+  }
 
-  flush() {}
+  // override
+  flush(source) {
+    this.emit('done', source);
+  }
 }
