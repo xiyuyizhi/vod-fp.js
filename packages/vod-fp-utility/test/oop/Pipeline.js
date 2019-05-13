@@ -1,4 +1,4 @@
-import PipeLine from '../../src/oop/Pipeline';
+import PipeLine from '../../src/oop/PipeLine';
 
 const chai = require('chai');
 const spies = require('chai-spies');

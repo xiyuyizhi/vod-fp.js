@@ -22,10 +22,10 @@ export default class EventBus {
     this.on(eventName, wrapper);
   }
 
-  emit(eventName, data) {
+  emit(eventName, ...params) {
     if (!this.events[eventName]) return;
     this.events[eventName].forEach(listener => {
-      listener(data);
+      listener(...params);
     });
   }
 

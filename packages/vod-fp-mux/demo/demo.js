@@ -1,4 +1,4 @@
-import { logger } from "../src/utils/logger"
+import { logger } from '../src/utils/logger';
 import { TsMux, Mp4Parser } from '../src';
 import parser from './m3u8-parser';
 
@@ -32,7 +32,6 @@ function getPlayList(m3u8Url) {
 function getStream(url) {
   return fetch(url).then(res => res.arrayBuffer());
 }
-
 
 let mediaSource;
 let videoBuffer;
@@ -72,7 +71,7 @@ function onSourceOpen() {
   if (videoBuffer) return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
-  videoBuffer.addEventListener('updateend', function (_) {
+  videoBuffer.addEventListener('updateend', function(_) {
     logger.log('video buffer update end');
     if (videoPending.length) {
       videoBuffer.appendBuffer(videoPending.shift());
@@ -86,7 +85,7 @@ function onSourceOpen() {
     }
   });
 
-  audioBuffer.addEventListener('updateend', function (_) {
+  audioBuffer.addEventListener('updateend', function(_) {
     logger.log('audio buffer update end');
     if (audioPending.length) {
       audioBuffer.appendBuffer(audioPending.shift());
@@ -146,7 +145,7 @@ function getBufferedInfo() {
 }
 
 let startLoadId = 0;
-let maxLoadCount = 140;
+let maxLoadCount = 1;
 function startTimer(segments) {
   // return;
   setInterval(() => {
@@ -181,7 +180,6 @@ document.querySelector('#load').addEventListener('click', e => {
     startTimer(pl.segments);
   });
 });
-
 
 //-------------mp4 parse------------
 

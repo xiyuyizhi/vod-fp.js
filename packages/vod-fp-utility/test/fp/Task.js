@@ -6,7 +6,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe('Fp: test Task', function() {
+describe.only('Fp: test Task', function() {
   this.timeout(2000);
   let spy;
 

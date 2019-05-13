@@ -1,9 +1,6 @@
-
-import { logger } from "../utils/logger"
+import { logger } from '../utils/logger';
 import ExpGolomb from '../utils/exp-golomb';
 import tsRemux from '../remux/ts-remux';
-
-
 
 const FREQUENCIES_MAP = {
   0: 96000,
@@ -77,7 +74,7 @@ function tsDemux(buffer, sequenceNumber = 0) {
   logger.log('监测ts流第一个同步字节的位置: ', syncOffset);
   let len = buffer.byteLength;
   len -= (len - syncOffset) % 188;
-  for (let i = syncOffset, j = 0; i < len;) {
+  for (let i = syncOffset, j = 0; i < len; ) {
     let payload;
     let header;
     let adaptionsOffset = 0;
@@ -107,10 +104,10 @@ function tsDemux(buffer, sequenceNumber = 0) {
   aacTrack.pesData = null;
   try {
     const { video, audio } = tsRemux(avcTrack, aacTrack);
-    mux.emit('MUX_DATA', [video, audio]);
+    tsDemux.emit('MUX_DATA', [video, audio]);
   } catch (e) {
     console.log('error', e);
-    mux.emit('MUX_DATA', []);
+    tsDemux.emit('MUX_DATA', []);
   }
 }
 
@@ -131,8 +128,8 @@ tsDemux.emit = (event, data) => {
   });
 };
 
-function probe(data) {
-  const len = Math.min(1000, data.byteLength - 3 * 188);
+function probe(buffer) {
+  const len = Math.min(1000, buffer.byteLength - 3 * 188);
   for (let i = 0; i < len; i++) {
     if (
       data[i] === 0x47 &&
@@ -506,7 +503,7 @@ function parseAVC(pes, lastPes) {
   const nalUnits = parseAVCNALu(pes);
   pes.data = null;
   let spsFound = false;
-  let createAVCSample = function (key, pts, dts, debug) {
+  let createAVCSample = function(key, pts, dts, debug) {
     return {
       key: key,
       pts: pts,
@@ -664,7 +661,7 @@ function discardEPB(data) {
   newData = new Uint8Array(newLength);
   let sourceIndex = 0;
 
-  for (i = 0; i < newLength; sourceIndex++ , i++) {
+  for (i = 0; i < newLength; sourceIndex++, i++) {
     if (sourceIndex === EPBPositions[0]) {
       // Skip this byte
       sourceIndex++;
@@ -803,8 +800,4 @@ function getFrameDuration(samplerate) {
   return (1024 * 90000) / samplerate;
 }
 
-
-export {
-  tsDemux,
-  tsProbe
-}
+export { tsDemux, tsProbe };

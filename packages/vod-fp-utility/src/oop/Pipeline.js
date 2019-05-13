@@ -1,13 +1,13 @@
 import EventBus from './EventBus';
 
-export default class Pipeline extends EventBus {
+export default class PipeLine extends EventBus {
   constructor() {
     super();
   }
 
   pipe(dest) {
-    this.on('data', data => {
-      dest.push(data);
+    this.on('data', (...params) => {
+      dest.push(...params);
     });
     this.on('done', source => {
       dest.flush(source);
@@ -16,8 +16,8 @@ export default class Pipeline extends EventBus {
   }
 
   // override
-  push(data) {
-    this.emit('data', data);
+  push(...params) {
+    this.emit('data', ...params);
   }
 
   // override

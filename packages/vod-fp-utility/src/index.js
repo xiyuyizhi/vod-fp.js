@@ -1,3 +1,3 @@
 import * as F from './fp/core';
-
-export { F };
+import PipeLine from './oop/PipeLine';
+export { F, PipeLine };
