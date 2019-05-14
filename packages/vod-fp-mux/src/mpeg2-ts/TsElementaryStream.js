@@ -12,6 +12,10 @@ export default class TsElementaryStream extends PipeLine {
 
   push(pesInfo) {
     const { type, starter, data } = pesInfo;
+    if (type === 'metadata') {
+      this.emit('data', pesInfo);
+      return;
+    }
     if (starter) {
       if (this.cache[type]) {
         const pes = this.parsePES(this.cache[type], 0);

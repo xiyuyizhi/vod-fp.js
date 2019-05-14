@@ -3,24 +3,33 @@ import {
   TsPacketParseStream,
   TsElementaryStream
 } from '../mpeg2-ts';
-
-import { AacAtream, AvcStream } from '../codecs';
-
-const input = new TsPacketStream();
-
-const es = input.pipe(new TsPacketParseStream()).pipe(new TsElementaryStream());
-
-es.pipe(new AvcStream()).on('data', data => {
-  console.log(data);
-});
-es.pipe(new AacAtream()).on('data', data => {
-  console.log(data);
-});
+import { AacStream, AvcStream, MetaDataStream } from '../codecs';
+import { RemuxStream, VideoFragmentStream, AudioFragmentStream } from '../mp4';
 
 function tsDemux(buffer) {
   input.push(buffer);
   input.flush();
 }
+
+const input = new TsPacketStream();
+const remuxStream = new RemuxStream();
+const es = input.pipe(new TsPacketParseStream()).pipe(new TsElementaryStream());
+es.pipe(new MetaDataStream()).pipe(remuxStream);
+
+es.pipe(new AacStream())
+  .pipe(remuxStream)
+  .pipe(new AudioFragmentStream())
+  .on('data', data => {
+    tsDemux.emit('MUX_DATA', data);
+  });
+
+es.pipe(new AvcStream())
+  .pipe(remuxStream)
+  .pipe(new VideoFragmentStream())
+  .on('data', data => {
+    tsDemux.emit('MUX_DATA', data);
+  });
+
 tsDemux.eventBus = {};
 
 tsDemux.on = (event, listener) => {

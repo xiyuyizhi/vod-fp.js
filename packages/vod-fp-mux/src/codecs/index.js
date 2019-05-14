@@ -1,4 +1,5 @@
 import AvcStream from './AvcStream';
-import AacAtream from './AacAtream';
+import AacStream from './AacStream';
+import MetaDataStream from './MetaDataStream';
 
-export { AacAtream, AvcStream };
+export { AacStream, AvcStream, MetaDataStream };

@@ -1,11 +1,10 @@
-import { logger } from "../utils/logger"
+import { logger } from '../utils/logger';
 import MP4 from '../utils/Mp4Box';
 
 let nextAvcDts = 0;
 let _initDts = 0;
 let lastDelta = 0;
 let mp4SampleDuration;
-
 
 function ptsNormalize(value, reference) {
   let offset;
@@ -57,9 +56,9 @@ function remuxVideo(avcTrack, initSegment, timeOffset) {
     );
     logger.error(
       `两个分片之间差了 ${(samples[0].dts - nextAvcDts) /
-      mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts) /
-      90000 -
-      lastDelta} s`
+        mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts - nextAvcDts) /
+        90000 -
+        lastDelta} s`
     );
     lastDelta = (samples[0].dts - nextAvcDts) / 90000;
   }
@@ -68,7 +67,7 @@ function remuxVideo(avcTrack, initSegment, timeOffset) {
     sample.pts -= delta;
   });
   // 按dts排序
-  samples.sort(function (a, b) {
+  samples.sort(function(a, b) {
     const deltadts = a.dts - b.dts;
     const deltapts = a.pts - b.pts;
     return deltadts || deltapts;
@@ -153,9 +152,6 @@ function remuxVideo(avcTrack, initSegment, timeOffset) {
   nextAvcDts = lastDTS + mp4SampleDuration;
   avcTrack.samples = mp4Samples;
   let moof = MP4.moof(avcTrack.sequenceNumber, firstDTS, avcTrack);
-  // avcTrack.samples = [];
-  // logger.log(moof);
-  // logger.log(mdat);
   const bf = new Uint8Array(
     initSegment.byteLength + moof.byteLength + mdat.byteLength
   );

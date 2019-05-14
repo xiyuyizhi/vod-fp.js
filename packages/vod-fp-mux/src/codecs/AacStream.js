@@ -11,7 +11,6 @@ export default class AacStream extends PipeLine {
     if (this.aacTrack === null) {
       this.aacTrack = getDefaultAACTrack();
     }
-    return this.aacTrack;
   }
 
   push(data) {

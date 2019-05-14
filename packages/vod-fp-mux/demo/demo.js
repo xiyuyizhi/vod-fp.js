@@ -108,18 +108,18 @@ function onSourceOpen() {
 
 attachMedia();
 
-TsMux.tsDemux.on('MUX_DATA', buff => {
-  if (!buff.length) return;
+TsMux.tsDemux.on('MUX_DATA', data => {
+  if (!data.buffer.byteLength) return;
   if (!videoBuffer.updating && videoPending.length === 0) {
-    // const a = document.createElement('a');
-    // a.href = URL.createObjectURL(new Blob([buff]))
-    // a.download = 'tsTomp4_1.mp4'
-    // a.click();
-    videoBuffer.appendBuffer(buff[0]);
-    audioBuffer.appendBuffer(buff[1]);
+    if (data.type === 'video') {
+      videoBuffer.appendBuffer(data.buffer);
+    }
+    if (data.type === 'audio') {
+      audioBuffer.appendBuffer(data.buffer);
+    }
   } else {
-    videoPending.push(buff[0]);
-    audioPending.push(buff[1]);
+    // videoPending.push(data);
+    // audioPending.push(buff[1]);
   }
 });
 
@@ -145,7 +145,7 @@ function getBufferedInfo() {
 }
 
 let startLoadId = 0;
-let maxLoadCount = 1;
+let maxLoadCount = 0;
 function startTimer(segments) {
   // return;
   setInterval(() => {

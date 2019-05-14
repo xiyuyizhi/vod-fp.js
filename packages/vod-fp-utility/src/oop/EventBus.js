@@ -12,6 +12,7 @@ export default class EventBus {
     } else {
       this.events[eventName] = [handler];
     }
+    return this;
   }
 
   once(eventName, handler) {
@@ -20,6 +21,7 @@ export default class EventBus {
       this.off(eventName, handler);
     };
     this.on(eventName, wrapper);
+    return this;
   }
 
   emit(eventName, ...params) {
@@ -27,6 +29,7 @@ export default class EventBus {
     this.events[eventName].forEach(listener => {
       listener(...params);
     });
+    return this;
   }
 
   off(eventName, handler) {
@@ -37,5 +40,6 @@ export default class EventBus {
       const index = this.events[eventName].indexOf(handler);
       this.events[eventName].splice(index, 1);
     }
+    return this;
   }
 }

@@ -86,6 +86,10 @@ export default class TsPacketParseStream extends PipeLine {
     if (header.pid === this.pmtId) {
       offset += 1 + payload[offset]; // table start position
       this.streamInfo = this.parsePMT(payload, offset);
+      this.emit('data', {
+        type: 'metadata',
+        data: this.streamInfo
+      });
       return;
     }
     if (!this.streamInfo) {
@@ -143,8 +147,8 @@ export default class TsPacketParseStream extends PipeLine {
       ((payload[offset + 10] & 0x0f) << 8) | payload[offset + 11] || 0;
     offset = offset + 11 + pil + 1; // stream_type position
     const result = {
-      video: -1,
-      audio: -1
+      videoId: -1,
+      audioId: -1
     };
     let stremType;
     while (offset < tableEnd) {
