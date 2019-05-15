@@ -52,12 +52,7 @@ let audioBuffer;
 
 let currentSegment;
 let pendingRequest;
-
-const PROCESS_STATE = {
-  MUXING: 'MUXING',
-  IDLE: 'IDLE',
-  APPENDING: 'APPENDING'
-};
+let processStatus = 'IDLE';
 
 function convertStrToBuffer(str) {
   return new Uint8Array(str.split('').map(x => x.charCodeAt(0)));
@@ -95,6 +90,7 @@ function onSourceOpen() {
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
   videoBuffer.addEventListener('updateend', function(_) {
+    processStatus = 'IDLE';
     logger.log('video buffer update end');
     if (videoPending.length) {
       videoBuffer.appendBuffer(videoPending.shift());
@@ -203,11 +199,10 @@ function startTimer(segments, duration) {
   }
   setInterval(() => {
     let current;
+    if (processStatus !== 'IDLE') return;
     if (window.seek) {
       current = getSegment();
-      if (pendingRequest.loading) {
-        pendingRequest.cancel();
-      }
+      tsToMp4.setTimeOffset(current.start);
     } else {
       current = segments.filter(x => {
         return !x.loaded && (currentSegment ? x.id > currentSegment.id : true);
@@ -220,24 +215,18 @@ function startTimer(segments, duration) {
       }
     }
     logger.log(`--------current segment ${current.id}-------------`);
+    processStatus = 'LOADING';
     pendingRequest = getStream(current.url);
-    pendingRequest.loading = true;
     pendingRequest.then(buffer => {
       if (buffer === 'cancel') {
         console.log('cancel request....');
-        pendingRequest.loading = false;
         return;
       }
+      processStatus = 'LOADED';
       current.loaded = true;
-      if (window.seek) {
-        tsToMp4.setTimeOffset(current.start);
-      }
       tsToMp4.push(buffer, current.id);
       tsToMp4.flush();
       currentSegment = current;
-      setTimeout(() => {
-        pendingRequest.loading = false;
-      }, 200);
     });
   }, 1000);
 }
