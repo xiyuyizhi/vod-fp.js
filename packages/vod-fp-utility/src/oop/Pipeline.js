@@ -7,11 +7,24 @@ export default class PipeLine extends EventBus {
 
   pipe(dest) {
     this.on('data', (...params) => {
-      dest.push(...params);
+      try {
+        dest.push(...params);
+      } catch (e) {
+        // bubble error
+        dest.emit('error', e)
+      }
     });
     this.on('done', source => {
-      dest.flush(source);
+      try {
+        dest.flush(source);
+      } catch (e) {
+        // bubble error
+        dest.emit('error', e)
+      }
     });
+    this.on('error', err => {
+      dest.emit('error', err)
+    })
     return dest;
   }
 

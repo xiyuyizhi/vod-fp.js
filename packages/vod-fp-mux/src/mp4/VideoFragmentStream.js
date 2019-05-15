@@ -10,23 +10,23 @@ export default class VideoFragmentStream extends PipeLine {
     this.initSegmentGenerate = false;
     this.initSegment = new Uint8Array();
     this.nextAvcDts = 0;
-    this.initDts = 0;
-    this.lastDelta = 0;
+    this.initDTS = 0;
     this.mp4SampleDuration = 0;
+    this.on('resetInitSegment', () => this.initSegmentGenerate = false)
+    this.on('sequenceNumber', sequenceNumber => this.sequenceNumber = sequenceNumber)
   }
 
   push(data) {
-    if (data.type === 'video' && !this.initSegmentGenerate) {
-      this.initSegmentGenerate = true;
+    if (data.type === 'video') {
       this.avcTrack = data;
-      this.initSegment = MP4.initSegment([data]);
-      logger.warn(
-        'video segment first sample:',
-        `【video: ${data.samples[0].dts}】`
-      );
+      if (!this.initSegmentGenerate) {
+        this.initSegmentGenerate = true;
+        this.initSegment = MP4.initSegment([data]);
+      }
     }
     if (data.videoTimeOffset !== undefined) {
-      this.remuxVideo(this.avcTrack, data.videoTimeOffset);
+      this.avcTrack['sequenceNumber'] = this.sequenceNumber;
+      this.remuxVideo(this.avcTrack, data.videoTimeOffset, data.contiguous);
     }
   }
 
@@ -36,53 +36,54 @@ export default class VideoFragmentStream extends PipeLine {
     this.emit('done');
   }
 
-  remuxVideo(avcTrack, timeOffset) {
+  remuxVideo(avcTrack, timeOffset, contiguous) {
     let samples = avcTrack.samples;
     let nbSamples = samples.length;
-    if (!this.initDts) {
-      this.initDts = avcTrack.samples[0].dts;
+    let nextAvcDts = this.nextAvcDts;
+
+    if (!this.initDTS) {
+      this.initDTS = avcTrack.samples[0].dts;
     }
 
     samples.forEach(sample => {
       sample.originPts = sample.pts;
       sample.originDts = sample.dts;
-      sample.pts = ptsNormalize(sample.pts - this.initDts, this.nextAvcDts);
-      sample.dts = ptsNormalize(sample.dts - this.initDts, this.nextAvcDts);
+      sample.pts = ptsNormalize(sample.pts - this.initDTS, timeOffset * avcTrack.inputTimeScale);
+      sample.dts = ptsNormalize(sample.dts - this.initDTS, timeOffset * avcTrack.inputTimeScale);
     });
 
-    let delta = samples[0].dts - this.nextAvcDts;
+    if (!nextAvcDts) {
+      nextAvcDts = avcTrack.samples[0].dts;
+    }
+    if (!contiguous) {
+      nextAvcDts = timeOffset * avcTrack.inputTimeScale;
+    }
+    // ----------------------
+    //           | delta | // 需往前偏移
+    // nextAvcDts        samples[0]
+    let delta = samples[0].dts - nextAvcDts;
 
-    /**
-     * preDts nextAvcDts samples[0].dts
-     */
-    if (samples[0].dts - this.nextAvcDts > this.mp4SampleDuration) {
+    if (samples[0].dts - nextAvcDts > this.mp4SampleDuration) {
       console.log(
         samples[0].originPts,
         samples[0].dts,
-        this.nextAvcDts,
+        nextAvcDts,
         this.mp4SampleDuration
       );
-      logger.error(
-        `两个分片之间差了 ${(samples[0].dts - this.nextAvcDts) /
-          this.mp4SampleDuration} 帧！与上次相比差了 ${(samples[0].dts -
-          this.nextAvcDts) /
-          90000 -
-          this.lastDelta} s`
-      );
-      this.lastDelta = (samples[0].dts - this.nextAvcDts) / 90000;
+      logger.warn(`两个分片之间差了 ${(samples[0].dts - nextAvcDts) / this.mp4SampleDuration} 帧！`);
     }
     samples.forEach(sample => {
       sample.dts -= delta;
       sample.pts -= delta;
     });
     // 按dts排序
-    samples.sort(function(a, b) {
+    samples.sort(function (a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
     });
 
-    logger.log('video samples', samples);
+    logger.warn(`video remux:【initDTS:${this.initDTS} , nextAvcDts:${nextAvcDts}, samples[0]:${samples[0].dts}】`)
 
     let sample = samples[0];
     let firstDTS = Math.max(sample.dts, 0);

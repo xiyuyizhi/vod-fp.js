@@ -36,7 +36,6 @@ export default class TsElementaryStream extends PipeLine {
     // 还剩最后一个pes没解析
     if (this.cache.video && this.cache.video.data.length) {
       const pes = this.parsePES(this.cache.video, 0);
-      logger.log('last video PES data: ', pes);
       this.emit('data', {
         type: 'video',
         pes
@@ -44,7 +43,6 @@ export default class TsElementaryStream extends PipeLine {
     }
     if (this.cache.audio && this.cache.audio.data.length) {
       const pes = this.parsePES(this.cache.audio, 0);
-      logger.log('last audio PES data: ', pes);
       this.emit('data', {
         type: 'audio',
         pes

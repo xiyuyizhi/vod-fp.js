@@ -1,6 +1,8 @@
 import { logger } from '../src/utils/logger';
-import { TsMux, Mp4Parser } from '../src';
+import { TsToMp4, Mp4Parser } from '../src';
 import parser from './m3u8-parser';
+import { rejects } from 'assert';
+import { resolve } from 'upath';
 
 logger.log('%c mux start!', 'background: #222; color: #bada55');
 
@@ -22,6 +24,7 @@ function getPlayList(m3u8Url) {
     .then(res => {
       let playlist = parser(res);
       logger.log(playlist);
+      window.pl = playlist;
       if (playlist.error) {
         logger.error('error:', playlist.msg);
       }
@@ -30,12 +33,26 @@ function getPlayList(m3u8Url) {
 }
 
 function getStream(url) {
-  return fetch(url).then(res => res.arrayBuffer());
+  let resolve;
+  let reject;
+  let inner = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  fetch(url).then(res => resolve(res.arrayBuffer()), err => reject(err));
+  inner.cancel = function() {
+    resolve('cancel');
+  };
+  return inner;
 }
 
 let mediaSource;
 let videoBuffer;
 let audioBuffer;
+
+let currentSegment;
+let pendingRequest;
+
 const PROCESS_STATE = {
   MUXING: 'MUXING',
   IDLE: 'IDLE',
@@ -62,6 +79,12 @@ function attachMedia() {
   videoMedia.addEventListener('waiting', e => {
     e.target.currentTime += 0.01;
   });
+  videoMedia.addEventListener('seeking', () => {
+    window.seek = true;
+  });
+  video.addEventListener('seeked', () => {
+    window.seek = false;
+  });
 }
 let videoPending = [];
 let audioPending = [];
@@ -81,7 +104,7 @@ function onSourceOpen() {
       !audioBuffer.updating &&
       !videoBuffer.updating
     ) {
-      mediaSource.endOfStream();
+      // mediaSource.endOfStream();
     }
   });
 
@@ -108,28 +131,53 @@ function onSourceOpen() {
 
 attachMedia();
 
-TsMux.tsDemux.on('MUX_DATA', data => {
-  if (!data.buffer.byteLength) return;
-  if (!videoBuffer.updating && videoPending.length === 0) {
-    if (data.type === 'video') {
-      videoBuffer.appendBuffer(data.buffer);
-    }
-    if (data.type === 'audio') {
-      audioBuffer.appendBuffer(data.buffer);
-    }
-  } else {
-    // videoPending.push(data);
-    // audioPending.push(buff[1]);
-  }
-});
+let tsToMp4 = new TsToMp4();
 
-function loadstream(segment) {
-  loadstream.loading = true;
-  getStream(segment.url).then(buffer => {
-    loadstream.loading = false;
-    segment.loaded = true;
-    TsMux.tsDemux(buffer, segment.id);
+tsToMp4
+  .on('data', data => {
+    if (!data.buffer.byteLength) return;
+    if (!videoBuffer.updating && videoPending.length === 0) {
+      if (data.type === 'video') {
+        videoBuffer.appendBuffer(data.buffer);
+      } else {
+        audioBuffer.appendBuffer(data.buffer);
+      }
+    } else {
+      if (data.type === 'video') {
+        videoPending.push(data.buffer);
+      } else {
+        audioPending.push(data.buffer);
+      }
+    }
+  })
+  .on('done', () => {
+    console.log('segment parse done');
+  })
+  .on('error', e => {
+    console.log(e);
   });
+
+function getSegment() {
+  function binarySearch(list, start, end, point) {
+    // start mid end
+    const mid = start + Math.floor((end - start) / 2);
+    if (list[mid].start < point && list[mid].end < point) {
+      start = mid;
+      return binarySearch(list, start, end, point);
+    } else if (list[mid].start > point && list[mid].end > point) {
+      end = mid;
+      return binarySearch(list, start, end, point);
+    } else {
+      return list[mid];
+    }
+    return -1;
+  }
+  return binarySearch(
+    pl.segments,
+    0,
+    pl.segments.length - 1,
+    videoMedia.currentTime
+  );
 }
 
 function getBufferedInfo() {
@@ -145,28 +193,64 @@ function getBufferedInfo() {
 }
 
 let startLoadId = 0;
-let maxLoadCount = 0;
-function startTimer(segments) {
+let maxLoadCount = 3;
+
+function startTimer(segments, duration) {
   // return;
+  console.log(duration);
+  if (mediaSource.readyState === 'open') {
+    mediaSource.duration = duration;
+  }
   setInterval(() => {
-    let current = segments.filter(x => !x.loaded && x.id >= startLoadId)[0];
-    if (
-      current.id > maxLoadCount ||
-      loadstream.loading ||
-      getBufferedInfo() > 40
-    )
-      return;
+    let current;
+    if (window.seek) {
+      current = getSegment();
+      if (pendingRequest.loading) {
+        pendingRequest.cancel();
+      }
+    } else {
+      current = segments.filter(x => {
+        return !x.loaded && (currentSegment ? x.id > currentSegment.id : true);
+      })[0];
+      if (
+        (pendingRequest && pendingRequest.loading) ||
+        getBufferedInfo() > 30
+      ) {
+        return;
+      }
+    }
     logger.log(`--------current segment ${current.id}-------------`);
-    loadstream(current);
+    pendingRequest = getStream(current.url);
+    pendingRequest.loading = true;
+    pendingRequest.then(buffer => {
+      if (buffer === 'cancel') {
+        console.log('cancel request....');
+        pendingRequest.loading = false;
+        return;
+      }
+      current.loaded = true;
+      if (window.seek) {
+        tsToMp4.setTimeOffset(current.start);
+      }
+      tsToMp4.push(buffer, current.id);
+      tsToMp4.flush();
+      currentSegment = current;
+      setTimeout(() => {
+        pendingRequest.loading = false;
+      }, 200);
+    });
   }, 1000);
 }
 
 let url = localStorage.getItem('url');
 if (url) {
-  getPlayList(url).then(pl => {
-    startTimer(pl.segments);
+  setTimeout(() => {
+    getPlayList(url).then(pl => {
+      startTimer(pl.segments, pl.duration);
+    });
   });
 }
+
 document.querySelector('#url').addEventListener('change', e => {
   url = e.target.value;
   localStorage.setItem('url', url);
@@ -177,7 +261,7 @@ document.querySelector('#load').addEventListener('click', e => {
     videoBuffer.remove(0, Infinity);
   }
   getPlayList(url).then(pl => {
-    startTimer(pl.segments);
+    startTimer(pl.segments, pl.duration);
   });
 });
 

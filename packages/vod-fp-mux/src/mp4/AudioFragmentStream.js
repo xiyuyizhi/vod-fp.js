@@ -10,24 +10,25 @@ export default class AudioFragmentStream extends PipeLine {
   constructor() {
     super();
     this.nextAacDts = 0;
-    this.audioInitDts = 0;
+    this.initDTS = 0;
     this.initSegmentGenerate = false;
     this.initSegment = new Uint8Array();
     this.aacTrack = null;
+    this.on('resetInitSegment', () => this.initSegmentGenerate = false)
+    this.on('sequenceNumber', sequenceNumber => this.sequenceNumber = sequenceNumber)
   }
 
   push(data) {
-    if (data.type === 'audio' && !this.initSegmentGenerate) {
-      this.initSegmentGenerate = true;
+    if (data.type === 'audio') {
       this.aacTrack = data;
-      this.initSegment = MP4.initSegment([data]);
-      logger.warn(
-        'audio segment first sample:',
-        `【audio: ${data.samples[0].dts}】`
-      );
+      if (!this.initSegmentGenerate) {
+        this.initSegmentGenerate = true;
+        this.initSegment = MP4.initSegment([data]);
+      }
     }
     if (data.audioTimeOffset !== undefined) {
-      this.remuxAudio(this.aacTrack, data.audioTimeOffset);
+      this.aacTrack['sequenceNumber'] = this.sequenceNumber;
+      this.remuxAudio(this.aacTrack, data.audioTimeOffset, data.contiguous);
     }
   }
 
@@ -37,9 +38,9 @@ export default class AudioFragmentStream extends PipeLine {
     this.emit('done');
   }
 
-  remuxAudio(aacTrack, timeOffset) {
-    if (!this.audioInitDts) {
-      this.audioInitDts = aacTrack.samples[0].dts;
+  remuxAudio(aacTrack, timeOffset, contiguous) {
+    if (!this.initDTS) {
+      this.initDTS = aacTrack.samples[0].dts;
     }
     const scaleFactor = TIME_SCALE / aacTrack.samplerate;
     const sampleDuration = 1024 * scaleFactor;
@@ -56,7 +57,7 @@ export default class AudioFragmentStream extends PipeLine {
 
     inputSamples.forEach(sample => {
       sample.pts = sample.dts = ptsNormalize(
-        sample.pts - this.audioInitDts,
+        sample.pts - this.initDTS,
         timeOffset * TIME_SCALE
       );
     });
@@ -66,8 +67,17 @@ export default class AudioFragmentStream extends PipeLine {
     if (inputSamples.length === 0) {
       return;
     }
+    if (!nextAudioPts) {
+      nextAudioPts = aacTrack.samples[0].dts
+    }
+    if (!contiguous) {
+      nextAudioPts = timeOffset * TIME_SCALE
+    }
 
-    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
+    logger.warn(`audio remux:【initDTS:${this.initDTS} , nextAacDts:${this.nextAacDts}, samples[0]:${inputSamples[0].dts}】`)
+
+
+    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
       let sample = inputSamples[i];
       let delta;
       let pts = sample.pts;

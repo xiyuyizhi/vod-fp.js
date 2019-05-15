@@ -1,5 +1,5 @@
 import { PipeLine } from 'vod-fp-utility';
-
+import { logger } from "../utils/logger"
 export default class RemuxStream extends PipeLine {
   constructor() {
     super();
@@ -7,6 +7,10 @@ export default class RemuxStream extends PipeLine {
     this.incomeTrackLen = 0;
     this.audioTrack = null;
     this.videoTrack = null;
+    this.timeOffset = undefined;
+    this.on('timeOffset', offset => {
+      this.timeOffset = offset;
+    })
   }
 
   push(track) {
@@ -23,17 +27,20 @@ export default class RemuxStream extends PipeLine {
     if (this.incomeTrackLen === this.trackLen) {
       this.incomeTrackLen = 0;
       const { audioTrack, videoTrack } = this;
-      let audioTimeOffset = 0;
-      let videoTimeOffset = 0;
+      let audioTimeOffset = this.timeOffset || 0;
+      let videoTimeOffset = this.timeOffset || 0;
       let audiovideoDeltaDts =
         (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
         videoTrack.inputTimeScale;
       //以小的为基准
       audioTimeOffset += Math.max(0, audiovideoDeltaDts);
       videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
-      console.log(audioTimeOffset, videoTimeOffset);
-      this.emit('data', { audioTimeOffset, videoTimeOffset });
+      logger.log('音视频第一采样delta: ', audioTimeOffset, videoTimeOffset);
+      this.emit('data', { audioTimeOffset, videoTimeOffset, contiguous: this.timeOffset === undefined });
       this.emit('done');
+      this.timeOffset = undefined;
+      this.audioTrack = null;
+      this.videoTrack = null;
     }
   }
 }

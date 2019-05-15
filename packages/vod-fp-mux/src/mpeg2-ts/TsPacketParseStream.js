@@ -84,6 +84,7 @@ export default class TsPacketParseStream extends PipeLine {
       return;
     }
     if (header.pid === this.pmtId) {
+      logger.warn('parse PMT');
       offset += 1 + payload[offset]; // table start position
       this.streamInfo = this.parsePMT(payload, offset);
       this.emit('data', {
@@ -138,7 +139,6 @@ export default class TsPacketParseStream extends PipeLine {
      *  reserved : 4bit
      *  ES_info_length: 12bit
      */
-    logger.warn('parse PMT');
     const sectionLen =
       ((payload[offset + 1] & 0x0f) << 8) | payload[offset + 2];
     const tableEnd = offset + 3 + sectionLen - 4;
