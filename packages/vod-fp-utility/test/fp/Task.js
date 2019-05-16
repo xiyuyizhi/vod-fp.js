@@ -1,6 +1,6 @@
 import Task from '../../src/fp/Task';
 import { compose, map, split, head, trace } from '../../src/fp/core';
-import { either } from '../../src/fp/Either';
+import { either, Success, Fail } from '../../src/fp/Either';
 const chai = require('chai');
 const spies = require('chai-spies');
 chai.use(spies);
@@ -190,5 +190,22 @@ describe.only('Fp: test Task', function() {
       spy.should.not.be.called();
       done();
     }, 1000);
+  });
+
+  it('either with Task', done => {
+    compose(
+      map(either(spy, () => {})),
+      map(value => {
+        if (value > 5) {
+          return Success.of(value);
+        }
+        return Fail.of(value);
+      })
+    )(Task.of(resolve => resolve(1)));
+
+    setTimeout(() => {
+      spy.should.be.called();
+      done();
+    }, 100);
   });
 });

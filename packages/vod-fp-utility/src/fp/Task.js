@@ -66,7 +66,6 @@ class Task {
             result = Success.of(this._errorCall(result.value()));
             continue;
           }
-          throw new Error('erro occur,but no .error() provide');
         }
         result = map(current, result); // return Success
         if (

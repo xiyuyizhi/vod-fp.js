@@ -1,6 +1,6 @@
 import Base from './Base';
 import { curry } from './core';
-class Either extends Base {}
+class Either extends Base { }
 
 class Fail extends Either {
   static of(value) {
