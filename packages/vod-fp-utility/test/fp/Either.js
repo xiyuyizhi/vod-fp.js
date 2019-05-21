@@ -1,11 +1,11 @@
-import { Fail, Success, either } from '../../src/fp/Either';
-import { F } from '../../src/index.js';
+import {Fail, Success, either} from '../../src/fp/Either';
+import {F} from '../../src/index.js';
 
 const chai = require('chai');
 chai.should();
-const { map, prop, compose } = F;
+const {map, prop, compose, join} = F;
 
-describe('Fp: test Either', () => {
+describe.only('Fp: test Either', () => {
   function isAgePermit(age) {
     if (age >= 18) {
       return Success.of(age);
@@ -18,45 +18,52 @@ describe('Fp: test Either', () => {
   }
 
   it('#Success', () => {
-    Success.of('success')
+    Success
+      .of('success')
       .toString()
-      .should.be.equal('Success("success")');
+      .should
+      .be
+      .equal('Success("success")');
+
+    compose(join, map(v => Success.of(v + 1)))(Success.of(1))
+      .toString()
+      .should
+      .be
+      .equal('Success(2)')
+
   });
 
   it('#Fail', () => {
-    Fail.of('error')
+    Fail
+      .of('error')
       .toString()
-      .should.be.equal('Fail("error")');
+      .should
+      .be
+      .equal('Fail("error")');
   });
 
   it('#Either base flow', () => {
-    compose(
-      map(toNetBar),
-      isAgePermit
-    )(18)
+    compose(map(toNetBar), isAgePermit)(18)
       .toString()
-      .should.be.equal(`Success("age:18")`);
+      .should
+      .be
+      .equal(`Success("age:18")`);
 
-    compose(
-      map(toNetBar),
-      isAgePermit
-    )(16)
+    compose(map(toNetBar), isAgePermit)(16)
       .toString()
-      .should.be.equal(`Fail("age is forbid")`);
+      .should
+      .be
+      .equal(`Fail("age is forbid")`);
   });
 
   it('#either', () => {
     let errorValue;
-    either(
-      error => {
-        errorValue = error;
-      },
-      () => {},
-      compose(
-        map(toNetBar),
-        isAgePermit
-      )(16)
-    );
-    errorValue.should.be.equal('age is forbid');
+    either(error => {
+      errorValue = error;
+    }, () => {}, compose(map(toNetBar), isAgePermit)(16));
+    errorValue
+      .should
+      .be
+      .equal('age is forbid');
   });
 });

@@ -1,6 +1,6 @@
-import { compose, map } from './core';
-import { Fail, Success } from './Either';
-import { defer } from './_inner/defer';
+import {compose, map} from './core';
+import {Fail, Success} from './Either';
+import {defer} from './_inner/defer';
 
 const STATE = {
   PENDING: 'pending',
@@ -13,8 +13,12 @@ class Task {
     this._state = STATE.PENDING;
     this._queueCall = [];
     this._errorCall = null;
-    this._resolve = this._resolve.bind(this);
-    this._reject = this._reject.bind(this);
+    this._resolve = this
+      ._resolve
+      .bind(this);
+    this._reject = this
+      ._reject
+      .bind(this);
     f.apply(null, [this._resolve, this._reject]);
   }
 
@@ -50,16 +54,19 @@ class Task {
     while (this._queueCall.length) {
       if (result instanceof Task) {
         // map 中 return new Task,将剩余未执行的map function 挂到新生成的Task
-        this._reMount(
-          result,
-          [...result._queueCall, ...this._queueCall.slice(0)],
-          this._errorCall
-        );
+        this._reMount(result, [
+          ...result._queueCall,
+          ...this
+            ._queueCall
+            .slice(0)
+        ], this._errorCall);
         this._queueCall = [];
         this._errorCall = null;
         continue;
       }
-      let current = this._queueCall.shift();
+      let current = this
+        ._queueCall
+        .shift();
       try {
         if (result instanceof Fail) {
           if (this._errorCall) {
@@ -68,10 +75,7 @@ class Task {
           }
         }
         result = map(current, result); // return Success
-        if (
-          typeof result.value === 'function' &&
-          result.value() instanceof Task
-        ) {
+        if (typeof result.value === 'function' && result.value()instanceof Task) {
           result = result.value();
         }
       } catch (e) {
@@ -81,7 +85,8 @@ class Task {
   }
 
   _resolve(result) {
-    if (this._state != STATE.PENDING) return;
+    if (this._state != STATE.PENDING) 
+      return;
     defer(() => {
       this._deferRun(Success.of(result));
       this._state = STATE.FULFILLED;
@@ -89,7 +94,8 @@ class Task {
   }
 
   _reject(result) {
-    if (this._state != STATE.PENDING) return;
+    if (this._state != STATE.PENDING) 
+      return;
     defer(() => {
       this._deferRun(Fail.of(result));
       this._state = STATE.REJECTED;
@@ -97,8 +103,14 @@ class Task {
   }
 
   map(f) {
-    this._queueCall.push(f);
+    this
+      ._queueCall
+      .push(f);
     return this;
+  }
+
+  chain(f) {
+    return this.map(f)
   }
 
   error(f) {
@@ -107,7 +119,8 @@ class Task {
   }
 
   cancel() {
-    if (this._state !== STATE.PENDING) return;
+    if (this._state !== STATE.PENDING) 
+      return;
     this._queueCall = [];
     this._state = STATE.FULFILLED;
   }

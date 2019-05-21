@@ -10,10 +10,26 @@ export default class Maybe extends Base {
   }
 
   map(fn) {
-    return this.isEmpty ? this : Maybe.of(fn(this._value));
+    return this.isEmpty
+      ? this
+      : Maybe.of(fn(this._value));
+  }
+
+  join() {
+    return this.isEmpty
+      ? Maybe.of(null)
+      : this.value();
+  }
+
+  chain(f) {
+    return this
+      .map(f)
+      .join()
   }
 
   toString() {
-    return this.isEmpty ? 'Empty' : super.toString();
+    return this.isEmpty
+      ? 'Empty'
+      : super.toString();
   }
 }
