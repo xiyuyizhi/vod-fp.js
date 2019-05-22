@@ -1,11 +1,11 @@
-import {Fail, Success, either} from '../../src/fp/Either';
-import {F} from '../../src/index.js';
+import { Fail, Success, either } from '../../src/fp/Either';
+import { F } from '../../src/index.js';
 
 const chai = require('chai');
 chai.should();
-const {map, prop, compose, join} = F;
+const { map, prop, compose, join } = F;
 
-describe.only('Fp: test Either', () => {
+describe('Fp: test Either', () => {
   function isAgePermit(age) {
     if (age >= 18) {
       return Success.of(age);
@@ -60,7 +60,7 @@ describe.only('Fp: test Either', () => {
     let errorValue;
     either(error => {
       errorValue = error;
-    }, () => {}, compose(map(toNetBar), isAgePermit)(16));
+    }, () => { }, compose(map(toNetBar), isAgePermit)(16));
     errorValue
       .should
       .be

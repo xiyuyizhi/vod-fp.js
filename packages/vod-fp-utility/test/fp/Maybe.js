@@ -1,5 +1,5 @@
 import Maybe from '../../src/fp/Maybe.js';
-import {F} from '../../src/index.js';
+import { F } from '../../src/index.js';
 
 const chai = require('chai');
 chai.should();
@@ -12,7 +12,7 @@ const {
   curry
 } = F;
 
-describe.only('Fp: test Maybe', () => {
+describe('Fp: test Maybe', () => {
   it('#Maybe base flow', () => {
     Maybe
       .of(1)
@@ -28,14 +28,14 @@ describe.only('Fp: test Maybe', () => {
       .be
       .equal('Empty');
 
-    map(prop('name'), Maybe.of({name: 'xx'}))
+    map(prop('name'), Maybe.of({ name: 'xx' }))
       .toString()
       .should
       .be
       .equal('Maybe("xx")');
 
     Maybe
-      .of({name: 'Boris'})
+      .of({ name: 'Boris' })
       .map(prop('age'))
       .toString()
       .should
@@ -48,7 +48,7 @@ describe.only('Fp: test Maybe', () => {
     const safeProp = curry((key, obj) => Maybe.of(obj && obj[key]))
     const safeHead = safeProp(0);
 
-    safeProp('name')({name: 123})
+    safeProp('name')({ name: 123 })
       .toString()
       .should
       .be
@@ -61,7 +61,7 @@ describe.only('Fp: test Maybe', () => {
       .equal('Empty')
 
     compose(map(safeHead), safeProp('name'))({
-        name: [1, 2, 3]
+      name: [1, 2, 3]
     })
       .toString()
       .should
@@ -69,7 +69,7 @@ describe.only('Fp: test Maybe', () => {
       .equal('Maybe(Maybe(1))')
 
     compose(join, map(safeHead), safeProp('name'))({
-        name: [1, 2, 3]
+      name: [1, 2, 3]
     })
       .toString()
       .should
@@ -88,7 +88,7 @@ describe.only('Fp: test Maybe', () => {
     const safeHead = safeProp(0);
 
     compose(chain(safeHead), safeProp('name'))({
-        name: [1, 2, 3]
+      name: [1, 2, 3]
     })
       .toString()
       .should
@@ -109,6 +109,32 @@ describe.only('Fp: test Maybe', () => {
       .should
       .be
       .equal(4)
+  })
+
+  it('#Maybe ap', () => {
+    const add = curry((a, b) => a + b);
+    Maybe
+      .of(2)
+      .map(add)
+      .ap(Maybe.of(3))
+      .toString()
+      .should
+      .be
+      .equal('Maybe(5)')
+
+    // F.of(x).map(f) === F.of(f).ap(F.of(x))
+    Maybe
+      .of(1)
+      .map(x => x + 1)
+      .value()
+      .should
+      .be
+      .equal(
+        Maybe
+          .of(x => x + 1)
+          .ap(Maybe.of(1))
+          .value()
+      )
 
   })
 

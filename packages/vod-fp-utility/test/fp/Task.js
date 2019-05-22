@@ -279,8 +279,71 @@ describe.only('Fp: test Task', function () {
           .should
           .be
           .equal(4)
-        done()
       })
+
+    Task
+      .of(resolve => resolve(1))
+      .chain(v => Task.reject(2))
+      .error(v => {
+        v
+          .should
+          .be
+          .equal(2)
+        setTimeout(done, 200)
+      })
+  })
+
+  it('Task.ap()', done => {
+    Task
+      .resolve(x => x + 3)
+      .ap(Task.resolve(2))
+      .map(v => {
+        v
+          .should
+          .be
+          .equal(5)
+      })
+
+    const add = curry((a, b) => {
+      console.log([a, b]);
+      return a + b
+    });
+
+    // 两个ap 中的task 谁先resolve没关系
+
+    Task
+      .resolve(add)
+      .ap(Task.of(resolve => {
+        setTimeout(() => {
+          resolve(3)
+        }, 250)
+      }))
+      .ap(Task.of(resolve => resolve(1)))
+      .map(v => {
+        v
+          .should
+          .be
+          .equal(4);
+      })
+
+    Task
+      .resolve(add)
+      .ap(Task.of(resolve => resolve(1)))
+      .ap(Task.of(resolve => {
+        setTimeout(() => {
+          resolve(3)
+        }, 250)
+      }))
+      .map(v => {
+        v
+          .should
+          .be
+          .equal(4);
+      })
+
+    setTimeout(() => {
+      done()
+    }, 800)
   })
 
 });

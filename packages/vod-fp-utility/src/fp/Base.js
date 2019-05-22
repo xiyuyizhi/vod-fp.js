@@ -17,6 +17,10 @@ export default class Base {
     return Base.of(f(this._value));
   }
 
+  ap(another) {
+    return another.map(this.value())
+  }
+
   toString() {
     const clsName = this.constructor.name;
     if (this._value instanceof this.constructor) {

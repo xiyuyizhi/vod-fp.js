@@ -13,13 +13,18 @@ class Task {
     this._state = STATE.PENDING;
     this._queueCall = [];
     this._errorCall = null;
+    this._value = null;
     this._resolve = this
       ._resolve
       .bind(this);
     this._reject = this
       ._reject
       .bind(this);
-    f.apply(null, [this._resolve, this._reject]);
+    try {
+      f.apply(this, [this._resolve, this._reject]);
+    } catch (e) {
+      this._reject(e)
+    }
   }
 
   static of(f) {
@@ -64,6 +69,7 @@ class Task {
         this._errorCall = null;
         continue;
       }
+
       let current = this
         ._queueCall
         .shift();
@@ -71,6 +77,7 @@ class Task {
         if (result instanceof Fail) {
           if (this._errorCall) {
             result = Success.of(this._errorCall(result.value()));
+            this._errorCall = null;
             continue;
           }
         }
@@ -82,6 +89,7 @@ class Task {
         result = Fail.of(`${e.constructor && e.constructor.name}:${e.message}`);
       }
     }
+    this._value = result;
   }
 
   _resolve(result) {
@@ -109,8 +117,21 @@ class Task {
     return this;
   }
 
+  // f return another Task
   chain(f) {
-    return this.map(f)
+    return Task.of((resolve, reject) => this.map(x => f(x).map(resolve).error(reject)))
+  }
+
+  ap(another) {
+    return this.chain(fn => {
+      if (another._state !== STATE.PENDING) {
+        //这个task先于其他任务完成
+        return another
+          ._value
+          .map(fn)
+      }
+      return another.map(fn)
+    })
   }
 
   error(f) {
