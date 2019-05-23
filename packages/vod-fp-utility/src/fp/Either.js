@@ -1,6 +1,6 @@
 import Base from './Base';
-import {curry} from './core';
-class Either extends Base {}
+import { curry } from './core';
+class Either extends Base { }
 
 class Fail extends Either {
   static of(value) {
@@ -14,6 +14,10 @@ class Fail extends Either {
   }
   chain() {
     return this;
+  }
+  // 用于 Task中_value为 Fail时
+  error(f) {
+    return f(this.value())
   }
 }
 
@@ -44,4 +48,4 @@ const either = curry((fn1, fn2, e) => {
   throw new Error('params not a Either');
 });
 
-export {Fail, Success, either};
+export { Fail, Success, either };

@@ -7,7 +7,7 @@ import {
   trace,
   curry
 } from '../../src/fp/core';
-import {either, Success, Fail} from '../../src/fp/Either';
+import { either, Success, Fail } from '../../src/fp/Either';
 const chai = require('chai');
 const spies = require('chai-spies');
 chai.use(spies);
@@ -48,7 +48,7 @@ describe.only('Fp: test Task', function () {
           .equal(1);
         done();
       })
-      .error(() => {});
+      .error(() => { });
   });
 
   it('Task reject error', done => {
@@ -254,12 +254,16 @@ describe.only('Fp: test Task', function () {
   });
 
   it('either with Task', done => {
-    compose(map(either(spy, () => {})), map(value => {
-      if (value > 5) {
-        return Success.of(value);
-      }
-      return Fail.of(value);
-    }))(Task.of(resolve => resolve(1)));
+    const task = Task.of((resolve, reject) => resolve(1))
+    compose(
+      map(either(spy, () => { })),
+      map(value => {
+        if (value > 5) {
+          return Success.of(value);
+        }
+        return Fail.of(value);
+      })
+    )(task)
 
     setTimeout(() => {
       spy
@@ -304,21 +308,21 @@ describe.only('Fp: test Task', function () {
           .equal(5)
       })
 
-    const add = curry((a, b) => {
-      console.log([a, b]);
-      return a + b
-    });
+    const add = curry((a, b) => a + b);
+
+    Task.resolve(add).ap(Task.of(2)).ap(Task.of(3)).map(v => {
+      v.should.be.equal(5)
+    })
 
     // 两个ap 中的task 谁先resolve没关系
-
     Task
-      .resolve(add)
+      .resolve(add) // [3,1]
       .ap(Task.of(resolve => {
         setTimeout(() => {
           resolve(3)
-        }, 250)
+        }, 100)
       }))
-      .ap(Task.of(resolve => resolve(1)))
+      .ap(Task.of(resolve => resolve(1))) // 优先完成依然是add的第二个参数
       .map(v => {
         v
           .should
@@ -327,11 +331,11 @@ describe.only('Fp: test Task', function () {
       })
 
     Task
-      .resolve(add)
-      .ap(Task.of(resolve => resolve(1)))
+      .resolve(add) //[3,1]
+      .ap(Task.of(resolve => resolve(3)))
       .ap(Task.of(resolve => {
         setTimeout(() => {
-          resolve(3)
+          resolve(1)
         }, 250)
       }))
       .map(v => {
@@ -344,6 +348,56 @@ describe.only('Fp: test Task', function () {
     setTimeout(() => {
       done()
     }, 800)
+  })
+
+  it('Task.ap with Fail', done => {
+    const add = curry((a, b) => a + b);
+    const anotherSpy1 = chai.spy();
+    const anotherSpy2 = chai.spy();
+    const anotherSpy3 = chai.spy();
+    const anotherSpy4 = chai.spy();
+    const anotherSpy5 = chai.spy();
+    const anotherSpy6 = chai.spy();
+    const anotherSpy7 = chai.spy();
+    const anotherSpy8 = chai.spy();
+
+    Task.resolve(add)
+      .ap(Task.of(resolve => setTimeout(resolve, 50)))
+      .ap(Task.reject('error1'))
+      .map(anotherSpy1)
+      .error(anotherSpy2)
+
+    Task.resolve(add)
+      .ap(Task.of(2))
+      .ap(Task.of((_, reject) => setTimeout(() => { reject('error2') }, 10)))
+      .map(anotherSpy3)
+      .error(anotherSpy4)
+
+    Task.resolve(add)
+      .ap(Task.reject('error3'))
+      .ap(Task.of(resolve => setTimeout(resolve, 50)))
+      .map(anotherSpy5)
+      .error(anotherSpy6)
+
+    Task.resolve(add)
+      .ap(Task.of((_, reject) => setTimeout(() => { reject('error4') }, 10)))
+      .ap(Task.of(2))
+      .map(anotherSpy7)
+      .error(anotherSpy8)
+
+    setTimeout(() => {
+      anotherSpy1.should.not.be.called()
+      anotherSpy2.should.be.called.with('error1')
+      anotherSpy3.should.not.be.called()
+      anotherSpy4.should.be.called.with('error2')
+      anotherSpy5.should.not.be.called()
+      anotherSpy6.should.be.called.with('error3')
+      anotherSpy7.should.not.be.called()
+      anotherSpy8.should.be.called.with('error4')
+      done()
+    }, 300)
+
+
   })
 
 });
