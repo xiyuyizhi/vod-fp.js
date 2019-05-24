@@ -1,6 +1,6 @@
-import { compose, map } from './core';
-import { Fail, Success } from './Either';
-import { defer } from './_inner/defer';
+import {compose, map} from './core';
+import {Fail, Success} from './Either';
+import {defer} from './_inner/defer';
 
 const STATE = {
   PENDING: 'pending',
@@ -55,10 +55,7 @@ class Task {
   }
 
   _deferRun(result) {
-    if (!this._queueCall.length && result instanceof Fail && this._errorCall) {
-      this._errorCall(result.value());
-      return;
-    }
+
     while (this._queueCall.length) {
       if (result instanceof Task) {
         // map 中 return new Task,将剩余未执行的map function 挂到新生成的Task
@@ -85,18 +82,22 @@ class Task {
           }
         }
         result = map(current, result); // return Success
-        if (typeof result.value === 'function' && result.value() instanceof Task) {
+        if (typeof result.value === 'function' && result.value()instanceof Task) {
           result = result.value();
         }
       } catch (e) {
         result = Fail.of(`${e.constructor && e.constructor.name}:${e.message}`);
       }
     }
+    if (!this._queueCall.length && result instanceof Fail && this._errorCall) {
+      this._errorCall(result.value());
+      return;
+    }
     this._value = result;
   }
 
   _resolve(result) {
-    if (this._state != STATE.PENDING)
+    if (this._state != STATE.PENDING) 
       return;
     defer(() => {
       this._deferRun(Success.of(result));
@@ -105,7 +106,7 @@ class Task {
   }
 
   _reject(result) {
-    if (this._state != STATE.PENDING)
+    if (this._state != STATE.PENDING) 
       return;
     defer(() => {
       this._deferRun(Fail.of(result));
@@ -122,10 +123,7 @@ class Task {
 
   // f return another Task
   chain(f) {
-    return Task.of((resolve, reject) => this
-      .map(x => f(x).map(resolve).error(reject))
-      .error(reject)
-    )
+    return Task.of((resolve, reject) => this.map(x => f(x).map(resolve).error(reject)).error(reject))
   }
 
   ap(another) {
@@ -149,7 +147,7 @@ class Task {
   }
 
   cancel() {
-    if (this._state !== STATE.PENDING)
+    if (this._state !== STATE.PENDING) 
       return;
     this._queueCall = [];
     this._state = STATE.FULFILLED;

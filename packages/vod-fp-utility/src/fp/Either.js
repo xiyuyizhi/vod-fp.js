@@ -1,6 +1,6 @@
 import Base from './Base';
-import { curry } from './core';
-class Either extends Base { }
+import {curry} from './core';
+class Either extends Base {}
 
 class Fail extends Either {
   static of(value) {
@@ -36,6 +36,9 @@ class Success extends Either {
       .map(f)
       .join()
   }
+  error() {
+    return this;
+  }
 }
 
 const either = curry((fn1, fn2, e) => {
@@ -48,4 +51,4 @@ const either = curry((fn1, fn2, e) => {
   throw new Error('params not a Either');
 });
 
-export { Fail, Success, either };
+export {Fail, Success, either};
