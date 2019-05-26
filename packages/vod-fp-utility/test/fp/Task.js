@@ -5,16 +5,19 @@ import {
   split,
   head,
   trace,
-  curry
+  curry,
+  liftA2
 } from '../../src/fp/core';
-import {either, Success, Fail} from '../../src/fp/Either';
+import {Success, Fail, either} from '../../src/fp/Either';
+import {Maybe} from "../../src/fp/Maybe"
 const chai = require('chai');
 const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe.only('Fp: test Task', function () {
+describe('Fp: test Task', function () {
   this.timeout(2000);
+  const add = curry((a, b) => a + b);
   let spy;
 
   beforeEach(() => {
@@ -294,8 +297,6 @@ describe.only('Fp: test Task', function () {
   })
 
   it('Task.ap()', done => {
-    const add = curry((a, b) => a + b);
-
     Task
       .resolve(x => x + 3)
       .ap(Task.resolve(2))
@@ -379,7 +380,6 @@ describe.only('Fp: test Task', function () {
   })
 
   it('Task.ap with Fail', done => {
-    const add = curry((a, b) => a + b);
     const anotherSpy1 = chai.spy();
     const anotherSpy2 = chai.spy();
     const anotherSpy3 = chai.spy();
@@ -437,6 +437,26 @@ describe.only('Fp: test Task', function () {
         done()
     }, 300)
 
+  })
+
+  it('Task with liftA2', done => {
+    liftA2(add, Task.of(resolve => setTimeout(() => resolve(10), 300)), Task.of(resolve => {
+      setTimeout(() => resolve(20), 150)
+    })).map(v => {
+      v
+        .should
+        .be
+        .equal(v)
+      done()
+    })
+    const tOfM = compose(Task.of, Maybe.of);
+    liftA2(liftA2(add), tOfM('w'), tOfM(' w')).map(v => {
+      v
+        .value()
+        .should
+        .be
+        .equal('w w')
+    })
   })
 
 });

@@ -1,5 +1,7 @@
-import { PipeLine } from 'vod-fp-utility';
-import { logger } from '../utils/logger';
+import {PipeLine} from 'vod-fp-utility';
+import Logger from '../utils/logger';
+
+let logger = new Logger('TsPacketParseStream')
 
 export default class TsPacketParseStream extends PipeLine {
   constructor() {
@@ -12,10 +14,7 @@ export default class TsPacketParseStream extends PipeLine {
     let adaptionsOffset = 0;
     let header = this.parseTsHeader(packet.subarray(0, 4));
     let payload = packet.subarray(4);
-    if (
-      header.adaptationFiledControl === 3 ||
-      header.adaptationFiledControl === 2
-    ) {
+    if (header.adaptationFiledControl === 3 || header.adaptationFiledControl === 2) {
       adaptionsOffset = this.parseAdaptationFiled(payload) + 1;
     }
     this.parsePayload(payload, adaptionsOffset, header);
@@ -97,7 +96,7 @@ export default class TsPacketParseStream extends PipeLine {
       logger.error('not found PMT');
       return;
     }
-    const { videoId, audioId } = this.streamInfo;
+    const {videoId, audioId} = this.streamInfo;
     switch (header.pid) {
       case videoId:
         this.emit('data', {
@@ -139,12 +138,10 @@ export default class TsPacketParseStream extends PipeLine {
      *  reserved : 4bit
      *  ES_info_length: 12bit
      */
-    const sectionLen =
-      ((payload[offset + 1] & 0x0f) << 8) | payload[offset + 2];
+    const sectionLen = ((payload[offset + 1] & 0x0f) << 8) | payload[offset + 2];
     const tableEnd = offset + 3 + sectionLen - 4;
     const pNum = (payload[offset + 3] << 8) | payload[offset + 4];
-    const pil =
-      ((payload[offset + 10] & 0x0f) << 8) | payload[offset + 11] || 0;
+    const pil = ((payload[offset + 10] & 0x0f) << 8) | payload[offset + 11] || 0;
     offset = offset + 11 + pil + 1; // stream_type position
     const result = {
       videoId: -1,

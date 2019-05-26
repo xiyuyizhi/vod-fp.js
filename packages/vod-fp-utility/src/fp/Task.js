@@ -42,6 +42,10 @@ class Task {
     return Task.of((resolve, reject) => reject(x));
   }
 
+  value() {
+    return this._value;
+  }
+
   _removeQueue() {
     this._queueCall = [];
   }

@@ -1,5 +1,5 @@
-import Maybe from '../../src/fp/Maybe.js';
-import { F } from '../../src/index.js';
+import {Empty, Just, Maybe} from '../../src/fp/Maybe.js';
+import {F} from '../../src/index.js';
 
 const chai = require('chai');
 chai.should();
@@ -12,14 +12,22 @@ const {
   curry
 } = F;
 
-describe('Fp: test Maybe', () => {
+describe.only('Fp: test Maybe', () => {
   it('#Maybe base flow', () => {
+
+    Just
+      .of(1)
+      .toString()
+      .should
+      .be
+      .equal('Just(1)');
+
     Maybe
       .of(1)
       .toString()
       .should
       .be
-      .equal('Maybe(1)');
+      .equal('Just(1)');
 
     Maybe
       .of(null)
@@ -28,15 +36,16 @@ describe('Fp: test Maybe', () => {
       .be
       .equal('Empty');
 
-    map(prop('name'), Maybe.of({ name: 'xx' }))
+    map(prop('name'), Maybe.of({name: 'xx'}))
       .toString()
       .should
       .be
-      .equal('Maybe("xx")');
+      .equal('Just("xx")');
 
     Maybe
-      .of({ name: 'Boris' })
+      .of({name: 'Boris'})
       .map(prop('age'))
+      .map(prop('age1'))
       .toString()
       .should
       .be
@@ -48,11 +57,11 @@ describe('Fp: test Maybe', () => {
     const safeProp = curry((key, obj) => Maybe.of(obj && obj[key]))
     const safeHead = safeProp(0);
 
-    safeProp('name')({ name: 123 })
+    safeProp('name')({name: 123})
       .toString()
       .should
       .be
-      .equal('Maybe(123)')
+      .equal('Just(123)')
 
     safeProp('name')({})
       .toString()
@@ -61,20 +70,20 @@ describe('Fp: test Maybe', () => {
       .equal('Empty')
 
     compose(map(safeHead), safeProp('name'))({
-      name: [1, 2, 3]
+        name: [1, 2, 3]
     })
       .toString()
       .should
       .be
-      .equal('Maybe(Maybe(1))')
+      .equal('Just(Just(1))')
 
     compose(join, map(safeHead), safeProp('name'))({
-      name: [1, 2, 3]
+        name: [1, 2, 3]
     })
       .toString()
       .should
       .be
-      .equal('Maybe(1)')
+      .equal('Just(1)')
 
     compose(join, map(safeHead), safeProp('name'))(null)
       .toString()
@@ -88,12 +97,12 @@ describe('Fp: test Maybe', () => {
     const safeHead = safeProp(0);
 
     compose(chain(safeHead), safeProp('name'))({
-      name: [1, 2, 3]
+        name: [1, 2, 3]
     })
       .toString()
       .should
       .be
-      .equal('Maybe(1)')
+      .equal('Just(1)')
 
     safeProp('name')(null)
       .chain(safeHead)
@@ -120,7 +129,7 @@ describe('Fp: test Maybe', () => {
       .toString()
       .should
       .be
-      .equal('Maybe(5)')
+      .equal('Just(5)')
 
     // F.of(x).map(f) === F.of(f).ap(F.of(x))
     Maybe
@@ -129,12 +138,16 @@ describe('Fp: test Maybe', () => {
       .value()
       .should
       .be
-      .equal(
-        Maybe
-          .of(x => x + 1)
-          .ap(Maybe.of(1))
-          .value()
-      )
+      .equal(Maybe.of(x => x + 1).ap(Maybe.of(1)).value())
+
+    Maybe
+      .of(add)
+      .ap(Maybe.of(null))
+      .ap(Maybe.of(2))
+      .value()
+      .should
+      .be
+      .equal('Empty')
 
   })
 

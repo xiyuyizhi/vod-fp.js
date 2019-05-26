@@ -1,5 +1,8 @@
-import { PipeLine } from 'vod-fp-utility';
-import { logger } from "../utils/logger"
+import {PipeLine} from 'vod-fp-utility';
+import Logger from "../utils/logger";
+
+let logger = new Logger('RemuxStream')
+
 export default class RemuxStream extends PipeLine {
   constructor() {
     super();
@@ -15,7 +18,9 @@ export default class RemuxStream extends PipeLine {
 
   push(track) {
     if (track.type === 'metadata') {
-      this.trackLen = Object.keys(track.data).length;
+      this.trackLen = Object
+        .keys(track.data)
+        .length;
       return;
     }
     this.incomeTrackLen += 1;
@@ -26,17 +31,19 @@ export default class RemuxStream extends PipeLine {
   flush() {
     if (this.incomeTrackLen === this.trackLen) {
       this.incomeTrackLen = 0;
-      const { audioTrack, videoTrack } = this;
+      const {audioTrack, videoTrack} = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;
-      let audiovideoDeltaDts =
-        (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
-        videoTrack.inputTimeScale;
+      let audiovideoDeltaDts = (audioTrack.samples[0].dts - videoTrack.samples[0].dts) / videoTrack.inputTimeScale;
       //以小的为基准
       audioTimeOffset += Math.max(0, audiovideoDeltaDts);
       videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
       logger.log('音视频第一采样delta: ', audioTimeOffset, videoTimeOffset);
-      this.emit('data', { audioTimeOffset, videoTimeOffset, contiguous: this.timeOffset === undefined });
+      this.emit('data', {
+        audioTimeOffset,
+        videoTimeOffset,
+        contiguous: this.timeOffset === undefined
+      });
       this.emit('done');
       this.timeOffset = undefined;
       this.audioTrack = null;

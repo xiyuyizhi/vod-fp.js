@@ -15,6 +15,9 @@ class Fail extends Either {
   chain() {
     return this;
   }
+  ap() {
+    return this;
+  }
   // 用于 Task中_value为 Fail时
   error(f) {
     return f(this.value())
@@ -26,7 +29,7 @@ class Success extends Either {
     return new Success(value);
   }
   map(f) {
-    return Success.of(f(this._value));
+    return Success.of(f(this.value()));
   }
   join() {
     return this.value()
@@ -35,6 +38,9 @@ class Success extends Either {
     return this
       .map(f)
       .join()
+  }
+  ap(another) {
+    return another.map(this.value())
   }
   error() {
     return this;

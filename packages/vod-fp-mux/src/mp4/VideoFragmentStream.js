@@ -1,7 +1,9 @@
-import { PipeLine } from 'vod-fp-utility';
+import {PipeLine} from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
 import ptsNormalize from '../utils/ptsNormalize';
-import { logger } from '../utils/logger';
+import Logger from '../utils/logger';
+
+let logger = new Logger('VideoFragmentStream')
 
 export default class VideoFragmentStream extends PipeLine {
   constructor() {
@@ -58,19 +60,13 @@ export default class VideoFragmentStream extends PipeLine {
     if (!contiguous) {
       nextAvcDts = timeOffset * avcTrack.inputTimeScale;
     }
-    // ----------------------
-    //           | delta | // 需往前偏移
-    // nextAvcDts        samples[0]
+    // ----------------------           | delta | // 需往前偏移 nextAvcDts
+    // samples[0]
     let delta = samples[0].dts - nextAvcDts;
 
     if (samples[0].dts - nextAvcDts > this.mp4SampleDuration) {
-      console.log(
-        samples[0].originPts,
-        samples[0].dts,
-        nextAvcDts,
-        this.mp4SampleDuration
-      );
-      logger.warn(`两个分片之间差了 ${(samples[0].dts - nextAvcDts) / this.mp4SampleDuration} 帧！`);
+      console.log(samples[0].originPts, samples[0].dts, nextAvcDts, this.mp4SampleDuration);
+      logger.warn(`两个分片之间差了 ${ (samples[0].dts - nextAvcDts) / this.mp4SampleDuration} 帧！`);
     }
     samples.forEach(sample => {
       sample.dts -= delta;
@@ -139,7 +135,9 @@ export default class VideoFragmentStream extends PipeLine {
       if (i < nbSamples - 1) {
         this.mp4SampleDuration = samples[i + 1].dts - avcSample.dts;
       } else {
-        let lastFrameDuration = avcSample.dts - samples[i > 0 ? i - 1 : i].dts;
+        let lastFrameDuration = avcSample.dts - samples[i > 0
+            ? i - 1
+            : i].dts;
         this.mp4SampleDuration = lastFrameDuration;
       }
       compositionTimeOffset = Math.round(avcSample.pts - avcSample.dts);
@@ -154,17 +152,19 @@ export default class VideoFragmentStream extends PipeLine {
           isDependedOn: 0,
           hasRedundancy: 0,
           degradPrio: 0,
-          dependsOn: avcSample.key ? 2 : 1,
-          isNonSync: avcSample.key ? 0 : 1
+          dependsOn: avcSample.key
+            ? 2
+            : 1,
+          isNonSync: avcSample.key
+            ? 0
+            : 1
         }
       });
     }
     this.nextAvcDts = lastDTS + this.mp4SampleDuration;
     avcTrack.samples = mp4Samples;
     let moof = MP4.moof(avcTrack.sequenceNumber, firstDTS, avcTrack);
-    let bf = new Uint8Array(
-      this.initSegment.byteLength + moof.byteLength + mdat.byteLength
-    );
+    let bf = new Uint8Array(this.initSegment.byteLength + moof.byteLength + mdat.byteLength);
     bf.set(this.initSegment, 0);
     bf.set(moof, this.initSegment.byteLength);
     bf.set(mdat, this.initSegment.byteLength + moof.byteLength);

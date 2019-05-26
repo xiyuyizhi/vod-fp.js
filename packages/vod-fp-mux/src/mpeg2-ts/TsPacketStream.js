@@ -1,6 +1,8 @@
-import { PipeLine } from 'vod-fp-utility';
-import { probe } from '../probe/ts-probe';
-import { logger } from '../utils/logger';
+import {PipeLine} from 'vod-fp-utility';
+import {probe} from '../probe/ts-probe';
+import Logger from '../utils/logger';
+
+let logger = new Logger('TsPacketStream')
 
 export default class TsPacketStream extends PipeLine {
   push(buffer) {

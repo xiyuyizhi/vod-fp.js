@@ -1,24 +1,55 @@
 import Base from './Base';
 
-export default class Maybe extends Base {
+class Maybe extends Base {
+
   static of(value) {
-    return new Maybe(value);
+    if (value === undefined || value === null) {
+      return Empty.of()
+    }
+    return Just.of(value)
   }
 
-  get isEmpty() {
-    return this._value === undefined || this._value === null;
+}
+
+class Empty extends Maybe {
+  static of(value) {
+    return new Empty(value)
+  }
+
+  map() {
+    return this;
+  }
+  join() {
+    return this;
+  }
+  chain() {
+    return this;
+  }
+  ap() {
+    return this;
+  }
+  value() {
+    return this.toString()
+  }
+  toString() {
+    return 'Empty'
+  }
+
+}
+
+class Just extends Maybe {
+
+  static of(value) {
+    return new Just(value)
   }
 
   map(fn) {
-    return this.isEmpty
-      ? this
-      : Maybe.of(fn(this._value));
+    const v = fn(this._value);
+    return Maybe.of(v);
   }
 
   join() {
-    return this.isEmpty
-      ? Maybe.of(null)
-      : this.value();
+    return this.value();
   }
 
   chain(f) {
@@ -27,9 +58,10 @@ export default class Maybe extends Base {
       .join()
   }
 
-  toString() {
-    return this.isEmpty
-      ? 'Empty'
-      : super.toString();
+  ap(f) {
+    return f.map(this.value());
   }
+
 }
+
+export {Empty, Just, Maybe}

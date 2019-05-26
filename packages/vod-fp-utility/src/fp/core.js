@@ -56,6 +56,8 @@ const prop = curry((a, b) => b[a]);
 const join = curry(a => a.join());
 const chain = curry((f, m) => m.map(f).join())
 
+const liftA2 = curry((g, a, b) => a.map(g).ap(b))
+
 const trace = a => {
   console.log(a);
   return a;
@@ -75,6 +77,7 @@ export {
   splitMap,
   join,
   chain,
+  liftA2,
   prop,
   ifElse,
   trace

@@ -1,9 +1,11 @@
-import { Fail, Success, either } from '../../src/fp/Either';
-import { F } from '../../src/index.js';
+import {Fail, Success, either} from '../../src/fp/Either';
+import {F} from '../../src/index.js';
+import {Suite} from 'mocha';
+import {curry} from '../../src/fp/core';
 
 const chai = require('chai');
 chai.should();
-const { map, prop, compose, join } = F;
+const {map, prop, compose, join, liftA2} = F;
 
 describe('Fp: test Either', () => {
   function isAgePermit(age) {
@@ -60,10 +62,39 @@ describe('Fp: test Either', () => {
     let errorValue;
     either(error => {
       errorValue = error;
-    }, () => { }, compose(map(toNetBar), isAgePermit)(16));
+    }, () => {}, compose(map(toNetBar), isAgePermit)(16));
     errorValue
       .should
       .be
       .equal('age is forbid');
   });
+
+  it('#Either ap()', () => {
+    const add = curry((a, b) => a + b);
+    Success
+      .of(add)
+      .ap(Success.of(1))
+      .ap(Success.of(2))
+      .value()
+      .should
+      .be
+      .equal(3)
+
+    Success
+      .of(add)
+      .ap(Fail.of('error'))
+      .ap(Success.of(2))
+      .value()
+      .should
+      .be
+      .equal('error')
+
+    liftA2(add, Success.of(1), Success.of(2))
+      .value()
+      .should
+      .be
+      .equal(3)
+
+  })
+
 });
