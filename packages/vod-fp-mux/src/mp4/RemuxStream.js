@@ -38,7 +38,7 @@ export default class RemuxStream extends PipeLine {
       //以小的为基准
       audioTimeOffset += Math.max(0, audiovideoDeltaDts);
       videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
-      logger.log('音视频第一采样delta: ', audioTimeOffset, videoTimeOffset);
+      logger.log('音视频第一采样delta: ', audioTimeOffset, videoTimeOffset, audiovideoDeltaDts);
       this.emit('data', {
         audioTimeOffset,
         videoTimeOffset,

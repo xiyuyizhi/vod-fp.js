@@ -1,5 +1,5 @@
-import { PipeLine } from 'vod-fp-utility';
-import { FREQUENCIES_MAP, getDefaultAACTrack } from '../default';
+import {PipeLine} from 'vod-fp-utility';
+import {FREQUENCIES_MAP, getDefaultAACTrack} from '../default';
 import Logger from "../utils/logger";
 
 let logger = new Logger('AacStream')
@@ -19,6 +19,7 @@ export default class AacStream extends PipeLine {
   push(data) {
     if (data.type === 'audio') {
       this.geneTrack('audio');
+      // console.log(data);
       this.parseADTS(data.pes.data, data.pes.dts);
       data.pes.data = null;
     }
@@ -108,14 +109,11 @@ export default class AacStream extends PipeLine {
       config = new Array(4);
     }
     // if (!audioCodec && adtsExtensionSampleingIndex >= 6) {
-    //   adtsExtensionSampleingIndex -= 3;
-    // } else {
-    //   if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && ((samplerateIndex >= 6 && aacTrack.channel === 1) || (!audioCodec && aacTrack.channel === 1))) {
-    //     adtsObjectType = 2;
-    //     config = new Array(2);
-    //   }
-    //   adtsExtensionSampleingIndex = samplerateIndex;
-    // }
+    // adtsExtensionSampleingIndex -= 3; } else {   if (audioCodec &&
+    // audioCodec.indexOf('mp4a.40.2') !== -1 && ((samplerateIndex >= 6 &&
+    // aacTrack.channel === 1) || (!audioCodec && aacTrack.channel === 1))) {
+    // adtsObjectType = 2;     config = new Array(2);   }
+    // adtsExtensionSampleingIndex = samplerateIndex; }
     config[0] = adtsObjectType << 3;
     config[0] |= (samplerateIndex & 0x0e) >> 1;
     config[1] |= (samplerateIndex & 0x01) << 7;

@@ -7,6 +7,7 @@ export default class TsToMp4 extends PipeLine {
 
   constructor(options) {
     super();
+    this.entryStream = null;
     this.audioStream = null;
     this.videoStream = null;
     this.remuxStream = null;
@@ -39,11 +40,11 @@ export default class TsToMp4 extends PipeLine {
       .emit('timeOffset', offset)
   }
 
-  push(buffer, sequenceNumber = 0, offset) {
+  push(buffer, sequenceNumber = 0, offset = 0) {
+    this.setSequenceNumber(sequenceNumber)
     this
       .entryStream
       .push(buffer)
-    this.setSequenceNumber(sequenceNumber)
   }
 
   flush() {

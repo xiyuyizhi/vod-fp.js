@@ -60,12 +60,11 @@ export default class VideoFragmentStream extends PipeLine {
     if (!contiguous) {
       nextAvcDts = timeOffset * avcTrack.inputTimeScale;
     }
-    // ----------------------           | delta | // 需往前偏移 nextAvcDts
-    // samples[0]
+    // ----------------------           | delta | // 需往前偏移 nextAvcDts samples[0]
     let delta = samples[0].dts - nextAvcDts;
 
-    if (samples[0].dts - nextAvcDts > this.mp4SampleDuration) {
-      console.log(samples[0].originPts, samples[0].dts, nextAvcDts, this.mp4SampleDuration);
+    logger.log(`originPts:${samples[0].originPts} , dts:${samples[0].dts} , nextAvcDts:${nextAvcDts} , delta:${delta} , mp4SampleDuration:${this.mp4SampleDuration}`);
+    if (nextAvcDts && samples[0].dts - nextAvcDts >= this.mp4SampleDuration) {
       logger.warn(`两个分片之间差了 ${ (samples[0].dts - nextAvcDts) / this.mp4SampleDuration} 帧！`);
     }
     samples.forEach(sample => {
@@ -170,7 +169,11 @@ export default class VideoFragmentStream extends PipeLine {
     bf.set(mdat, this.initSegment.byteLength + moof.byteLength);
     this.emit('data', {
       type: 'video',
-      buffer: bf
+      buffer: bf,
+      startPTS: firstPTS,
+      startDTS: firstDTS,
+      endPTS: lastPTS + this.mp4SampleDuration,
+      endDTS: this.nextAvcDts
     });
     bf = null;
   }

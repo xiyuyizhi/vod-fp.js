@@ -1,8 +1,8 @@
 import Logger from '../src/utils/logger';
-import { TsToMp4, Mp4Parser } from '../src';
+import {TsToMp4, Mp4Parser} from '../src';
 import parser from './m3u8-parser';
-import { rejects } from 'assert';
-import { resolve } from 'upath';
+import {rejects} from 'assert';
+import {resolve} from 'upath';
 
 let logger = new Logger('demo')
 logger.log('%c mux start!', 'background: #222; color: #bada55');
@@ -11,7 +11,7 @@ let videoMedia = document.querySelector('#video');
 
 window.serializeBuffer = () => {
   const buffered = videoMedia.buffered;
-  if (!buffered.length)
+  if (!buffered.length) 
     return [];
   let arr = [];
   for (let i = 0; i < buffered.length; i++) {
@@ -91,13 +91,15 @@ let audioPending = [];
 
 function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
-  if (videoBuffer)
+  if (videoBuffer) 
     return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
+
   videoBuffer.addEventListener('updateend', function (_) {
-    processStatus = 'IDLE';
     logger.log('video buffer update end');
+    currentSegment.videoAppend = true;
+    updateSegmentsBoundAfterAppended()
     if (videoPending.length) {
       videoBuffer.appendBuffer(videoPending.shift());
     } else if (!videoPending.length && !audioPending.length && !audioBuffer.updating && !videoBuffer.updating) {
@@ -107,6 +109,8 @@ function onSourceOpen() {
 
   audioBuffer.addEventListener('updateend', function (_) {
     logger.log('audio buffer update end');
+    currentSegment.audioAppend = true;
+    updateSegmentsBoundAfterAppended()
     if (audioPending.length) {
       audioBuffer.appendBuffer(audioPending.shift());
     } else if (!videoPending.length && !audioPending.length && !audioBuffer.updating && !videoBuffer.updating) {
@@ -121,12 +125,42 @@ function onSourceOpen() {
   });
 }
 
+function updateSegmentsBoundAfterAppended() {
+  if (currentSegment.videoAppend && currentSegment.audioAppend) {
+    let start = Math.max(Math.max(lastVideoInfo.startPTS, lastVideoInfo.startDTS), lastAudioInfo.startDTS)
+    start = start / 90000;
+    let end = Math.min(Math.min(lastVideoInfo.endPTS, lastVideoInfo.endDTS), lastAudioInfo.endDTS);
+    end = end / 90000;
+    console.log([start, end]);
+    let id = currentSegment.id;
+    currentSegment.start = start;
+    currentSegment.end = end;
+    currentSegment.duration = end - start;
+    let segs = pl.segments
+    let len = segs.length - 1;
+    for (let i = id + 1; i <= len; i++) {
+      segs[i].start = segs[i - 1].end;
+      segs[i].end = segs[i].start + segs[i].duration;
+    }
+    processStatus = 'IDLE';
+  }
+}
+
 attachMedia();
 
 let tsToMp4 = new TsToMp4();
+let lastVideoInfo = null;
+let lastAudioInfo = null;
 
 tsToMp4.on('data', data => {
-  if (!data.buffer.byteLength)
+  logger.log(data)
+  if (data.type === 'video') {
+    lastVideoInfo = data;
+  }
+  if (data.type === 'audio') {
+    lastAudioInfo = data;
+  }
+  if (!data.buffer.byteLength) 
     return;
   if (!videoBuffer.updating && videoPending.length === 0) {
     if (data.type === 'video') {
@@ -176,7 +210,7 @@ function getBufferedInfo() {
 }
 
 let startLoadId = 0;
-let maxLoadCount = 3;
+let maxLoadCount = 0;
 
 function startTimer(segments, duration) {
   if (mediaSource.readyState === 'open') {
@@ -184,7 +218,7 @@ function startTimer(segments, duration) {
   }
   setInterval(() => {
     let current;
-    if (processStatus !== 'IDLE')
+    if (processStatus !== 'IDLE') 
       return;
     if (window.seek) {
       current = getSegment();
@@ -195,7 +229,7 @@ function startTimer(segments, duration) {
           ? x.id > currentSegment.id
           : true);
       })[0];
-      if ((pendingRequest && pendingRequest.loading) || getBufferedInfo() > 30) {
+      if ((pendingRequest && pendingRequest.loading) || getBufferedInfo() > 8) {
         return;
       }
     }
@@ -235,7 +269,7 @@ document
 document
   .querySelector('#load')
   .addEventListener('click', e => {
-    if (!url)
+    if (!url) 
       return;
     if (videoBuffer.buffered.length) {
       videoBuffer.remove(0, Infinity);

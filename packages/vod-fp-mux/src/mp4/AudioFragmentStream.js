@@ -58,6 +58,8 @@ export default class AudioFragmentStream extends PipeLine {
     let nextAudioPts = this.nextAacDts;
 
     inputSamples.forEach(sample => {
+      sample.originPts = sample.pts;
+      sample.originDts = sample.dts;
       sample.pts = sample.dts = ptsNormalize(sample.pts - this.initDTS, timeOffset * TIME_SCALE);
     });
     inputSamples = inputSamples.filter(sample => {
@@ -71,9 +73,14 @@ export default class AudioFragmentStream extends PipeLine {
     }
     if (!contiguous) {
       nextAudioPts = timeOffset * TIME_SCALE
+      logger.warn('not contiguous', timeOffset, nextAudioPts)
     }
-
-    logger.warn(`audio remux:【initDTS:${this.initDTS} , nextAacDts:${this.nextAacDts}, samples[0]:${inputSamples[0].dts}】`)
+    let delta = inputSamples[0].dts - nextAudioPts;
+    inputSamples.forEach(sample => {
+      sample.dts -= delta;
+      sample.pts -= delta;
+    });
+    logger.warn(`audio remux:【initDTS:${this.initDTS} , nextAacPts:${nextAudioPts}, originDTS:${inputSamples[0].originDts} , samples[0]:${inputSamples[0].dts}】`)
 
     for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
       let sample = inputSamples[i];
@@ -144,8 +151,8 @@ export default class AudioFragmentStream extends PipeLine {
       let unitLen = unit.byteLength;
       offset += unitLen;
       // console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS :
-      // ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audi
-      // oSample.pts/4294967296).toFixed(3)}');
+      // ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(aud
+      // i oSample.pts/4294967296).toFixed(3)}');
       mp4Sample = {
         size: unitLen,
         cts: 0,
@@ -181,15 +188,19 @@ export default class AudioFragmentStream extends PipeLine {
       aacTrack.samples = [];
       const start = firstPTS / TIME_SCALE;
       const end = this.nextAacDts / TIME_SCALE;
-      // const audioData = {   data1: moof,   data2: mdat,   startPTS: start,
-      // endPTS: end,   startDTS: start,   endDTS: end,   nb: nbSamples };
+      // const audioData = {   data1: moof,   data2: mdat,   startPTS: start, endPTS:
+      // end,   startDTS: start,   endDTS: end,   nb: nbSamples };
       let bf = new Uint8Array(this.initSegment.byteLength + moof.byteLength + mdat.byteLength);
       bf.set(this.initSegment, 0);
       bf.set(moof, this.initSegment.byteLength);
       bf.set(mdat, this.initSegment.byteLength + moof.byteLength);
       this.emit('data', {
         type: 'audio',
-        buffer: bf
+        buffer: bf,
+        startPTS: firstPTS,
+        startDTS: firstPTS,
+        endPTS: this.nextAacDts,
+        endDTS: this.nextAacDts
       });
       bf = null;
     }
