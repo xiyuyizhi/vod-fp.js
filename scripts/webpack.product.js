@@ -1,5 +1,6 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
+const fs = require('fs');
 
 const ROOT = process.cwd();
 const PACKAGE_ROOT = `packages/vod-fp-${process.env.BUILD}/`;
@@ -48,7 +49,10 @@ const config = {
       {
         test: /\.js$/,
         include: [/vod-fp-mux/, /vod-fp-player/, /vod-fp-utility/, /src/],
-        loader: require.resolve('babel-loader')
+        loader: require.resolve('babel-loader'),
+        options: {
+          ...JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.babelrc'))),
+        }
       }
     ]
   }

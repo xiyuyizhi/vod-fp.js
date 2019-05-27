@@ -1,6 +1,6 @@
-import {PipeLine} from 'vod-fp-utility';
+import { PipeLine } from 'vod-fp-utility';
 import ExpGolomb from '../utils/exp-golomb';
-import {getDefaultAVCTrack} from '../default';
+import { getDefaultAVCTrack } from '../default';
 import Logger from "../utils/logger";
 
 let logger = new Logger('AvcStream')
@@ -53,7 +53,7 @@ export default class AvcStream extends PipeLine {
     pes.data = null;
     let spsFound = false;
     let createAVCSample = function (key, pts, dts, debug) {
-      return {key: key, pts: pts, dts: dts, units: []};
+      return { key: key, pts: pts, dts: dts, units: [] };
     };
 
     /**
@@ -113,7 +113,7 @@ export default class AvcStream extends PipeLine {
         default:
           logger.warn(`unknow ${unit.nalType}`);
       }
-      if (this.avcSample && [1, 5, 6, 7, 8].includes(unit.nalType)) {
+      if (this.avcSample && [1, 5, 6, 7, 8].indexOf(unit.nalType) !== -1) {
         let units = this.avcSample.units;
         units.push(unit);
       }
@@ -162,14 +162,14 @@ export default class AvcStream extends PipeLine {
             : 3
         };
       }
-      return {index: -1};
+      return { index: -1 };
     };
 
     if (getNalUStartIndex(0).index === -1) {
       nalStartInPesStart = false;
     }
     while (i <= len - 4) {
-      let {index, is3Or4} = getNalUStartIndex(i);
+      let { index, is3Or4 } = getNalUStartIndex(i);
       if (index !== -1) {
         // 去除 pes中nal unit不是开始于第一字节的那部分数据 [把这部分数据添加到上一个采样的最后一个nal unit 中]
         if (index !== 0 && nalStartInPesStart) {
@@ -269,7 +269,7 @@ export default class AvcStream extends PipeLine {
     newData = new Uint8Array(newLength);
     let sourceIndex = 0;
 
-    for (i = 0; i < newLength; sourceIndex++, i++) {
+    for (i = 0; i < newLength; sourceIndex++ , i++) {
       if (sourceIndex === EPBPositions[0]) {
         // Skip this byte
         sourceIndex++;

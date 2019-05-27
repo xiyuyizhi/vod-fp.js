@@ -15,7 +15,7 @@ class Logger {
     const keys = ['log', 'warn', 'error', 'group', 'groupEnd']
     keys.forEach(key => {
       this[key] = (...args) => {
-        if (this._disabled) 
+        if (this._disabled)
           return;
         let arg1 = args[0];
         if (arg1 && arg1.indexOf && arg1.indexOf('%c') !== -1) {
@@ -24,7 +24,7 @@ class Logger {
         } else {
           args = [`${this._position}: `].concat(args)
         }
-        console[key].apply(null, args)
+        console[key].apply(window.console, args)
       }
     })
 

@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const ROOT = process.cwd();
@@ -31,7 +32,10 @@ const config = {
           new RegExp(path.join(PACKAGE_ROOT, '/demo/')),
           new RegExp(path.join(PACKAGE_ROOT, '/src/'))
         ],
-        loader: require.resolve('babel-loader')
+        loader: require.resolve('babel-loader'),
+        options: {
+          ...JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.babelrc'))),
+        }
       }
     ]
   },
@@ -44,7 +48,8 @@ const config = {
   devServer: {
     compress: true,
     disableHostCheck: true,
-    port: process.env.PORT
+    port: process.env.PORT,
+    host: '0.0.0.0'
   }
 };
 

@@ -1,4 +1,4 @@
-import {PipeLine} from 'vod-fp-utility';
+import { PipeLine } from 'vod-fp-utility';
 import Logger from '../utils/logger';
 
 let logger = new Logger('TsPacketParseStream')
@@ -9,7 +9,6 @@ export default class TsPacketParseStream extends PipeLine {
     this.pmtId = -1;
     this.streamInfo = null;
   }
-
   push(packet) {
     let adaptionsOffset = 0;
     let header = this.parseTsHeader(packet.subarray(0, 4));
@@ -96,7 +95,7 @@ export default class TsPacketParseStream extends PipeLine {
       logger.error('not found PMT');
       return;
     }
-    const {videoId, audioId} = this.streamInfo;
+    const { videoId, audioId } = this.streamInfo;
     switch (header.pid) {
       case videoId:
         this.emit('data', {

@@ -1,8 +1,8 @@
 import Logger from '../src/utils/logger';
-import {TsToMp4, Mp4Parser} from '../src';
+import { TsToMp4, Mp4Parser } from '../src';
 import parser from './m3u8-parser';
-import {rejects} from 'assert';
-import {resolve} from 'upath';
+import { rejects } from 'assert';
+import { resolve } from 'upath';
 
 let logger = new Logger('demo')
 logger.log('%c mux start!', 'background: #222; color: #bada55');
@@ -11,7 +11,7 @@ let videoMedia = document.querySelector('#video');
 
 window.serializeBuffer = () => {
   const buffered = videoMedia.buffered;
-  if (!buffered.length) 
+  if (!buffered.length)
     return [];
   let arr = [];
   for (let i = 0; i < buffered.length; i++) {
@@ -91,7 +91,7 @@ let audioPending = [];
 
 function onSourceOpen() {
   logger.log('readyState:', mediaSource.readyState);
-  if (videoBuffer) 
+  if (videoBuffer)
     return;
   videoBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E"');
   audioBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="mp4a.40.2"');
@@ -126,7 +126,7 @@ attachMedia();
 let tsToMp4 = new TsToMp4();
 
 tsToMp4.on('data', data => {
-  if (!data.buffer.byteLength) 
+  if (!data.buffer.byteLength)
     return;
   if (!videoBuffer.updating && videoPending.length === 0) {
     if (data.type === 'video') {
@@ -184,7 +184,7 @@ function startTimer(segments, duration) {
   }
   setInterval(() => {
     let current;
-    if (processStatus !== 'IDLE') 
+    if (processStatus !== 'IDLE')
       return;
     if (window.seek) {
       current = getSegment();
@@ -235,7 +235,7 @@ document
 document
   .querySelector('#load')
   .addEventListener('click', e => {
-    if (!url) 
+    if (!url)
       return;
     if (videoBuffer.buffered.length) {
       videoBuffer.remove(0, Infinity);
@@ -255,7 +255,7 @@ if (localBfStr) {
 document
   .querySelector('#mp4Upload')
   .addEventListener('change', e => {
-    const [file] = e.target.files;
+    const file = e.target.files[0];
     const reader = new FileReader();
     reader.onload = e => {
       const buffer = e.target.result;
