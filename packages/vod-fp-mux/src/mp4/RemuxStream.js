@@ -34,16 +34,30 @@ export default class RemuxStream extends PipeLine {
       const {audioTrack, videoTrack} = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;
-      let audiovideoDeltaDts = (audioTrack.samples[0].dts - videoTrack.samples[0].dts) / videoTrack.inputTimeScale;
-      //以小的为基准
-      audioTimeOffset += Math.max(0, audiovideoDeltaDts);
-      videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
-      logger.log('音视频第一采样delta: ', audioTimeOffset, videoTimeOffset, audiovideoDeltaDts);
-      this.emit('data', {
-        audioTimeOffset,
-        videoTimeOffset,
-        contiguous: this.timeOffset === undefined
-      });
+      if (videoTrack.samples.length) {
+        let firstVideoSampleDts = videoTrack.samples[0].dts;
+        let audiovideoDeltaDts = (audioTrack.samples[0].dts - videoTrack.samples[0].dts) / videoTrack.inputTimeScale;
+        if (Math.abs(audiovideoDeltaDts) >= 0.5) {
+          logger.warn('音视频first dts差距过大')
+          //可能存在视频非开始于关键帧，在上一阶段丢弃了那些关键帧之前的，导致音视频dts差距过大
+          audioTrack.samples = audioTrack
+            .samples
+            .filter(sample => sample.dts >= firstVideoSampleDts)
+          audiovideoDeltaDts = 0;
+        }
+        //以小的为基准
+        audioTimeOffset += Math.max(0, audiovideoDeltaDts);
+        videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
+        logger.log('音,视频第一采样delta: ', audioTimeOffset, videoTimeOffset, audiovideoDeltaDts);
+        this.emit('data', {
+          audioTimeOffset,
+          videoTimeOffset,
+          contiguous: this.timeOffset === undefined
+        })
+      } else {
+        logger.warn('不存在采样,应该是缺少IDR帧')
+        this.emit('error', new Error('NOT_FOUNT_IDR'))
+      }
       this.emit('done');
       this.timeOffset = undefined;
       this.audioTrack = null;

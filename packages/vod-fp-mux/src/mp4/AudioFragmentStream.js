@@ -71,15 +71,16 @@ export default class AudioFragmentStream extends PipeLine {
     if (!nextAudioPts) {
       nextAudioPts = aacTrack.samples[0].dts
     }
-    if (!contiguous) {
-      nextAudioPts = timeOffset * TIME_SCALE
+    if (!contiguous || (Math.abs(inputSamples[0].dts - nextAudioPts) / 90000 > 0.2)) {
+      nextAudioPts = timeOffset * TIME_SCALE || nextAudioPts;
       logger.warn('not contiguous', timeOffset, nextAudioPts)
+      let delta = inputSamples[0].dts - nextAudioPts;
+      inputSamples.forEach(sample => {
+        sample.dts -= delta;
+        sample.pts -= delta;
+      });
     }
-    let delta = inputSamples[0].dts - nextAudioPts;
-    inputSamples.forEach(sample => {
-      sample.dts -= delta;
-      sample.pts -= delta;
-    });
+
     logger.warn(`audio remux:【initDTS:${this.initDTS} , nextAacPts:${nextAudioPts}, originDTS:${inputSamples[0].originDts} , samples[0]:${inputSamples[0].dts}】`)
 
     for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
