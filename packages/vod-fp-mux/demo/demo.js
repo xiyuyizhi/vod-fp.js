@@ -122,7 +122,7 @@ function onSourceOpen() {
     if (audioPending.length) {
       audioBuffer.appendBuffer(audioPending.shift());
     } else if (!videoPending.length && !audioPending.length && !audioBuffer.updating && !videoBuffer.updating) {
-      mediaSource.endOfStream();
+      // mediaSource.endOfStream();
     }
   });
   videoBuffer.addEventListener('error', e => {
@@ -139,7 +139,7 @@ function updateSegmentsBoundAfterAppended() {
     start = start / 90000;
     let end = Math.min(lastVideoInfo.endPTS, lastAudioInfo.endPTS);
     end = end / 90000;
-    logger.log([
+    logger.log('new buffer:', [
       start, end
     ], serializeBuffer().map(x => x[0] + '-' + x[1]).join(' ~ '));
     let id = currentSegment.id;
@@ -208,14 +208,17 @@ tsToMp4.on('data', data => {
 });
 
 function getSegment() {
+
+  //timeline  |start      end| |
+
   function binarySearch(list, start, end, point) {
     // start mid end
     const mid = start + Math.floor((end - start) / 2);
-    if (list[mid].start < point && list[mid].end < point) {
-      start = mid;
+    if (list[mid].end < point + 0.25) {
+      start = mid + 1;
       return binarySearch(list, start, end, point);
-    } else if (list[mid].start > point && list[mid].end > point) {
-      end = mid;
+    } else if (list[mid].start > point + 0.25) {
+      end = mid - 1;
       return binarySearch(list, start, end, point);
     } else {
       return list[mid];
@@ -251,9 +254,7 @@ function startTimer(segments, duration) {
     if (window.seek) {
       current = getSegment();
       logger.log('seek to segment ', current.id, [current.start, current.end])
-      if (current.loaded) {
-        current = pl.segments[current.id + 1];
-      }
+      // if (current.loaded) {   current = pl.segments[current.id + 1]; }
     } else {
       current = segments.filter(x => {
         return !x.loaded && (currentSegment

@@ -1,6 +1,6 @@
-import { PipeLine } from 'vod-fp-utility';
+import {PipeLine} from 'vod-fp-utility';
 import ExpGolomb from '../utils/exp-golomb';
-import { getDefaultAVCTrack } from '../default';
+import {getDefaultAVCTrack} from '../default';
 import Logger from "../utils/logger";
 
 let logger = new Logger('AvcStream')
@@ -49,11 +49,16 @@ export default class AvcStream extends PipeLine {
      * 9 : access unit delimiter | AUD
      */
     const nalUnits = this.parseAVCNALu(pes);
-    // logger.log(nalUnits)
     pes.data = null;
+
+    // logger.log(nalUnits)
+    if (nalUnits.length >= 10) {
+      logger.log('应该是一个坏掉的pes,丢弃掉')
+      return;
+    }
     let spsFound = false;
     let createAVCSample = function (key, pts, dts, debug) {
-      return { key: key, pts: pts, dts: dts, units: [] };
+      return {key: key, pts: pts, dts: dts, units: []};
     };
 
     /**
@@ -79,6 +84,7 @@ export default class AvcStream extends PipeLine {
           this.avcSample = createAVCSample(false, pes.pts, pes.dts);
           break;
         case 5:
+          logger.warn('detect IDR');
           if (!this.avcSample) {
             this.avcSample = createAVCSample(true, pes.pts, pes.dts);
           }
@@ -162,14 +168,14 @@ export default class AvcStream extends PipeLine {
             : 3
         };
       }
-      return { index: -1 };
+      return {index: -1};
     };
 
     if (getNalUStartIndex(0).index === -1) {
       nalStartInPesStart = false;
     }
     while (i <= len - 4) {
-      let { index, is3Or4 } = getNalUStartIndex(i);
+      let {index, is3Or4} = getNalUStartIndex(i);
       if (index !== -1) {
         // 去除 pes中nal unit不是开始于第一字节的那部分数据 [把这部分数据添加到上一个采样的最后一个nal unit 中]
         if (index !== 0 && nalStartInPesStart) {
@@ -179,9 +185,6 @@ export default class AvcStream extends PipeLine {
             nalIdc: (nalUnit[0] & 0x60) >> 5,
             nalType: nalUnit[0] & 0x1f
           });
-          if ((nalUnit[0] & 0x1f) === 5) {
-            logger.warn('detect IDR');
-          }
         }
         if (!nalStartInPesStart) {
           // 属于最新一个采样最后一个nal
@@ -269,7 +272,7 @@ export default class AvcStream extends PipeLine {
     newData = new Uint8Array(newLength);
     let sourceIndex = 0;
 
-    for (i = 0; i < newLength; sourceIndex++ , i++) {
+    for (i = 0; i < newLength; sourceIndex++, i++) {
       if (sourceIndex === EPBPositions[0]) {
         // Skip this byte
         sourceIndex++;
