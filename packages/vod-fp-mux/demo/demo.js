@@ -87,10 +87,12 @@ function bindEvent() {
   });
   videoMedia.addEventListener('seeked', () => {
     window.seek = false;
+    clearInterval(window.seekTimer)
     logger.log('seek end , can play')
   });
   videoMedia.addEventListener('waiting', () => {
-    videoMedia.currentTime += 0.1;
+    console.log('waiting....');
+    videoMedia.currentTime += 0.2
   })
 }
 
@@ -153,6 +155,15 @@ function updateSegmentsBoundAfterAppended() {
       segs[i].end = segs[i].start + segs[i].duration;
     }
     processStatus = 'IDLE';
+    if (currentSegment.id === pl.segments.length - 1) {
+      mediaSource.endOfStream();
+    }
+    clearInterval(window.seekTimer)
+    if (videoMedia.seeking) {
+      window.seekTimer = setInterval(() => {
+        videoMedia.currentTime += 0.05
+      }, 250)
+    }
   }
 }
 
@@ -230,8 +241,23 @@ function getSegment() {
 
 function getBufferedInfo() {
   const currentTime = videoMedia.currentTime;
-  const buffered = serializeBuffer();
-  const currentBuffered = buffered.filter(([start, end]) => start <= currentTime && end > currentTime)[0];
+  let buffered = serializeBuffer();
+  let merged = [];
+  let last = buffered[0]
+  if (!buffered.length) 
+    return 0;
+  
+  //合并间隙比较小的buffer
+  for (let i = 1; i < buffered.length; i++) {
+    if (buffered[i][0] < (last[1] + 0.3)) {
+      last[1] = buffered[i][1]
+    } else {
+      merged.push(last);
+      last = buffered[i]
+    }
+  }
+  merged.push(last)
+  const currentBuffered = merged.filter(([start, end]) => start <= currentTime && end > currentTime)[0];
   if (currentBuffered) {
     return currentBuffered[1] - currentTime;
   }
@@ -248,28 +274,42 @@ function startTimer(segments, duration) {
   clearInterval(window.timer)
   window.timer = setInterval(() => {
     let current;
-    if (processStatus !== 'IDLE') 
+    if (processStatus !== 'IDLE' || mediaSource.readyState === 'end') 
       return;
-    processStatus = 'LOADING';
     if (window.seek) {
       current = getSegment();
-      logger.log('seek to segment ', current.id, [current.start, current.end])
-      // if (current.loaded) {   current = pl.segments[current.id + 1]; }
+      logger.log('seek to segment ', current.id, [
+        current.start, current.end
+      ], videoMedia.currentTime)
+      if (current.loaded) {
+        if (!pl.segments[current.id - 1].loaded) {
+          current = pl.segments[current.id - 1]
+        } else {
+          current = pl.segments[current.id + 1]
+          if (current.loaded) 
+            return;
+          }
+        }
     } else {
       current = segments.filter(x => {
         return !x.loaded && (currentSegment
           ? x.id > currentSegment.id
           : true);
       })[0];
-      if ((pendingRequest && pendingRequest.loading) || getBufferedInfo() > 30) {
-        processStatus = 'IDLE';
-        return;
-      }
     }
-    if ((currentSegment && current.cc !== currentSegment.cc) || window.seek) {
+    if ((pendingRequest && pendingRequest.loading) || getBufferedInfo() > 30) {
+      processStatus = 'IDLE';
+      return;
+    }
+
+    logger.groupEnd()
+    if (!current) 
+      return;
+    if ((currentSegment && current && current.cc !== currentSegment.cc) || window.seek) {
       tsToMp4.setTimeOffset(current.start);
     }
-    logger.groupEnd()
+    processStatus = 'LOADING';
+    clearInterval(window.seekTimer)
     logger.group(`--------current segment ${current.id}  ${processStatus}-------------`);
     pendingRequest = getStream(current.url);
     pendingRequest.then(buffer => {

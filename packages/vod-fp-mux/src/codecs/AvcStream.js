@@ -48,13 +48,14 @@ export default class AvcStream extends PipeLine {
      * 8 : PPS
      * 9 : access unit delimiter | AUD
      */
+    let badNals = false;
     const nalUnits = this.parseAVCNALu(pes);
     pes.data = null;
 
     // logger.log(nalUnits)
     if (nalUnits.length >= 10) {
       logger.log('应该是一个坏掉的pes,丢弃掉')
-      return;
+      badNals = true;
     }
     let spsFound = false;
     let createAVCSample = function (key, pts, dts, debug) {
@@ -117,9 +118,9 @@ export default class AvcStream extends PipeLine {
           }
           break;
         default:
-          logger.warn(`unknow ${unit.nalType}`);
+          // logger.warn(`unknow ${unit.nalType}`);
       }
-      if (this.avcSample && [1, 5, 6, 7, 8].indexOf(unit.nalType) !== -1) {
+      if (!badNals && this.avcSample && [1, 5, 6, 7, 8].indexOf(unit.nalType) !== -1) {
         let units = this.avcSample.units;
         units.push(unit);
       }

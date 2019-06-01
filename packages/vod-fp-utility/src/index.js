@@ -1,3 +1,6 @@
 import * as F from './fp/core';
-import PipeLine from './oop/PipeLine';
-export { F, PipeLine };
+import * as oop from './oop';
+
+const {EventBus, PipeLine, StateMachine, Tick} = oop;
+
+export {F, EventBus, PipeLine, StateMachine, Tick};

@@ -12,7 +12,7 @@ const {
   curry
 } = F;
 
-describe.only('Fp: test Maybe', () => {
+describe('Fp: test Maybe', () => {
   it('#Maybe base flow', () => {
 
     Just

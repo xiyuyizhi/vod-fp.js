@@ -1,4 +1,4 @@
-import {PipeLine} from 'vod-fp-utility';
+import {PipeLine, oop} from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
 import AAC from '../utils/aac';
 import ptsNormalize from '../utils/ptsNormalize';

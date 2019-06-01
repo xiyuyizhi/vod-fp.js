@@ -1,8 +1,5 @@
 {
   "env": {
-    "dev": {
-      "presets": [["@babel/preset-env"]]
-    },
     "test": {
       "presets": [
         [
