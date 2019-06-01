@@ -1,6 +1,28 @@
-import * as F from './fp/core';
 import * as oop from './oop';
+import {
+  F,
+  Maybe,
+  Just,
+  Empty,
+  Fail,
+  Success,
+  either,
+  Task
+} from './fp';
 
 const {EventBus, PipeLine, StateMachine, Tick} = oop;
 
-export {F, EventBus, PipeLine, StateMachine, Tick};
+export {
+  F,
+  Maybe,
+  Just,
+  Empty,
+  Fail,
+  Success,
+  either,
+  Task,
+  EventBus,
+  PipeLine,
+  StateMachine,
+  Tick
+};

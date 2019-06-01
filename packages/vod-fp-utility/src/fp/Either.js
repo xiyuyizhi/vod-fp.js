@@ -1,5 +1,5 @@
 import Base from './Base';
-import {curry} from './core';
+import { curry } from './core';
 class Either extends Base {}
 
 class Fail extends Either {
@@ -20,7 +20,7 @@ class Fail extends Either {
   }
   // 用于 Task中_value为 Fail时
   error(f) {
-    return f(this.value())
+    return f(this.value());
   }
 }
 
@@ -29,18 +29,20 @@ class Success extends Either {
     return new Success(value);
   }
   map(f) {
-    return Success.of(f(this.value()));
+    try {
+      return Success.of(f(this.value()));
+    } catch (e) {
+      return Fail.of(e);
+    }
   }
   join() {
-    return this.value()
+    return this.value();
   }
   chain(f) {
-    return this
-      .map(f)
-      .join()
+    return this.map(f).join();
   }
   ap(another) {
-    return another.map(this.value())
+    return another.map(this.value());
   }
   error() {
     return this;
@@ -57,4 +59,4 @@ const either = curry((fn1, fn2, e) => {
   throw new Error('params not a Either');
 });
 
-export {Fail, Success, either};
+export { Fail, Success, either };

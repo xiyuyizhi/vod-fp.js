@@ -2,7 +2,8 @@
  * https://tools.ietf.org/html/draft-pantos-http-live-streaming-23
  */
 
-import { F } from 'vod-fp-utility';
+import { F, Maybe, Success, Fail, either } from 'vod-fp-utility';
+import { fail } from 'assert';
 
 const {
   curry,
@@ -17,6 +18,7 @@ const {
   splitOnce,
   splitMap,
   ifElse,
+  chain,
   trace
 } = F;
 
@@ -24,7 +26,8 @@ const TAG_PATTERN = /EXT(?:-X-)(.+)/;
 const SPLIT_COMMA_PATTERN = /,(?:(?=[a-zA-Z-]+(?:=|"|$)))/;
 const Error = {
   INVALID: {
-    error: 1
+    error: 1,
+    message: 'INVALID'
   },
   PARSE_ERROR: {
     error: 2
@@ -36,19 +39,13 @@ const splitByComma = split(SPLIT_COMMA_PATTERN);
 const splitByAcross = split('-');
 const filterEmpty = filter(a => Boolean(a) && a !== ',');
 
-const valid = m3u8 => m3u8.indexOf('#EXTM3U') !== -1;
-
-const isMaster = m3u8 =>
-  m3u8.indexOf('EXT-X-STREAM-INF') !== -1 &&
-  m3u8.indexOf('#EXT-X-ENDLIST') === -1;
-
 const isTag = line => line.trim().indexOf('#EXT') === 0;
 
 const splitLines = m3u8 =>
   m3u8
     .split(/\n/)
-    .filter(x => Boolean(x))
-    .filter(x => (/#/.test(x) ? /#EXT/.test(x) : true))
+    .filter(Boolean)
+    .filter(x => /^(#EXT|[^#])/.test(x))
     .map(line => line.replace(/("|'|\s+)/g, '').trim());
 
 const keyFormat = key => {
@@ -82,24 +79,26 @@ const combineObjs = list => {
   return list;
 };
 
-const extractAttrs = compose(
-  combineObjs,
-  map(
-    compose(
-      ifElse(
-        x => x.length === 1,
-        head, //eg: EXTINF:duration
-        compose(
-          combinePair,
-          splitMap(keyFormat, identity)
-        ) // eg: EXT-X-MEDIA:TYPE=AUDIO,URI="XXXX"
-      ),
-      splitOnceByEq
-    )
-  ),
-  filterEmpty,
-  splitByComma
-);
+const extractAttrs = attrs => {
+  const extractAttr = compose(
+    ifElse(
+      x => x.length === 1,
+      head, //eg: EXTINF:duration
+      compose(
+        combinePair,
+        splitMap(keyFormat, identity)
+      ) // eg: EXT-X-MEDIA:TYPE=AUDIO,URI="XXXX"
+    ),
+    splitOnceByEq
+  );
+
+  return compose(
+    combineObjs,
+    map(extractAttr),
+    filterEmpty,
+    splitByComma
+  )(attrs);
+};
 
 const extractTag = compose(
   combinePair,
@@ -109,8 +108,10 @@ const extractTag = compose(
 );
 
 const getUrl = curry((baseUrl, url) => {
-  if (!/(https|http)/.test(url)) {
-    return { url: baseUrl + url };
+  if (!/^https?/.test(url)) {
+    return {
+      url: baseUrl + url
+    };
   }
   return { url };
 });
@@ -119,14 +120,14 @@ const fullfillM3u8 = curry((a, fn, b) => fn(a, b));
 
 /** ------------- call -------------*/
 
-const structureM3u8 = (m3u8, baseUrl) => {
+const structureM3u8 = curry((baseUrl, m3u8) => {
   const getUrlWithBase = getUrl(baseUrl);
   return compose(
     map(ifElse(isTag, extractTag, getUrlWithBase)),
     tail,
     splitLines
   )(m3u8);
-};
+});
 
 const compositionMaster = list => {
   const result = {
@@ -148,7 +149,12 @@ const compositionMaster = list => {
   const fullfillIFrameLevels = fullfillMaster((result, item) => {
     if (item.iFrameStreamInf) {
       if (!result.iFrames) {
-        result.iFrames = [{ id: 0, ...item.iFrameStreamInf }];
+        result.iFrames = [
+          {
+            id: 0,
+            ...item.iFrameStreamInf
+          }
+        ];
       } else {
         result.iFrames.push({
           id: result.iFrames.length,
@@ -264,32 +270,62 @@ const compositionLevel = list => {
   return level;
 };
 
-const parse = (m3u8, baseUrl = '') => {
-  if (!valid(m3u8)) return Error.INVALID;
-  const list = structureM3u8(m3u8, baseUrl);
-  let res = null;
-  if (isMaster(m3u8)) {
-    res = compositionMaster(list);
-  } else {
-    res = compositionLevel(list);
+// string -> Either
+const valid = m3u8 => {
+  if (m3u8.indexOf('#EXTM3U') !== -1) {
+    return Success.of(m3u8);
   }
-  if (res.levels && res.levels.length === 0) {
-    return Error.INVALID;
-  }
-  if (res.segments && res.segments.length === 0) {
-    return Error.INVALID;
-  }
-  res.baseUrl = baseUrl;
-  return res;
+  return Fail.of(Error.INVALID);
 };
 
-export default (m3u8, baseUrl) => {
-  try {
-    return parse(m3u8, baseUrl);
-  } catch (e) {
-    return {
-      ...Error.PARSE_ERROR,
-      msg: e.message
-    };
-  }
+const isMaster = m3u8 =>
+  m3u8.indexOf('EXT-X-STREAM-INF') !== -1 &&
+  m3u8.indexOf('#EXT-X-ENDLIST') === -1;
+
+// (string,string) -> Either
+export default (m3u8, baseUrl = '') => {
+  const handleMaster = compose(
+    compositionMaster,
+    structureM3u8(baseUrl)
+  );
+
+  const handleLevel = compose(
+    compositionLevel,
+    structureM3u8(baseUrl)
+  );
+
+  // object -> Either
+  const usableCheck = res => {
+    if (res.levels && res.levels.length === 0) {
+      return Fail.of(Error.INVALID);
+    }
+    if (res.segments && res.segments.length === 0) {
+      return Fail.of(Error.INVALID);
+    }
+    return Success.of(res);
+  };
+
+  const handle = compose(
+    map(x => {
+      x.baseUrl = baseUrl;
+      return x;
+    }),
+    chain(usableCheck),
+    map(ifElse(isMaster, handleMaster, handleLevel)),
+    valid
+  );
+
+  return either(
+    e => {
+      if (e.error) {
+        return e;
+      }
+      return {
+        ...Error.PARSE_ERROR,
+        msg: e.message
+      };
+    },
+    identity,
+    handle(m3u8)
+  );
 };

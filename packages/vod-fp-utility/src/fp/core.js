@@ -29,10 +29,7 @@ const splitOnce = curry((a, b) => {
   if (i === -1) {
     return [b];
   }
-  return [
-    b.slice(0, i),
-    b.slice(i + 1)
-  ];
+  return [b.slice(0, i), b.slice(i + 1)];
 });
 
 const head = a => a[0];
@@ -40,8 +37,7 @@ const tail = a => a.slice(1);
 const identity = a => a;
 
 const splitMap = curry((fn1, fn2, list) => {
-  const [head,
-    ...tail] = list;
+  const [head, ...tail] = list;
   return [fn1(head)].concat(map(fn2, tail));
 });
 
@@ -54,9 +50,9 @@ const ifElse = curry((condition, fn1, fn2, arg) => {
 
 const prop = curry((a, b) => b[a]);
 const join = curry(a => a.join());
-const chain = curry((f, m) => m.map(f).join())
+const chain = curry((f, m) => m.map(f).join());
 
-const liftA2 = curry((g, a, b) => a.map(g).ap(b))
+const liftA2 = curry((g, a, b) => a.map(g).ap(b));
 
 const trace = a => {
   console.log(a);
