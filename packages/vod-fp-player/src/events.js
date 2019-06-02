@@ -1,0 +1,5 @@
+export default {
+  ERROR: 'ERROR',
+  DURATION_CHANGE: 'DURATION_CHANGE',
+  LEVEL_CHANGE: 'LEVEL_CHANGE'
+};
