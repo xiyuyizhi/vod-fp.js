@@ -4,4 +4,5 @@ console.log('%c player start!', 'background: #222; color: #bada55');
 
 window.Vod = Vod;
 const vod = new Vod({ maxBufferLength: 100 });
+vod.attachMedia(document.querySelector('video'));
 vod.loadSource('url: https://youku.com/abc');
