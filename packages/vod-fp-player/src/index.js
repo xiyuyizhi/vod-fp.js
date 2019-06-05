@@ -9,6 +9,7 @@ export default class Vod extends EventBus {
     this.media = null;
     this.url = '';
     this.store = store();
+    console.log(this.store);
   }
 
   static get Events() {
@@ -17,11 +18,13 @@ export default class Vod extends EventBus {
 
   attachMedia(media) {
     this.media = media;
+    this.store.dispatch(ACTION.COLLECT_MEDIA, media);
     this.setUp();
   }
 
   loadSource(url) {
     this.url = url;
+    this.store.dispatch(ACTION.COLLECT_URL, url);
     this.setUp();
   }
 

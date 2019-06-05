@@ -4,6 +4,9 @@ const curry = fn => {
     if (args.length < len) {
       return _curry.bind(null, ...args);
     }
+    if (typeof args[0] === 'function' && args[0].name === '_connect_store') {
+      args = [args[0]()].concat(args.slice(1));
+    }
     return fn.apply(null, args);
   };
 };

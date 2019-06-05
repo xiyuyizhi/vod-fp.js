@@ -1,6 +1,6 @@
-import {compose, map} from './core';
-import {Fail, Success} from './Either';
-import {defer} from './_inner/defer';
+import { compose, map } from './core';
+import { Fail, Success } from './Either';
+import { defer } from './_inner/defer';
 
 const STATE = {
   PENDING: 'pending',
@@ -14,16 +14,12 @@ class Task {
     this._queueCall = [];
     this._errorCall = null;
     this._value = null;
-    this._resolve = this
-      ._resolve
-      .bind(this);
-    this._reject = this
-      ._reject
-      .bind(this);
+    this._resolve = this._resolve.bind(this);
+    this._reject = this._reject.bind(this);
     try {
       f.apply(this, [this._resolve, this._reject]);
     } catch (e) {
-      this._reject(e)
+      this._reject(e);
     }
   }
 
@@ -31,7 +27,7 @@ class Task {
     if (typeof f === 'function') {
       return new Task(f);
     }
-    return Task.resolve(f)
+    return Task.resolve(f);
   }
 
   static resolve(x) {
@@ -59,24 +55,20 @@ class Task {
   }
 
   _deferRun(result) {
-
     while (this._queueCall.length) {
       if (result instanceof Task) {
         // map 中 return new Task,将剩余未执行的map function 挂到新生成的Task
-        this._reMount(result, [
-          ...result._queueCall,
-          ...this
-            ._queueCall
-            .slice(0)
-        ], this._errorCall);
+        this._reMount(
+          result,
+          [...result._queueCall, ...this._queueCall.slice(0)],
+          this._errorCall
+        );
         this._queueCall = [];
         this._errorCall = null;
         continue;
       }
 
-      let current = this
-        ._queueCall
-        .shift();
+      let current = this._queueCall.shift();
       try {
         if (result instanceof Fail) {
           if (this._errorCall) {
@@ -86,7 +78,10 @@ class Task {
           }
         }
         result = map(current, result); // return Success
-        if (typeof result.value === 'function' && result.value()instanceof Task) {
+        if (
+          typeof result.value === 'function' &&
+          result.value() instanceof Task
+        ) {
           result = result.value();
         }
       } catch (e) {
@@ -101,8 +96,7 @@ class Task {
   }
 
   _resolve(result) {
-    if (this._state != STATE.PENDING) 
-      return;
+    if (this._state != STATE.PENDING) return;
     defer(() => {
       this._deferRun(Success.of(result));
       this._state = STATE.FULFILLED;
@@ -110,8 +104,7 @@ class Task {
   }
 
   _reject(result) {
-    if (this._state != STATE.PENDING) 
-      return;
+    if (this._state != STATE.PENDING) return;
     defer(() => {
       this._deferRun(Fail.of(result));
       this._state = STATE.REJECTED;
@@ -119,30 +112,33 @@ class Task {
   }
 
   map(f) {
-    this
-      ._queueCall
-      .push(f);
+    this._queueCall.push(f);
     return this;
   }
 
   // f return another Task
   chain(f) {
-    return Task.of((resolve, reject) => this.map(x => f(x).map(resolve).error(reject)).error(reject))
+    return Task.of((resolve, reject) =>
+      this.map(x =>
+        f(x)
+          .map(resolve)
+          .error(reject)
+      ).error(reject)
+    );
   }
 
   ap(another) {
     return this.chain(fn => {
       if (typeof fn !== 'function') {
-        console.warn(`${fn} is not a function`)
+        console.warn(`call ap(),${fn} is not a function`);
       }
       if (another._state !== STATE.PENDING) {
         //这个task先于其他任务完成
-        return another
-          ._value // Success or Fail
-          .map(fn)
+        return another._value // Success or Fail
+          .map(fn);
       }
-      return another.map(fn)
-    })
+      return another.map(fn);
+    });
   }
 
   error(f) {
@@ -151,8 +147,7 @@ class Task {
   }
 
   cancel() {
-    if (this._state !== STATE.PENDING) 
-      return;
+    if (this._state !== STATE.PENDING) return;
     this._queueCall = [];
     this._state = STATE.FULFILLED;
   }
