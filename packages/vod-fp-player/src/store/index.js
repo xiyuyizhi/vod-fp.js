@@ -1,36 +1,18 @@
-const ACTION = {
+import { combineActions, combineStates, createStore } from 'vod-fp-utility';
+import playlist from './playlist';
+import media from './media';
+
+let ACTION = {
   ERROR: 'error',
-  COLLECT_MEDIA: 'collect_media',
-  COLLECT_URL: 'collect_url',
-  MEDIA_SOURCE_CREATE: 'media_source_create',
-  PLAYLIST_LOADED: 'playlist_loaded'
+  M3U8_URL: 'm3u8Url'
 };
 
-let stores = [];
+let initState = {
+  error: null,
+  m3u8Url: ''
+};
 
-let storeId = 0;
+ACTION = combineActions(ACTION, playlist, media);
+initState = combineStates(initState, playlist, media);
 
-function store() {
-  const _store = {
-    id: storeId++,
-    connect: fn => {
-      return fn(store);
-    },
-    dispatch: () => {},
-    subscribe: () => {},
-    getState: () => {}
-  };
-  stores.push(_store);
-  return _store;
-}
-
-function connect(fn) {
-  // let _connect_store = (id => {
-  //   console.log(id);
-  //   return stores[stores.length - 1];
-  // })(storeId);
-  let _connect_store = () => stores[stores.length - 1];
-  return fn(_connect_store);
-}
-
-export { store, connect, ACTION };
+export { createStore, initState, ACTION };

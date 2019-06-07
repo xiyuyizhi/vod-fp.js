@@ -1,7 +1,7 @@
 import { F } from 'vod-fp-utility';
 
-function tick(a, b) {
-  console.log(a, b);
+function tick({ id }, a, b) {
+  console.log(id, a, b);
 }
 
 const startTick = F.curry(tick);

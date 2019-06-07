@@ -1,6 +1,6 @@
 import { EventBus } from 'vod-fp-utility';
 import Events from './events';
-import { store, ACTION } from './store';
+import { createStore, initState, ACTION } from './store';
 import manage from './manage';
 
 export default class Vod extends EventBus {
@@ -8,8 +8,7 @@ export default class Vod extends EventBus {
     super();
     this.media = null;
     this.url = '';
-    this.store = store();
-    console.log(this.store);
+    this.store = createStore(initState);
   }
 
   static get Events() {
@@ -18,22 +17,23 @@ export default class Vod extends EventBus {
 
   attachMedia(media) {
     this.media = media;
-    this.store.dispatch(ACTION.COLLECT_MEDIA, media);
+    this.store.dispatch(ACTION.MEDIA.MEDIA_ELE, media);
     this.setUp();
   }
 
   loadSource(url) {
     this.url = url;
-    this.store.dispatch(ACTION.COLLECT_URL, url);
+    this.store.dispatch(ACTION.M3U8_URL, url);
     this.setUp();
   }
 
   setUp() {
     if (this.media && this.url) {
-      this.store.subscribe(ACTION.ERROR, e => {
+      const { subscribe, connect } = this.store;
+      subscribe(ACTION.ERROR, e => {
         this.emit(Events.ERROR, e);
       });
-      manage(this.media, this.url, this.store);
+      connect(manage)(this.media, this.url);
     }
   }
 }
