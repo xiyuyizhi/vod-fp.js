@@ -1,10 +1,10 @@
 import { Maybe } from '../fp/Maybe';
 
-function combineActions(...args) {
-  return args.reduce((all, c) => {
-    let { module, ACTION } = c;
+function combineActions(...actions) {
+  return actions.reduce((all, action) => {
+    let { module, ACTION } = action;
     if (!module && !ACTION) {
-      return { ...all, ...c };
+      return { ...all, ...action };
     }
     Object.keys(ACTION).forEach(action => {
       if (action !== module) {
@@ -20,8 +20,8 @@ function combineActions(...args) {
   }, {});
 }
 
-function combineStates(...args) {
-  return args.reduce(
+function combineStates(...states) {
+  return states.reduce(
     (all, c) => {
       let { module, state } = c;
       if (!module) {
@@ -51,13 +51,20 @@ function combineStates(...args) {
 }
 
 let storeId = 0;
-function createStore(initState) {
+function createStore(initState, actions = {}) {
   let state = initState;
   let events = {
     all: []
   };
   const _store = {
     id: storeId++,
+    _findAction(path) {
+      path = path.split('.');
+      if (path.length === 1) {
+        path = path[0];
+        return actions[path.toUpperCase()];
+      }
+    },
     connect: fn => {
       return fn(_store);
     },
@@ -67,20 +74,42 @@ function createStore(initState) {
       let currentState = null;
       let currentDerive = null;
       if (props.length === 1) {
-        state[prop] = payload;
+        state = {
+          ...state,
+          ...{
+            [prop]: payload
+          }
+        };
       } else {
+        let parentProp = prop;
         currentState = state[prop];
         currentDerive = state.derive[prop];
         prop = props.slice(1)[0];
         if (!currentDerive[prop]) {
           currentState[prop] = payload;
         } else {
-          currentDerive[prop](Maybe.of(currentState), payload);
+          // create the copy of currentState //shadow cpoy
+          const newState = currentDerive[prop](
+            Maybe.of({ ...currentState }),
+            payload
+          );
+          state[parentProp] = {
+            ...currentState,
+            ...newState.value()
+          };
         }
       }
       if (events[path]) {
-        events[path].forEach(listener => listener(state));
+        events[path].forEach(listener => listener(_store.getState(path)));
       }
+      // if current update a parent prop,all it's child props listener should be called
+      let childs = _store._findAction(path);
+      if (!childs) return;
+      Object.keys(childs).forEach(child => {
+        if (child !== path && events[child]) {
+          events[child].forEach(listener => listener(_store.getState(child)));
+        }
+      });
     },
     subscribe: (path, listener) => {
       if (typeof path === 'function') {
@@ -96,7 +125,7 @@ function createStore(initState) {
       };
     },
     getState: path => {
-      if (!path) return initState;
+      if (!path) return Maybe.of(state);
       if (typeof path !== 'string') {
         throw new Error('invalid path');
       }
@@ -109,7 +138,7 @@ function createStore(initState) {
       let currentDerive = state.derive[prop];
       prop = props.slice(1)[0];
       if (!currentDerive[prop]) {
-        return currentState[prop];
+        return Maybe.of(currentState[prop]);
       } else {
         return currentDerive[prop](Maybe.of(currentState));
       }

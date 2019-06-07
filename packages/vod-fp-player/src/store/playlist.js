@@ -16,7 +16,10 @@ const state = {
       if (!payload) {
         return map(prop('currentLevel'))(state);
       }
-      return state.map(x => (x.currentLevel = payload));
+      return state.map(x => {
+        x.currentLevel = payload;
+        return x;
+      });
     },
     segments(state, payload) {
       if (!payload)
@@ -28,21 +31,15 @@ const state = {
         )(state);
       return map(
         compose(
-          x => (x.segments = payload),
+          x => {
+            x.segments = payload;
+            return x;
+          },
           prop('currentLevel')
         )
       )(state);
     }
   }
 };
-
-/**
- * dispatch(ACTION.PLAYLIST,playlist)
- * dispatch(ACTION.CURRENT_LEVEL,newLevelId)
- * getState(ACTION.CURRENT_LEVEL)
- * getState(ACTION.PLAYLIST)
- * subscribe(ACTION.CURRENT_LEVEL,()=>{
- * })
- */
 
 export default { module: 'PLAYLIST', ACTION, state };

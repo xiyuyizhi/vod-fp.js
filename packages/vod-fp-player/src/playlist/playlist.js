@@ -3,7 +3,7 @@ import { ACTION } from '../store';
 import { buffer } from '../buffer/buffer';
 import m3u8Parser from '../utils/m3u8-parser';
 
-function startLoad({ id, dispatch, getState, connect }, url) {
+function startLoad({ id, dispatch, subscribe, getState, connect }, url) {
   return Task.of((resolve, reject) => {
     // throw new Error('hhhhh');
     fetch(url)
@@ -14,11 +14,12 @@ function startLoad({ id, dispatch, getState, connect }, url) {
       }, reject);
   }).map(text => {
     const level = m3u8Parser(text);
+    subscribe(ACTION.PLAYLIST.CURRENT_LEVEL, state => console.log(state));
     dispatch(ACTION.PLAYLIST.PLAYLIST, {
       currentLevel: 1,
       levels: [level]
     });
-    // dispatch(ACTION.PLAYLIST.CURRENT_LEVEL, 2);
+    dispatch(ACTION.PLAYLIST.CURRENT_LEVEL, 2);
     return level;
   });
 }

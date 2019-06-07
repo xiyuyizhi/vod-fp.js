@@ -15,4 +15,5 @@ let initState = {
 ACTION = combineActions(ACTION, playlist, media);
 initState = combineStates(initState, playlist, media);
 
+console.log(ACTION);
 export { createStore, initState, ACTION };
