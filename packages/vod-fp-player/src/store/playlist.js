@@ -5,11 +5,25 @@ const ACTION = {
   PLAYLIST: 'playlist',
   CURRENT_LEVEL_ID: 'currentLevelId',
   CURRENT_LEVEL: 'currentLevel',
-  SEGMENTS: 'segments'
+  SEGMENTS: 'segments',
+  CURRENT_SEGMENT: 'currentSegment'
 };
 
+function getCurrentLevel(state) {
+  let currentLevelId = state.value().currentLevelId;
+  return map(
+    compose(
+      head,
+      filter(x => x.levelId === currentLevelId),
+      prop('levels')
+    )
+  )(state);
+}
+
 const state = {
+  currentSegment: -1,
   playlist: {
+    levels: [],
     currentLevelId: -1
   },
   derive: {
@@ -24,23 +38,11 @@ const state = {
     },
     currentLevel(state, payload) {
       if (!payload) {
-        return map(
-          compose(
-            head,
-            filter(x => x.levelId === state.value().currentLevelId),
-            prop('levels')
-          )
-        )(state);
+        return getCurrentLevel(state);
       }
     },
     segments(state, payload) {
-      if (!payload)
-        return map(
-          compose(
-            prop('segments'),
-            prop('currentLevel')
-          )
-        )(state);
+      if (!payload) return map(prop('segments'))(getCurrentLevel(state));
       return map(
         compose(
           x => {

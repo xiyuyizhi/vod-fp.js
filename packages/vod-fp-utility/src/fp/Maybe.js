@@ -1,19 +1,17 @@
 import Base from './Base';
 
 class Maybe extends Base {
-
   static of(value) {
     if (value === undefined || value === null) {
-      return Empty.of()
+      return Empty.of();
     }
-    return Just.of(value)
+    return Just.of(value);
   }
-
 }
 
 class Empty extends Maybe {
   static of(value) {
-    return new Empty(value)
+    return new Empty(value);
   }
 
   map() {
@@ -29,18 +27,22 @@ class Empty extends Maybe {
     return this;
   }
   value() {
-    return this.toString()
+    return this.toString();
+  }
+  getOrElse(value) {
+    if (typeof value === 'function') {
+      return value();
+    }
+    return value;
   }
   toString() {
-    return 'Empty'
+    return 'Empty';
   }
-
 }
 
 class Just extends Maybe {
-
   static of(value) {
-    return new Just(value)
+    return new Just(value);
   }
 
   map(fn) {
@@ -53,15 +55,16 @@ class Just extends Maybe {
   }
 
   chain(f) {
-    return this
-      .map(f)
-      .join()
+    return this.map(f).join();
   }
 
   ap(f) {
     return f.map(this.value());
   }
 
+  getOrElse() {
+    return this.value();
+  }
 }
 
-export {Empty, Just, Maybe}
+export { Empty, Just, Maybe };

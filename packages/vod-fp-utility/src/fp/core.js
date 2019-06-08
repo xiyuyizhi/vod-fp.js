@@ -23,6 +23,7 @@ const compose = (...fns) => {
 const map = curry((fn, mappable) => mappable.map(fn));
 const forEach = curry((fn, list) => list.forEach(fn));
 const filter = curry((fn, list) => list.filter(fn));
+const reduce = curry((fn, init, arr) => arr.reduce(fn, init));
 const split = curry((a, b) => b.split(a));
 const splitOnce = curry((a, b) => {
   let i = b.indexOf(a);
@@ -65,6 +66,7 @@ export {
   map,
   forEach,
   filter,
+  reduce,
   head,
   tail,
   identity,

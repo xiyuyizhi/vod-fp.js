@@ -149,7 +149,11 @@ function createStore(initState, actions = {}) {
       let currentDerive = state.derive[prop];
       prop = props.slice(1)[0];
       if (!currentDerive[prop]) {
-        return Maybe.of(currentState[prop]);
+        if (currentState[prop] !== undefined) {
+          return Maybe.of(currentState[prop]);
+        } else {
+          return Maybe.of(state[prop]);
+        }
       } else {
         return currentDerive[prop](Maybe.of(currentState));
       }
