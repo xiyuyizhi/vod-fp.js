@@ -38,11 +38,10 @@ function combineStates(...states) {
           [module]: state.derive || {}
         }
       };
+      delete state.derive;
       return {
         ...all,
-        ...{
-          [module]: state[module]
-        },
+        ...state,
         derive
       };
     },
@@ -52,6 +51,9 @@ function combineStates(...states) {
 
 let storeId = 0;
 function createStore(initState, actions = {}) {
+  if (!initState.derive) {
+    initState.derive = {};
+  }
   let state = initState;
   let events = {
     all: []
@@ -85,14 +87,21 @@ function createStore(initState, actions = {}) {
         currentState = state[prop];
         currentDerive = state.derive[prop];
         prop = props.slice(1)[0];
-        if (!currentDerive[prop]) {
-          currentState[prop] = payload;
-        } else {
+        if (!currentDerive || !currentDerive[prop]) {
+          if (currentState[prop] !== undefined) {
+            currentState[prop] = payload;
+          } else if (state[prop] !== undefined) {
+            state[prop] = payload;
+          }
+        } else if (currentDerive[prop]) {
           // create the copy of currentState //shadow cpoy
           const newState = currentDerive[prop](
             Maybe.of({ ...currentState }),
             payload
           );
+          if (!newState) {
+            throw new Error(`${path} not support set value`);
+          }
           state[parentProp] = {
             ...currentState,
             ...newState.value()
@@ -106,6 +115,8 @@ function createStore(initState, actions = {}) {
       let childs = _store._findAction(path);
       if (!childs) return;
       Object.keys(childs).forEach(child => {
+        if (child === path) return;
+        child = childs[child];
         if (child !== path && events[child]) {
           events[child].forEach(listener => listener(_store.getState(child)));
         }

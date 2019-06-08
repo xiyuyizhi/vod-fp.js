@@ -15,7 +15,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe.only('Fp: test Task', function() {
+describe('Fp: test Task', function() {
   this.timeout(2000);
   const add = curry((a, b) => a + b);
   let spy;

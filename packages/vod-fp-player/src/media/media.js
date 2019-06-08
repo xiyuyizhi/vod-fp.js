@@ -10,7 +10,7 @@ function createMediaSource({ dispatch }, media) {
     media.src = URL.createObjectURL(mediaSource);
     dispatch(ACTION.MEDIA.MEDIA_SOURCE, mediaSource);
     bindMediaEvent(media);
-    return Task.of(2);
+    return Task.of(mediaSource);
   }
   return Task.reject('not support');
 }

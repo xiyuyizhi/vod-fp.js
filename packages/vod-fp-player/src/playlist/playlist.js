@@ -14,12 +14,12 @@ function startLoad({ id, dispatch, subscribe, getState, connect }, url) {
       }, reject);
   }).map(text => {
     const level = m3u8Parser(text);
-    subscribe(ACTION.PLAYLIST.CURRENT_LEVEL, state => console.log(state));
+    // subscribe(ACTION.PLAYLIST.CURRENT_LEVEL, state => console.log(state));
     dispatch(ACTION.PLAYLIST.PLAYLIST, {
-      currentLevel: 1,
+      currentLevelId: 1,
       levels: [level]
     });
-    dispatch(ACTION.PLAYLIST.CURRENT_LEVEL, 2);
+    // dispatch(ACTION.PLAYLIST.CURRENT_LEVEL_ID, 2);
     return level;
   });
 }
