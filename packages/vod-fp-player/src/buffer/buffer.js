@@ -44,7 +44,7 @@ const afterAppended = curry(({ getState, dispatch }) => {
   dispatch(ACTION.PROCESS, PROCESS.IDLE);
   Maybe.of(
     curry((segments, id) => {
-      console.log(segments, id);
+      // console.log(segments, id);
     })
   )
     .ap(getState(ACTION.PLAYLIST.SEGMENTS))
