@@ -13,13 +13,11 @@ export default {
     VIDEO_APPENDED: 'videoAppended'
   },
   state: {
-    buffer: {
-      audioSourceBuffer: null,
-      videoSourceBuffer: null,
-      audioBuffer: null,
-      videoBuffer: null,
-      audioAppended: false,
-      videoAppended: false
-    }
+    audioSourceBuffer: null,
+    videoSourceBuffer: null,
+    audioBuffer: null,
+    videoBuffer: null,
+    audioAppended: false,
+    videoAppended: false
   }
 };

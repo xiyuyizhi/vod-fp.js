@@ -22,8 +22,10 @@ function createMux({ dispatch }) {
   dispatch(ACTION.MUX, mux);
 }
 
-function setTimeOffset(mux, offset) {
-  mux.setTimeOffset(offset);
+function setTimeOffset({ getState }, offset) {
+  getState(ACTION.MUX).map(mux => {
+    mux.setTimeOffset(offset);
+  });
 }
 
 function toMux({ getState }, buffer, id) {
@@ -32,7 +34,7 @@ function toMux({ getState }, buffer, id) {
     mux.flush();
   });
 }
-
+setTimeOffset = F.curry(setTimeOffset);
 createMux = F.curry(createMux);
 toMux = F.curry(toMux);
 

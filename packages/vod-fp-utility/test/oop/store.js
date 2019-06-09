@@ -66,19 +66,15 @@ describe.only('OOp: test store', function() {
 
   it('combineStates', () => {
     const state1 = {
-      playlist: {
-        levels: []
-      }
+      levels: []
     };
     const state2 = {
-      media: {
-        mediaEle: null,
-        mediaSource: null
-      }
+      mediaEle: null,
+      mediaSource: null
     };
     const result = combineStates(state1, state2);
     result.should.have.property('derive');
-    Object.keys(result).length.should.be.equal(3);
+    Object.keys(result).length.should.be.equal(4);
   });
 
   it('combineStates with module', () => {
@@ -86,10 +82,8 @@ describe.only('OOp: test store', function() {
       module: 'PLAYLIST',
       state: {
         m3u8Url: '',
-        playlist: {
-          levels: [],
-          currentLevel: -1
-        },
+        levels: [],
+        currentLevel: -1,
         derive: {
           currentLevel: () => {}
         }
@@ -99,38 +93,34 @@ describe.only('OOp: test store', function() {
     const module2 = {
       module: 'MEDIA',
       state: {
-        media: {
-          mediaEle: null,
-          mediaSource: null
-        }
+        mediaEle: null,
+        mediaSource: null
       }
     };
     const result = combineStates(module1, module2);
     result.should.have.property('derive');
-    result.should.have.property('m3u8Url');
     result.should.have.property('playlist');
+    result.playlist.should.have.property('m3u8Url');
     result.should.have.property('media');
   });
 
   it('createStore', () => {
     const states = {
       m3u8Url: '',
-      playlist: {
-        levels: [],
-        currentLevel: -1
-      }
+      levels: [],
+      currentLevel: -1
     };
     const actions = {
       M3U8_URL: 'm3u8Url',
-      PLAYLIST: 'playlist',
-      CURRENT_LEVEL: 'playlist.currentLevel'
+      LEVELS: 'levels',
+      CURRENT_LEVEL: 'currentLevel'
     };
 
     const store = createStore(states, actions);
     const initState = store.getState();
     initState.constructor.should.be.equal(Just);
     initState.value().should.have.property('m3u8Url');
-    initState.value().should.have.property('playlist');
+    initState.value().should.have.property('levels');
 
     store.subscribe(actions.M3U8_URL, spy);
     store.dispatch(actions.M3U8_URL, 'https://xxxx.com');
@@ -140,14 +130,11 @@ describe.only('OOp: test store', function() {
       .value()
       .m3u8Url.should.be.equal('https://xxxx.com');
 
-    store.dispatch(actions.PLAYLIST, {
-      levels: [123],
-      currentLevel: 1
-    });
+    store.dispatch(actions.LEVELS, [123]);
     store
       .getState()
       .value()
-      .playlist.levels[0].should.be.equal(123);
+      .levels[0].should.be.equal(123);
     store.dispatch(actions.CURRENT_LEVEL, 2);
   });
 
@@ -155,10 +142,8 @@ describe.only('OOp: test store', function() {
     const module1 = {
       module: 'PLAYLIST',
       state: {
-        playlist: {
-          levels: [],
-          currentLevel: -1
-        },
+        levels: [],
+        currentLevel: -1,
         derive: {
           levels(state, payload) {
             if (!payload) {
@@ -181,7 +166,6 @@ describe.only('OOp: test store', function() {
         }
       },
       ACTION: {
-        PLAYLIST: 'playlist',
         CURRENT_LEVEL: 'currentLevel',
         LEVELS: 'levels'
       }

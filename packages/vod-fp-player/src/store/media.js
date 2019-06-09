@@ -9,9 +9,7 @@ export default {
     MEDIA_SOURCE: 'mediaSource'
   },
   state: {
-    media: {
-      mediaEle: null,
-      mediaSource: null
-    }
+    mediaEle: null,
+    mediaSource: null
   }
 };

@@ -29,9 +29,6 @@ function combineStates(...states) {
       }
       let currentDerive = state.derive;
       module = module.toLowerCase();
-      if (!state[module]) {
-        throw new Error(`${module} store 中不存在state.${module}`);
-      }
       let derive = {
         ...all.derive,
         ...{
@@ -41,7 +38,9 @@ function combineStates(...states) {
       delete state.derive;
       return {
         ...all,
-        ...state,
+        ...{
+          [module]: state
+        },
         derive
       };
     },

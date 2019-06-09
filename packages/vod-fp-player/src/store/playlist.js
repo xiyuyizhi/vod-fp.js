@@ -1,11 +1,14 @@
 import { F } from 'vod-fp-utility';
+import { Maybe } from '../../../vod-fp-utility/src';
+import { curry } from '../../../vod-fp-utility/src/fp/core';
 
 const { prop, compose, map, head, filter, trace } = F;
 const ACTION = {
-  PLAYLIST: 'playlist',
+  LEVELS: 'levels',
   CURRENT_LEVEL_ID: 'currentLevelId',
   CURRENT_LEVEL: 'currentLevel',
   SEGMENTS: 'segments',
+  CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_SEGMENT: 'currentSegment'
 };
 
@@ -21,11 +24,9 @@ function getCurrentLevel(state) {
 }
 
 const state = {
-  currentSegment: -1,
-  playlist: {
-    levels: [],
-    currentLevelId: -1
-  },
+  currentSegmentId: -1,
+  currentLevelId: 1,
+  levels: [],
   derive: {
     currentLevelId(state, payload) {
       if (!payload) {
@@ -52,6 +53,17 @@ const state = {
           prop('currentLevel')
         )
       )(state);
+    },
+    currentSegment(state, payload) {
+      if (!payload) {
+        return Maybe.of(
+          curry((segments, id) => {
+            return segments[id];
+          })
+        )
+          .ap(map(prop('segments'))(getCurrentLevel(state)))
+          .ap(state.map(prop('currentSegmentId')));
+      }
     }
   }
 };

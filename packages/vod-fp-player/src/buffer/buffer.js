@@ -41,12 +41,14 @@ const afterAppended = curry(({ getState, dispatch }) => {
   console.log('current sgement appended');
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
-  console.log(getState(ACTION.PLAYLIST.CURRENT_LEVEL));
-  console.log(getState(ACTION.PLAYLIST.CURRENT_SEGMENT));
   dispatch(ACTION.PROCESS, PROCESS.IDLE);
-  Maybe.of(curry((segments, id) => {}))
+  Maybe.of(
+    curry((segments, id) => {
+      console.log(segments, id);
+    })
+  )
     .ap(getState(ACTION.PLAYLIST.SEGMENTS))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT));
+    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID));
 });
 
 function createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {

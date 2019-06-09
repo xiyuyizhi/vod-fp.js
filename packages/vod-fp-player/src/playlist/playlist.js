@@ -12,10 +12,7 @@ function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
       }, reject);
   }).map(text => {
     const level = m3u8Parser(text);
-    dispatch(ACTION.PLAYLIST.PLAYLIST, {
-      currentLevelId: 1,
-      levels: [level]
-    });
+    dispatch(ACTION.PLAYLIST.LEVELS, [level]);
     return level;
   });
 }

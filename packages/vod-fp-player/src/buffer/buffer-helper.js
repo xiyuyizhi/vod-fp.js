@@ -25,10 +25,10 @@ function bufferMerge(all, c) {
     return all;
   }
   let last = all[all.length - 1];
-  if (c[i][0] < last[1] + 0.3) {
-    last[1] = c[i][1];
+  if (c[0] < last[1] + 0.3) {
+    last[1] = c[1];
   } else {
-    all.push(last);
+    all.push(c);
   }
   return all;
 }
@@ -39,10 +39,10 @@ const getCurrentPositionBuffer = F.curry((currentTime, buffered) => {
   )[0];
 });
 
-function getBufferInfo({ getState }) {
+function getBufferInfo({ getState }, seeking) {
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
   let currentTime = map(prop('currentTime'))(media).value();
-  return compose(
+  let restInfo = compose(
     map(x => {
       return {
         bufferLength: x[1] - currentTime,
@@ -52,12 +52,24 @@ function getBufferInfo({ getState }) {
     map(
       compose(
         getCurrentPositionBuffer(currentTime),
-        // trace,
         reduce(bufferMerge, [])
       )
     ),
     bufferSerialize
   )(media);
+
+  return restInfo.getOrElse(() => {
+    if (seeking) {
+      return {
+        bufferLength: 0,
+        bufferEnd: currentTime
+      };
+    }
+    return {
+      bufferLength: 0,
+      bufferEnd: 0
+    };
+  });
 }
 
 getBufferInfo = F.curry(getBufferInfo);

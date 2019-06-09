@@ -10,7 +10,8 @@ let PROCESS = {
   SEGMENT_LOADING: 'segmentLoading',
   SEGMENT_LOADED: 'segmentLoaded',
   BUFFER_APPENDING: 'bufferAppending',
-  BUFFER_APPENDED: 'bufferAppended'
+  BUFFER_APPENDED: 'bufferAppended',
+  ABORT: 'ABORT'
 };
 
 let ACTION = {
