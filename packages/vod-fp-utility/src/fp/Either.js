@@ -56,7 +56,6 @@ const either = curry((fn1, fn2, e) => {
   if (e && e.constructor === Success) {
     return fn2(e.value());
   }
-  throw new Error('params not a Either');
 });
 
 export { Fail, Success, either };

@@ -2,8 +2,7 @@ import { F, Success, Maybe, either } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { getBufferInfo } from './buffer-helper';
 
-const { map, compose, curry, join, prop, trace } = F;
-
+const { map, compose, curry, join, chain, prop, trace } = F;
 
 function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   const _waitFinished = (other, me) => {
@@ -15,14 +14,14 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
         dispatch(me, true);
       }
     })(getState(other));
-  }
-  sb.addEventListener('updateend', function (_) {
+  };
+  sb.addEventListener('updateend', function(_) {
     console.log(type + ' buffer update end');
     if (type === 'video') {
-      _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED)
+      _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
     }
     if (type === 'audio') {
-      _waitFinished(ACTION.BUFFER.VIDEO_APPENDED, ACTION.BUFFER.AUDIO_APPENDED)
+      _waitFinished(ACTION.BUFFER.VIDEO_APPENDED, ACTION.BUFFER.AUDIO_APPENDED);
     }
   });
   sb.addEventListener('error', e => {
@@ -30,8 +29,7 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   });
   return sb;
 }
-bindSourceBufferEvent = curry(bindSourceBufferEvent)
-
+bindSourceBufferEvent = curry(bindSourceBufferEvent);
 
 function afterAppended({ getState, dispatch }) {
   console.log('current sgement appended');
@@ -39,14 +37,29 @@ function afterAppended({ getState, dispatch }) {
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
   dispatch(ACTION.PROCESS, PROCESS.IDLE);
   Maybe.of(
-    curry((segments, id) => {
-      console.log(segments, id);
+    curry((segments, id, videoBufferInfo, audioBufferInfo) => {
+      let start = Math.min(videoBufferInfo.startPTS, audioBufferInfo.startPTS);
+      start = start / 90000;
+      let end = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
+      end = end / 90000;
+      console.log('new buffer:', [start, end]);
+      segments[id].start = start;
+      segments[id].end = parseFloat(end.toFixed(6));
+      segments[id].duration = end - start;
+      let len = segments.length - 1;
+      for (let i = id + 1; i <= len; i++) {
+        segments[i].start = segments[i - 1].end;
+        segments[i].end = segments[i].start + segments[i].duration;
+      }
+      dispatch(ACTION.BUFFER.VIDEO_BUFFER, null);
+      dispatch(ACTION.BUFFER.AUDIO_BUFFER, null);
     })
   )
     .ap(getState(ACTION.PLAYLIST.SEGMENTS))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID));
+    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
+    .ap(getState(ACTION.BUFFER.VIDEO_BUFFER))
+    .ap(getState(ACTION.BUFFER.AUDIO_BUFFER));
 }
-
 afterAppended = curry(afterAppended);
 
 // (MediaSource,string,string)  -> Maybe
@@ -68,17 +81,18 @@ function createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
 }
 createSourceBuffer = curry(createSourceBuffer);
 
-
 function buffer({ id, getState, subscribe, dispatch, connect }) {
   let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
-  let append = curry((sb, buffer) => sb.appendBuffer(buffer))
-  let doAppend = (sb, bufferInfo) => {
-    return Success.of(append)
+  let doAppend = F.curry((sb, bufferInfo) => {
+    return Success.of(curry((sb, buffer) => sb.appendBuffer(buffer)))
       .ap(Success.of(sb.join()))
       .ap(
-        compose(Success.of, join, map(prop('buffer')))(bufferInfo)
-      )
-  }
+        compose(
+          Success.of,
+          prop('buffer')
+        )(bufferInfo)
+      );
+  });
 
   createSourceBuffer = connect(createSourceBuffer);
 
@@ -90,10 +104,13 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
         'video/mp4; codecs="avc1.42E01E"'
       );
     });
-    either((e) => {
-      console.log('error: ', e);
-    }, () => { }, doAppend(sb, bufferInfo))
-
+    either(
+      e => {
+        console.log('error: ', e);
+      },
+      () => {},
+      chain(doAppend(sb))(bufferInfo)
+    );
   });
   subscribe(ACTION.BUFFER.AUDIO_BUFFER, bufferInfo => {
     let sb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).getOrElse(() => {
@@ -103,11 +120,14 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
         'video/mp4; codecs="mp4a.40.2"'
       );
     });
-    either((e) => {
-      console.log(e);
-    }, () => { }, doAppend(sb, bufferInfo))
+    either(
+      e => {
+        console.log(e);
+      },
+      () => {},
+      chain(doAppend(sb))(bufferInfo)
+    );
   });
-
 }
 
 buffer = curry(buffer);
