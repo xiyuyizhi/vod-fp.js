@@ -9,11 +9,12 @@ const ACTION = {
   CURRENT_LEVEL: 'currentLevel',
   SEGMENTS: 'segments',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
-  CURRENT_SEGMENT: 'currentSegment'
+  CURRENT_SEGMENT: 'currentSegment',
+  DURATION: 'duration'
 };
 
 function getCurrentLevel(state) {
-  let currentLevelId = state.value().currentLevelId;
+  let currentLevelId = state.map(prop('currentLevelId')).join();
   return map(
     compose(
       head,
@@ -44,15 +45,15 @@ const state = {
     },
     segments(state, payload) {
       if (!payload) return map(prop('segments'))(getCurrentLevel(state));
-      return map(
-        compose(
-          x => {
-            x.segments = payload;
-            return x;
-          },
-          prop('currentLevel')
-        )
-      )(state);
+      // return map(
+      //   compose(
+      //     x => {
+      //       x.segments = payload;
+      //       return x;
+      //     },
+      //     prop('currentLevel')
+      //   )
+      // )(state);
     },
     currentSegment(state, payload) {
       if (!payload) {
@@ -63,6 +64,11 @@ const state = {
         )
           .ap(map(prop('segments'))(getCurrentLevel(state)))
           .ap(state.map(prop('currentSegmentId')));
+      }
+    },
+    duration(state, payload) {
+      if (!payload) {
+        return map(prop('duration'))(getCurrentLevel(state))
       }
     }
   }

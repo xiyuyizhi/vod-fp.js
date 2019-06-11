@@ -2,6 +2,7 @@ import { combineActions, combineStates, createStore } from 'vod-fp-utility';
 import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
+import { map, prop } from '../../../vod-fp-utility/src/fp/core';
 
 let PROCESS = {
   IDLE: 'idle',
@@ -10,7 +11,6 @@ let PROCESS = {
   SEGMENT_LOADING: 'segmentLoading',
   SEGMENT_LOADED: 'segmentLoaded',
   BUFFER_APPENDING: 'bufferAppending',
-  BUFFER_APPENDED: 'bufferAppended',
   ABORT: 'ABORT'
 };
 
@@ -18,14 +18,36 @@ let ACTION = {
   ERROR: 'error',
   M3U8_URL: 'm3u8Url',
   MUX: 'mux',
-  PROCESS: 'process'
+  PROCESS: 'process',
+  ABORTABLE: 'abortAble',
+  REMOVE_ABORTABLE: 'removeAbortAble'
 };
 
 let initState = {
   error: null,
   m3u8Url: '',
   mux: null,
-  process: PROCESS.IDLE
+  abortAble: [],
+  process: PROCESS.IDLE,
+  derive: {
+    abortAble(state, payload) {
+      if (!payload) {
+        return map(prop('abortAble'))(state)
+      }
+      return map(x => {
+        x.abortAble = x.abortAble.concat([payload])
+        return x;
+      })(state)
+    },
+    removeAbortAble(state, payload) {
+      if (payload !== undefined) {
+        return map(x => {
+          x.abortAble = x.abortAble.filter(x => x.id === payload)
+          return x;
+        })(state)
+      }
+    }
+  }
 };
 
 ACTION = combineActions(ACTION, playlist, media, buffer);

@@ -75,6 +75,12 @@ function createStore(initState, actions = {}) {
       let currentState = null;
       let currentDerive = null;
       if (props.length === 1) {
+        let deriveProp = state.derive[prop]
+        if (deriveProp) {
+          //只是一个更新已有的某个属性的方法
+          state = deriveProp(Maybe.of(state), payload).join()
+          return;
+        }
         state = {
           ...state,
           ...{
@@ -103,7 +109,7 @@ function createStore(initState, actions = {}) {
           }
           state[parentProp] = {
             ...currentState,
-            ...newState.value()
+            ...newState.join()
           };
         }
       }

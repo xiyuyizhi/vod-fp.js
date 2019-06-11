@@ -1,14 +1,14 @@
 import { Task, F } from 'vod-fp-utility';
 import { ACTION } from './store';
-import createMediaSource from './media/media';
-import loadPlaylist from './playlist/playlist';
+import { createMediaSource } from './media/media';
+import { loadPlaylist } from './playlist/playlist';
 import { startTick } from './tick/tick';
-import { curry } from '../../vod-fp-utility/src/fp/core';
 
 function manage({ dispatch, connect }, media, url) {
+  let tick = connect(startTick);
   let m = connect(createMediaSource)(media);
   let s = connect(loadPlaylist)(url);
-  Task.resolve(connect(startTick))
+  Task.resolve(tick)
     .ap(s)
     .ap(m)
     .error(e => {

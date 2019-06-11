@@ -4,16 +4,16 @@ import { getBufferInfo } from '../buffer/buffer-helper';
 import { findSegment, loadSegment } from '../playlist/segment';
 import { createMux } from '../mux/mux';
 import { buffer } from '../buffer/buffer';
-import media from '../media/media';
+import { updateMediaDuration } from '../media/media';
 const { prop, compose, map } = F;
 
 function tick({ getState, connect, dispatch }, playlist, mediaSource) {
   let timer = null;
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
-  mediaSource.duration = playlist.duration;
+  let loadSeg = connect(loadSegment);
+  connect(updateMediaDuration)
   connect(createMux);
   connect(buffer);
-
   timer = setInterval(() => {
     let rest = map(
       compose(
@@ -27,14 +27,14 @@ function tick({ getState, connect, dispatch }, playlist, mediaSource) {
       getState(ACTION.PROCESS).value() !== PROCESS.IDLE
     )
       return;
-    console.log('restBuffer: ', rest);
     let segment = findSegment(playlist.segments, rest.bufferEnd);
-    console.warn('current segment ', segment.id);
+    console.groupEnd()
+    console.group('current segment ', segment.id);
+    console.log('restBuffer: ', rest);
     dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADING);
     if (segment) {
       dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
-      console.log('segment', getState(ACTION.PLAYLIST.CURRENT_SEGMENT));
-      connect(loadSegment)(segment);
+      loadSeg(segment);
     }
   }, 200);
   window.timer = timer;
