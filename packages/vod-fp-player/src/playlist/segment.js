@@ -1,7 +1,7 @@
 import { F, Task } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
-import { toMux, setTimeOffset } from '../mux/mux';
-import loader from "../loader/loader"
+import { toMux, setTimeOffset, resetInitSegment } from '../mux/mux';
+import loader from '../loader/loader';
 import { Maybe } from '../../../vod-fp-utility/src';
 
 function binarySearch(list, start, end, bufferEnd) {
@@ -27,14 +27,14 @@ function binarySearch(list, start, end, bufferEnd) {
 const findSegment = F.curry((segments, bufferEnd) => {
   let seg = binarySearch(segments, 0, segments.length - 1, bufferEnd);
   if (typeof seg === 'number') {
-    return Maybe.of(null)
+    return Maybe.of(null);
   }
-  return Maybe.of(seg)
+  return Maybe.of(seg);
 });
 
 const addAbortSegment = F.curry(({ dispatch }, abortable) => {
-  dispatch(ACTION.ABORTABLE, abortable)
-})
+  dispatch(ACTION.ABORTABLE, abortable);
+});
 
 // segment -> Task
 function loadSegment() {
@@ -44,28 +44,32 @@ function loadSegment() {
       {
         url: segment.url,
         options: {
-          responseType: 'arraybuffer',
+          responseType: 'arraybuffer'
         }
       },
       connect(addAbortSegment)
-    ).map(buffer => {
-      dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADED)
-      dispatch(ACTION.REMOVE_ABORTABLE, segment.id)
-      if (
-        (lastSegment && lastSegment.cc !== segment.cc) ||
-        (lastSegment && segment.id - lastSegment.id !== 1)
-      ) {
-        // check to set timeoffset
-        connect(setTimeOffset)(segment.start);
-      }
-      connect(toMux)(buffer, segment.id);
-      lastSegment = segment;
-    })
+    )
+      .map(buffer => {
+        dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADED);
+        dispatch(ACTION.REMOVE_ABORTABLE, segment.id);
+        if (
+          (lastSegment && lastSegment.cc !== segment.cc) ||
+          (lastSegment && segment.id - lastSegment.id !== 1)
+        ) {
+          // check to set timeoffset
+          connect(setTimeOffset)(segment.start);
+        }
+        if (lastSegment && lastSegment.cc !== segment.cc) {
+          connect(resetInitSegment);
+        }
+        connect(toMux)(buffer, segment.id);
+        lastSegment = segment;
+      })
       .error(e => {
         console.log('error', e);
         if (e.message === 'Abort') {
-          dispatch(ACTION.PROCESS, PROCESS.IDLE)
-          dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1)
+          dispatch(ACTION.PROCESS, PROCESS.IDLE);
+          dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
         }
       });
   };

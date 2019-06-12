@@ -22,6 +22,12 @@ function createMux({ dispatch }) {
   dispatch(ACTION.MUX, mux);
 }
 
+function resetInitSegment({ getState }) {
+  getState(ACTION.MUX).map(mux => {
+    mux.resetInitSegment();
+  });
+}
+
 function setTimeOffset({ getState }, offset) {
   getState(ACTION.MUX).map(mux => {
     mux.setTimeOffset(offset);
@@ -34,8 +40,9 @@ function toMux({ getState }, buffer, id) {
     mux.flush();
   });
 }
+resetInitSegment = F.curry(resetInitSegment);
 setTimeOffset = F.curry(setTimeOffset);
 createMux = F.curry(createMux);
 toMux = F.curry(toMux);
 
-export { createMux, setTimeOffset, toMux };
+export { createMux, resetInitSegment, setTimeOffset, toMux };

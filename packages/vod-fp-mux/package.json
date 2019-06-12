@@ -16,7 +16,8 @@
     "remux"
   ],
   "devDependencies": {
-    "vod-fp-utility": "0.0.1"
+    "vod-fp-utility": "0.0.1",
+    "vod-fp-player": "0.0.1"
   },
   "author": "xiyuyizhi",
   "license": "ISC",

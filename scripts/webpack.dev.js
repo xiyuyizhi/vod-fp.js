@@ -18,7 +18,8 @@ const config = {
   resolve: {
     alias: {
       'vod-fp-utility': 'vod-fp-utility/src',
-      'vod-fp-mux': 'vod-fp-mux/src'
+      'vod-fp-mux': 'vod-fp-mux/src',
+      'vod-fp-player': 'vod-fp-player/src'
     }
   },
   module: {
@@ -29,12 +30,13 @@ const config = {
         include: [
           /vod-fp-mux/,
           /vod-fp-utility/,
+          /vod-fp-player/,
           new RegExp(path.join(PACKAGE_ROOT, '/demo/')),
           new RegExp(path.join(PACKAGE_ROOT, '/src/'))
         ],
         loader: require.resolve('babel-loader'),
         options: {
-          ...JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.babelrc'))),
+          ...JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.babelrc')))
         }
       }
     ]
