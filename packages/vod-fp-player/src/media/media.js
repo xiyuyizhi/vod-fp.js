@@ -1,4 +1,4 @@
-import { Task, F, Maybe, Success } from 'vod-fp-utility';
+import { Task, F, Maybe, Success, maybeToEither } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { isSupportMS } from '../utils/probe';
 
@@ -15,10 +15,8 @@ function abortCurrentSegment({ getState }) {
     .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT))
 }
 
-function bindMediaEvent({ getState, connect }, media) {
-  media.addEventListener('waiting', e => {
-    media.currentTime += 0.01;
-  });
+function bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
+
   media.addEventListener('seeking', () => {
     map(x => {
       if (x === PROCESS.SEGMENT_LOADING) {
@@ -32,8 +30,31 @@ function bindMediaEvent({ getState, connect }, media) {
   });
   media.addEventListener('waiting', () => {
     console.log('waiting....');
-    media.currentTime += 0.05;
+    media.currentTime += 0.1;
   });
+  media.addEventListener('ended', () => {
+    console.log('end....');
+  });
+
+  subscribe(ACTION.PROCESS, (process) => {
+    Success.of(curry((proce, mediaSource, segmentsLen, currentId) => {
+      if (proce === PROCESS.IDLE && currentId === segmentsLen - 1) {
+        if (mediaSource.readyState === 'open') {
+          console.warn('end of stream')
+          mediaSource.endOfStream()
+          dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1)
+        }
+      }
+    })).ap(maybeToEither(process))
+      .ap(maybeToEither(getState(ACTION.MEDIA.MEDIA_SOURCE)))
+      .ap(maybeToEither(getState(ACTION.PLAYLIST.SEGMENTS_LEN)))
+      .ap(maybeToEither(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID)))
+      .error(e => {
+        console.log(e)
+      })
+
+  })
+
 }
 bindMediaEvent = curry(bindMediaEvent)
 

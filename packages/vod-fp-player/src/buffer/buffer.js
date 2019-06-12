@@ -15,7 +15,7 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function(_) {
+  sb.addEventListener('updateend', function (_) {
     console.log(type + ' buffer update end');
     if (type === 'video') {
       _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
@@ -35,24 +35,24 @@ function afterAppended({ getState, dispatch }) {
   console.log('current sgement appended');
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
-  dispatch(ACTION.PROCESS, PROCESS.IDLE);
   Maybe.of(
-    curry((segments, id, videoBufferInfo, audioBufferInfo) => {
+    curry((segments, currentId, videoBufferInfo, audioBufferInfo) => {
       let start = Math.min(videoBufferInfo.startPTS, audioBufferInfo.startPTS);
-      start = start / 90000;
+      start = parseFloat((start / 90000).toFixed(6));
       let end = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
-      end = end / 90000;
+      end = parseFloat((end / 90000).toFixed(6));
+      segments[currentId].start = start;
+      segments[currentId].end = end;
+      segments[currentId].duration = end - start;
       console.log('new buffer:', [start, end]);
-      segments[id].start = start;
-      segments[id].end = parseFloat(end.toFixed(6));
-      segments[id].duration = end - start;
       let len = segments.length - 1;
-      for (let i = id + 1; i <= len; i++) {
+      for (let i = currentId + 1; i <= len; i++) {
         segments[i].start = segments[i - 1].end;
-        segments[i].end = segments[i].start + segments[i].duration;
+        segments[i].end = parseFloat((segments[i].start + segments[i].duration).toFixed(6));
       }
       dispatch(ACTION.BUFFER.VIDEO_BUFFER, null);
       dispatch(ACTION.BUFFER.AUDIO_BUFFER, null);
+      dispatch(ACTION.PROCESS, PROCESS.IDLE);
     })
   )
     .ap(getState(ACTION.PLAYLIST.SEGMENTS))
@@ -108,7 +108,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       e => {
         console.log('error: ', e);
       },
-      () => {},
+      () => { },
       chain(doAppend(sb))(bufferInfo)
     );
   });
@@ -124,7 +124,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       e => {
         console.log(e);
       },
-      () => {},
+      () => { },
       chain(doAppend(sb))(bufferInfo)
     );
   });

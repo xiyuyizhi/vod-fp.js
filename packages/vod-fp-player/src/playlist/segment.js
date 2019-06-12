@@ -2,30 +2,41 @@ import { F, Task } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { toMux, setTimeOffset } from '../mux/mux';
 import loader from "../loader/loader"
+import { Maybe } from '../../../vod-fp-utility/src';
 
-function binarySearch(list, start, end, point) {
+function binarySearch(list, start, end, bufferEnd) {
   // start mid end
+  let endIndex = list.length - 1;
+  if (start > endIndex) {
+    return endIndex;
+  }
+  if (end < 0) return 0;
   const mid = start + Math.floor((end - start) / 2);
-  if (list[mid].end < point + 0.25) {
+  if (list[mid].end < bufferEnd + 0.25) {
     start = mid + 1;
-    return binarySearch(list, start, end, point);
-  } else if (list[mid].start > point + 0.25) {
+    return binarySearch(list, start, end, bufferEnd);
+  } else if (list[mid].start > bufferEnd + 0.25) {
     end = mid - 1;
-    return binarySearch(list, start, end, point);
+    return binarySearch(list, start, end, bufferEnd);
   } else {
     return list[mid];
   }
   return -1;
 }
 
-const findSegment = F.curry((segments, currentTime) => {
-  return binarySearch(segments, 0, segments.length - 1, currentTime);
+const findSegment = F.curry((segments, bufferEnd) => {
+  let seg = binarySearch(segments, 0, segments.length - 1, bufferEnd);
+  if (typeof seg === 'number') {
+    return Maybe.of(null)
+  }
+  return Maybe.of(seg)
 });
 
 const addAbortSegment = F.curry(({ dispatch }, abortable) => {
   dispatch(ACTION.ABORTABLE, abortable)
 })
 
+// segment -> Task
 function loadSegment() {
   let lastSegment = null;
   return ({ getState, connect, dispatch }, segment) => {
@@ -54,11 +65,11 @@ function loadSegment() {
         console.log('error', e);
         if (e.message === 'Abort') {
           dispatch(ACTION.PROCESS, PROCESS.IDLE)
+          dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1)
         }
       });
   };
 }
-//http://player.youku.com/?url=https://valipl-vip.cp31.ott.cibntv.net/6974BA40D364E71FD37F725D7/03000600005C3DBEFE016F3011BA6AF1D8A2E7-3A8F-4527-897F-A94A1BF056FA-1-114.m3u8?ccode=0502&duration=1420&expire=1000&psid=b773a44ac07d12d78bccede62cfcc16d&ups_client_netip=6a0b29d4&ups_ts=1560256418&ups_userid=1081877852&ut
 loadSegment = F.curry(loadSegment());
 
 export { findSegment, loadSegment };

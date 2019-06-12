@@ -10,7 +10,8 @@ const ACTION = {
   SEGMENTS: 'segments',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_SEGMENT: 'currentSegment',
-  DURATION: 'duration'
+  DURATION: 'duration',
+  SEGMENTS_LEN: 'segmentsLen'
 };
 
 function getCurrentLevel(state) {
@@ -69,6 +70,14 @@ const state = {
     duration(state, payload) {
       if (!payload) {
         return map(prop('duration'))(getCurrentLevel(state))
+      }
+    },
+    segmentsLen(state, payload) {
+      if (!payload) {
+        return map(compose(
+          prop('length'),
+          prop('segments')
+        ))(getCurrentLevel(state))
       }
     }
   }

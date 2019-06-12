@@ -1,5 +1,5 @@
 import Base from './Base';
-
+import { Success } from "./Either"
 class Maybe extends Base {
   static of(value) {
     if (value === undefined || value === null) {
@@ -67,4 +67,7 @@ class Just extends Maybe {
   }
 }
 
-export { Empty, Just, Maybe };
+const maybeToEither = (maybe) => maybe.chain(x => Success.of(x))
+
+
+export { Empty, Just, Maybe, maybeToEither };

@@ -1,5 +1,15 @@
 import * as oop from './oop';
-import { F, Maybe, Just, Empty, Fail, Success, either, Task } from './fp';
+import {
+  F,
+  Maybe,
+  Just,
+  Empty,
+  Fail,
+  Success,
+  either,
+  maybeToEither,
+  Task
+} from './fp';
 
 const {
   EventBus,
@@ -19,6 +29,7 @@ export {
   Fail,
   Success,
   either,
+  maybeToEither,
   Task,
   EventBus,
   PipeLine,

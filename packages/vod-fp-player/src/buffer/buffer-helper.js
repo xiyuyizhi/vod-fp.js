@@ -2,7 +2,7 @@ import { F, Maybe } from 'vod-fp-utility';
 import { ACTION } from '../store';
 import { buffer } from './buffer';
 
-const { compose, map, reduce, curry, prop, ifElse, trace } = F;
+const { compose, map, reduce, curry, prop, join, ifElse, trace } = F;
 
 // void -> Maybe
 function bufferSerialize(media) {
@@ -35,13 +35,17 @@ function bufferMerge(all, c) {
 
 const getCurrentPositionBuffer = F.curry((currentTime, buffered) => {
   return buffered.filter(
-    ([start, end]) => start <= currentTime + 0.1 && end > currentTime
+    ([start, end]) => start <= currentTime + 0.1 && end >= currentTime
   )[0];
 });
 
+// boolean -> Maybe
 function getBufferInfo({ getState }, seeking) {
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
-  let currentTime = map(prop('currentTime'))(media).value();
+  let currentTime = compose(
+    join,
+    map(prop('currentTime'))
+  )(media);
   let restInfo = compose(
     map(x => {
       return {
