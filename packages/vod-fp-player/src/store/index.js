@@ -39,7 +39,10 @@ let initState = {
     error(state, payload) {
       if (payload) {
         console.log('Error', payload);
-        return state;
+        return map(x => {
+          x.error = payload;
+          return x;
+        })(state);
       }
     },
     abortAble(state, payload) {

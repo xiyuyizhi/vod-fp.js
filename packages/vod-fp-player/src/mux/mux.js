@@ -15,7 +15,8 @@ function createMux({ dispatch }) {
       }
     })
     .on('error', e => {
-      console.error(e);
+      dispatch(ACTION.PROCESS, PROCESS.ERROR);
+      dispatch(ACTION.ERROR, e);
     });
   dispatch(ACTION.MUX, mux);
 }
