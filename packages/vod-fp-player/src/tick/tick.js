@@ -8,40 +8,37 @@ import { updateMediaDuration } from '../media/media';
 
 const { prop, compose, map, curry } = F;
 const loadCheck = curry((bufferInfo, process, media) => {
-  if (
-    bufferInfo.bufferLength > 15 ||
-    process !== PROCESS.IDLE ||
-    media.ended
-  ) {
+  if (bufferInfo.bufferLength > 15 || process !== PROCESS.IDLE || media.ended) {
     return;
   }
   return bufferInfo;
-})
-
+});
 
 function tick({ getState, connect, dispatch }, level, mediaSource) {
-
-  connect(updateMediaDuration)
+  connect(updateMediaDuration);
   connect(createMux);
   connect(buffer);
 
   let timer = null;
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
-  let findSegmentWithLevel = findSegment(level.segments)
+  let findSegmentWithLevel = findSegment(level.segments);
   let loadSeg = connect(loadSegment);
 
   function startProcess(rest) {
-    return Maybe.of(curry((segment, currentId) => {
-      if (currentId === segment.id) {
-        segment = level.segments[currentId + 1]
-        console.warn(`segment ${currentId} 已下载,下载下一分片`)
-      }
-      return segment
-    }))
+    return Maybe.of(
+      curry((segment, currentId) => {
+        if (currentId === segment.id) {
+          segment = level.segments[currentId + 1];
+          console.warn(`segment ${currentId} 已下载,下载下一分片`);
+        }
+        return segment;
+      })
+    )
       .ap(findSegmentWithLevel(rest.bufferEnd))
       .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
       .map(segment => {
-        console.groupEnd()
+        console.log(segment);
+        console.groupEnd();
         console.group('current segment ', segment.id);
         console.log('restBuffer: ', rest);
         dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADING);
@@ -49,10 +46,10 @@ function tick({ getState, connect, dispatch }, level, mediaSource) {
         loadSeg(segment);
         return true;
       })
-      .getOrElse(Empty.of('no found segement'))
+      .getOrElse(Empty.of('no found segement'));
   }
 
-  startProcess = curry(startProcess)
+  startProcess = curry(startProcess);
 
   timer = setInterval(() => {
     let rest = map(
@@ -67,9 +64,9 @@ function tick({ getState, connect, dispatch }, level, mediaSource) {
       .ap(process)
       .ap(media)
       .map(startProcess)
-      .getOrElse((e) => {
+      .getOrElse(e => {
         console.log(e || 'continue check');
-      })
+      });
   }, 200);
 
   window.timer = timer;

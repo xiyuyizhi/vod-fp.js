@@ -16,7 +16,7 @@ let PROCESS = {
   BUFFER_APPENDING: 'bufferAppending',
   BUFFER_APPENDED: 'bufferAppended',
   ABORT: 'abort',
-  ERROR: 'error',
+  ERROR: 'error'
 };
 
 let ACTION = {
@@ -38,39 +38,43 @@ let initState = {
   derive: {
     error(state, payload) {
       if (payload) {
-        console.log('Error', payload)
+        console.log('Error', payload);
         return state;
       }
     },
     abortAble(state, payload) {
       if (!payload) {
-        return map(prop('abortAble'))(state)
+        return map(prop('abortAble'))(state);
       }
       return map(x => {
-        x.abortAble = x.abortAble.concat([payload])
+        x.abortAble = x.abortAble.concat([payload]);
         return x;
-      })(state)
+      })(state);
     },
     removeAbortAble(state, payload) {
       if (payload !== undefined) {
         return map(x => {
           x.abortAble = [];
           return x;
-        })(state)
+        })(state);
       }
     },
     process(state, payload, type = '') {
       if (payload) {
-        const { timeStamp, process } = state.value()
-        let ts = (performance.now() - timeStamp).toFixed(2)
-        console.log(`PROCESS: ${state.value().process}(${ts} ms) -> ${payload}${type ? '[' + type + ']' : ''}`);
+        const { timeStamp, process } = state.value();
+        let ts = (performance.now() - timeStamp).toFixed(2);
+        console.log(
+          `PROCESS: ${state.value().process}(${ts} ms) -> ${payload}${
+            type ? '[' + type + ']' : ''
+          }`
+        );
         return map(x => {
           x.timeStamp = performance.now();
           x.process = payload;
           return x;
-        })(state)
-
+        })(state);
       }
+      return map(prop('process'))(state);
     }
   }
 };

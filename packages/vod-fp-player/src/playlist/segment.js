@@ -3,8 +3,7 @@ import { ACTION, PROCESS } from '../store';
 import { toMux, setTimeOffset, resetInitSegment } from '../mux/mux';
 import loader from '../loader/loader';
 
-
-const { compose, head, map, filter } = F
+const { compose, head, map, filter } = F;
 
 function binarySearch(list, start, end, bufferEnd) {
   // start mid end
@@ -28,8 +27,8 @@ function binarySearch(list, start, end, bufferEnd) {
 
 const findSegment = F.curry((segments, bufferEnd) => {
   let seg = binarySearch(segments, 0, segments.length - 1, bufferEnd);
-  if (typeof seg === -1) {
-    return Empty.of()
+  if (seg === -1) {
+    return Empty.of();
   }
   return Success.of(seg);
 });
@@ -39,16 +38,18 @@ const addAbortSegment = F.curry((dispatch, abortable) => {
 });
 
 const abortCurrentSegment = F.curry(({ getState }) => {
-  Success.of(F.curry((abortables, currentSegment) => {
-    compose(
-      x => x.abortAble.abort(),
-      head,
-      filter(x => x.id === currentSegment.url)
-    )(abortables)
-  }))
+  Success.of(
+    F.curry((abortables, currentSegment) => {
+      compose(
+        x => x.abortAble.abort(),
+        head,
+        filter(x => x.id === currentSegment.url)
+      )(abortables);
+    })
+  )
     .ap(getState(ACTION.ABORTABLE))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT))
-})
+    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT));
+});
 
 // segment -> Task
 function loadSegment() {
@@ -58,7 +59,7 @@ function loadSegment() {
       {
         url: segment.url,
         options: {
-          responseType: 'arraybuffer',
+          responseType: 'arraybuffer'
           // timeout: 1500
         }
       },
@@ -88,7 +89,7 @@ function loadSegment() {
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
         } else {
           dispatch(ACTION.PROCESS, PROCESS.ERROR);
-          dispatch(ACTION.ERROR, e)
+          dispatch(ACTION.ERROR, e);
         }
       });
   };
