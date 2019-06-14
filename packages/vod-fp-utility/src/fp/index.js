@@ -1,5 +1,5 @@
 import * as F from "./core"
-import { Maybe, Just, Empty, maybeToEither } from "./Maybe"
+import { Maybe, Just, Empty, maybe, maybeToEither } from "./Maybe"
 import { Fail, Success, either } from "./Either"
 import Task from "./Task"
 
@@ -11,6 +11,7 @@ export {
   Fail,
   Success,
   either,
+  maybe,
   maybeToEither,
   Task
 }

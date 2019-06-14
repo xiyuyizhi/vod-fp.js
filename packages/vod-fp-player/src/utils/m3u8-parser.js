@@ -62,7 +62,9 @@ const keyFormat = key => {
 
 const combinePair = args => {
   let [key, value] = args;
-  if (key === 'discontinuity') return { [key]: true };
+  if (key === 'discontinuity') {
+    return { 'discontinuity': true }
+  };
   if (!value) return {};
   if (value.length === 1) {
     value = value[0];
@@ -249,6 +251,7 @@ const compositionLevel = list => {
     if (item.extinf || item.url) return;
     if (item.discontinuity === true) {
       lastCC++;
+      return;
     }
     for (let key in item) {
       if (level[key]) {

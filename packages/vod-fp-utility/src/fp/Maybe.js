@@ -1,4 +1,5 @@
 import Base from './Base';
+import { curry } from "./core"
 import { Success } from "./Either"
 class Maybe extends Base {
   static of(value) {
@@ -27,13 +28,13 @@ class Empty extends Maybe {
     return this;
   }
   value() {
-    return this.toString();
+    return this._value || this.toString();
   }
-  getOrElse(value) {
-    if (typeof value === 'function') {
-      return value();
+  getOrElse(f) {
+    if (typeof f === 'function') {
+      return f();
     }
-    return value;
+    return f;
   }
   toString() {
     return 'Empty';
@@ -62,12 +63,24 @@ class Just extends Maybe {
     return f.map(this.value());
   }
 
-  getOrElse() {
+  getOrElse(f) {
+    let v = this.value();
+    if (typeof f === 'function' && v && v.constructor === Empty) {
+      return f(v.value());
+    }
     return this.value();
   }
 }
 
 const maybeToEither = (maybe) => maybe.chain(x => Success.of(x))
 
+const maybe = curry((f1, f2, e) => {
+  if (e && e.constructor === Empty) {
+    return f1(e.value());
+  }
+  if (e && e.constructor === Just) {
+    return f2(e.value());
+  }
+})
 
-export { Empty, Just, Maybe, maybeToEither };
+export { Empty, Just, Maybe, maybe, maybeToEither };

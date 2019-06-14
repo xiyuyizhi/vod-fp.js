@@ -1,19 +1,9 @@
 import { Task, F, Maybe, Success, maybeToEither } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { isSupportMS } from '../utils/probe';
+import { abortCurrentSegment } from "../playlist/segment"
 
 const { map, compose, curry, trace } = F
-
-function abortCurrentSegment({ getState }) {
-  Success.of(F.curry((abortables, currentSegment) => {
-    let a = abortables.filter(x => x.id === currentSegment.url)[0]
-    if (a) {
-      a.abortAble.abort()
-    }
-  }))
-    .ap(getState(ACTION.ABORTABLE))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT))
-}
 
 function bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
 

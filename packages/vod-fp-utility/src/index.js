@@ -7,6 +7,7 @@ import {
   Fail,
   Success,
   either,
+  maybe,
   maybeToEither,
   Task
 } from './fp';
@@ -29,6 +30,7 @@ export {
   Fail,
   Success,
   either,
+  maybe,
   maybeToEither,
   Task,
   EventBus,

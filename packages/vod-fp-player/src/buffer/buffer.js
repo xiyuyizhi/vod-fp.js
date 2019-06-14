@@ -1,6 +1,6 @@
-import { F, Success, Maybe, either } from 'vod-fp-utility';
+import { F, Success, Maybe, either, maybe } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
-import { getBufferInfo } from './buffer-helper';
+import { bufferSerialize, bufferDump } from './buffer-helper';
 
 const { map, compose, curry, join, chain, prop, trace } = F;
 
@@ -16,7 +16,6 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
     })(getState(other));
   };
   sb.addEventListener('updateend', function (_) {
-    console.log(type + ' buffer update end');
     if (type === 'video') {
       _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
     }
@@ -32,7 +31,7 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
 bindSourceBufferEvent = curry(bindSourceBufferEvent);
 
 function afterAppended({ getState, dispatch }) {
-  console.log('current sgement appended');
+  dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDED)
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
   Maybe.of(
@@ -44,12 +43,13 @@ function afterAppended({ getState, dispatch }) {
       segments[currentId].start = start;
       segments[currentId].end = end;
       segments[currentId].duration = end - start;
-      console.log('new buffer:', [start, end]);
+      console.log('new buffer:', [start, end], bufferDump(getState(ACTION.MEDIA.MEDIA_ELE)));
       let len = segments.length - 1;
       for (let i = currentId + 1; i <= len; i++) {
         segments[i].start = segments[i - 1].end;
         segments[i].end = parseFloat((segments[i].start + segments[i].duration).toFixed(6));
       }
+      //清除无用元素
       dispatch(ACTION.BUFFER.VIDEO_BUFFER, null);
       dispatch(ACTION.BUFFER.AUDIO_BUFFER, null);
       dispatch(ACTION.PROCESS, PROCESS.IDLE);
@@ -104,6 +104,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
         'video/mp4; codecs="avc1.42E01E"'
       );
     });
+
     either(
       e => {
         console.log('error: ', e);
@@ -120,6 +121,10 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
         'video/mp4; codecs="mp4a.40.2"'
       );
     });
+    maybe(() => { }, () => {
+      dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING)
+    }, bufferInfo)
+
     either(
       e => {
         console.log(e);

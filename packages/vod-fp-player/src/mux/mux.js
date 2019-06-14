@@ -1,6 +1,6 @@
 import { TsToMp4 } from 'vod-fp-mux';
 import { F } from 'vod-fp-utility';
-import { ACTION } from '../store';
+import { ACTION, PROCESS } from '../store';
 
 function createMux({ dispatch }) {
   let mux = new TsToMp4();
@@ -10,11 +10,9 @@ function createMux({ dispatch }) {
         dispatch(ACTION.BUFFER.VIDEO_BUFFER, data);
       }
       if (data.type === 'audio') {
+        dispatch(ACTION.PROCESS, PROCESS.MUXED);
         dispatch(ACTION.BUFFER.AUDIO_BUFFER, data);
       }
-    })
-    .on('done', () => {
-      console.log('segment parse done');
     })
     .on('error', e => {
       console.error(e);

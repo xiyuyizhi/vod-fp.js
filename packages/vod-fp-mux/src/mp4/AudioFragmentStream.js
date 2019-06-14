@@ -96,13 +96,13 @@ export default class AudioFragmentStream extends PipeLine {
 
     logger.warn(
       `audio remux:【initDTS:${
-        this.initDTS
-      } , nextAacPts:${nextAudioPts}, originDTS:${
-        inputSamples[0].originDts
+      this.initDTS
+      } , nextAacPts:${nextAudioPts}, originPTS:${inputSamples[0].originPts} ,  originDTS:${
+      inputSamples[0].originDts
       } , samples[0]:${inputSamples[0].dts}】`
     );
 
-    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
+    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
       let sample = inputSamples[i];
       let delta;
       let pts = sample.pts;
@@ -132,7 +132,7 @@ export default class AudioFragmentStream extends PipeLine {
           if (!fillFrame) {
             logger.log(
               'Unable to get silent frame for given audio codec; duplicating last frame instead' +
-                '.'
+              '.'
             );
             fillFrame = sample.data.subarray();
           }

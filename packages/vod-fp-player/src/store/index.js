@@ -1,8 +1,9 @@
-import { combineActions, combineStates, createStore } from 'vod-fp-utility';
+import { combineActions, combineStates, createStore, F } from 'vod-fp-utility';
 import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
-import { map, prop } from '../../../vod-fp-utility/src/fp/core';
+
+const { map, prop } = F;
 
 let PROCESS = {
   IDLE: 'idle',
@@ -10,8 +11,12 @@ let PROCESS = {
   PAYLIST_LOADED: 'playlistLoaded',
   SEGMENT_LOADING: 'segmentLoading',
   SEGMENT_LOADED: 'segmentLoaded',
+  MUXING: 'muxing',
+  MUXED: 'muxed',
   BUFFER_APPENDING: 'bufferAppending',
-  ABORT: 'ABORT'
+  BUFFER_APPENDED: 'bufferAppended',
+  ABORT: 'abort',
+  ERROR: 'error',
 };
 
 let ACTION = {
@@ -28,8 +33,15 @@ let initState = {
   m3u8Url: '',
   mux: null,
   abortAble: [],
+  timeStamp: performance.now(),
   process: PROCESS.IDLE,
   derive: {
+    error(state, payload) {
+      if (payload) {
+        console.log('Error', payload)
+        return state;
+      }
+    },
     abortAble(state, payload) {
       if (!payload) {
         return map(prop('abortAble'))(state)
@@ -42,9 +54,22 @@ let initState = {
     removeAbortAble(state, payload) {
       if (payload !== undefined) {
         return map(x => {
-          x.abortAble = x.abortAble.filter(x => x.id === payload)
+          x.abortAble = [];
           return x;
         })(state)
+      }
+    },
+    process(state, payload, type = '') {
+      if (payload) {
+        const { timeStamp, process } = state.value()
+        let ts = (performance.now() - timeStamp).toFixed(2)
+        console.log(`PROCESS: ${state.value().process}(${ts} ms) -> ${payload}${type ? '[' + type + ']' : ''}`);
+        return map(x => {
+          x.timeStamp = performance.now();
+          x.process = payload;
+          return x;
+        })(state)
+
       }
     }
   }

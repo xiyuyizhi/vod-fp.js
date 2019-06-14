@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+ssh://git@github.com/xiyuyizhi/vod-fp.js.git"
   },
-  "devDependencies": {
+  "dependencies": {
     "vod-fp-mux": "0.0.1",
     "vod-fp-utility": "0.0.1"
   },

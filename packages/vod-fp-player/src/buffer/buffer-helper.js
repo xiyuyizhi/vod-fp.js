@@ -19,6 +19,18 @@ function bufferSerialize(media) {
   )(media);
 }
 
+function bufferDump(media) {
+  return compose(
+    join,
+    map(
+      compose(
+        x => x.join(' ~~ '),
+        map(x => x.join('-'))
+      )
+    )
+  )(bufferSerialize(media))
+}
+
 function bufferMerge(all, c) {
   if (all.length === 0) {
     all.push(c);
@@ -78,4 +90,4 @@ function getBufferInfo({ getState }, seeking) {
 
 getBufferInfo = F.curry(getBufferInfo);
 
-export { getBufferInfo };
+export { bufferSerialize, getBufferInfo, bufferDump };
