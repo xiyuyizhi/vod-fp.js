@@ -3,7 +3,6 @@
  */
 
 import { F, Maybe, Success, Fail, either } from 'vod-fp-utility';
-import { fail } from 'assert';
 
 const {
   curry,
@@ -28,9 +27,6 @@ const Error = {
   INVALID: {
     error: 1,
     message: 'INVALID'
-  },
-  PARSE_ERROR: {
-    error: 2
   }
 };
 const splitOnceByColon = splitOnce(':');
@@ -63,8 +59,8 @@ const keyFormat = key => {
 const combinePair = args => {
   let [key, value] = args;
   if (key === 'discontinuity') {
-    return { 'discontinuity': true }
-  };
+    return { discontinuity: true };
+  }
   if (!value) return {};
   if (value.length === 1) {
     value = value[0];
@@ -133,6 +129,7 @@ const structureM3u8 = curry((baseUrl, m3u8) => {
 
 const compositionMaster = list => {
   const result = {
+    type: 'master',
     medias: [],
     levels: []
   };
@@ -202,6 +199,7 @@ const compositionMaster = list => {
 
 const compositionLevel = list => {
   const level = {
+    type: 'level',
     segments: [],
     duration: 0,
     levelId: 1
@@ -282,9 +280,7 @@ const valid = m3u8 => {
   return Fail.of(Error.INVALID);
 };
 
-const isMaster = m3u8 =>
-  m3u8.indexOf('EXT-X-STREAM-INF') !== -1 &&
-  m3u8.indexOf('#EXT-X-ENDLIST') === -1;
+const isMaster = m3u8 => m3u8.indexOf('EXT-X-STREAM-INF') !== -1;
 
 // (string,string) -> Either
 export default (m3u8, baseUrl = '') => {
@@ -308,7 +304,6 @@ export default (m3u8, baseUrl = '') => {
     }
     return Success.of(res);
   };
-
   const handle = compose(
     map(x => {
       x.baseUrl = baseUrl;
@@ -318,18 +313,5 @@ export default (m3u8, baseUrl = '') => {
     map(ifElse(isMaster, handleMaster, handleLevel)),
     valid
   );
-
-  return either(
-    e => {
-      if (e.error) {
-        return e;
-      }
-      return {
-        ...Error.PARSE_ERROR,
-        msg: e.message
-      };
-    },
-    identity,
-    handle(m3u8)
-  );
+  return handle(m3u8);
 };

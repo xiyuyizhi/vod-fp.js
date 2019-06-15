@@ -3,7 +3,7 @@ import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
 
-const { map, prop } = F;
+const { map, prop, compose, trace } = F;
 
 let PROCESS = {
   IDLE: 'idle',
@@ -25,16 +25,28 @@ let ACTION = {
   MUX: 'mux',
   PROCESS: 'process',
   ABORTABLE: 'abortAble',
-  REMOVE_ABORTABLE: 'removeAbortAble'
+  REMOVE_ABORTABLE: 'removeAbortAble',
+  MAIN_LOOP: 'mainLoop',
+  MAIN_LOOP_HANDLE: 'mainLoopHandle'
 };
 
+/**
+ *
+ * state存放状态,所有跨文件需要定义的状态全部存放到公共地方 store。
+ * 对状态的使用只能通过getState()！！获取。
+ * 对状态的修改、操作只能通过dispatch(ACTION)！！操作。
+ * 对状态的操作定义只能声明在state.derive中！！。
+ * 各个模块需要接触state的function都必须是curry化的！！,第一个参数必须是_store对象。
+ */
 let initState = {
   error: null,
   m3u8Url: '',
   mux: null,
+  mainLoop: null,
   abortAble: [],
   timeStamp: performance.now(),
   process: PROCESS.IDLE,
+  // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
   derive: {
     error(state, payload) {
       if (payload) {
@@ -78,6 +90,25 @@ let initState = {
         })(state);
       }
       return map(prop('process'))(state);
+    },
+    mainLoopHandle(state, payload) {
+      if (payload === 'stop') {
+        map(
+          compose(
+            tick => tick.stop(),
+            prop('mainLoop')
+          )
+        )(state);
+      }
+      if (payload === 'resume') {
+        map(
+          compose(
+            tick => tick.immediate(),
+            trace,
+            prop('mainLoop')
+          )
+        )(state);
+      }
     }
   }
 };

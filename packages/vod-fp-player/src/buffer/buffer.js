@@ -1,10 +1,10 @@
 import { F, Success, Maybe, either, maybe } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
-import { bufferSerialize, bufferDump } from './buffer-helper';
+import { bufferDump } from './buffer-helper';
 
 const { map, compose, curry, join, chain, prop, trace } = F;
 
-function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
+function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   const _waitFinished = (other, me) => {
     map(x => {
       if (x) {
@@ -15,7 +15,7 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function (_) {
+  sb.addEventListener('updateend', function(_) {
     if (type === 'video') {
       _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
     }
@@ -28,10 +28,9 @@ function bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   });
   return sb;
 }
-bindSourceBufferEvent = curry(bindSourceBufferEvent);
 
 function afterAppended({ getState, dispatch }) {
-  dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDED)
+  dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDED);
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
   Maybe.of(
@@ -43,11 +42,17 @@ function afterAppended({ getState, dispatch }) {
       segments[currentId].start = start;
       segments[currentId].end = end;
       segments[currentId].duration = end - start;
-      console.log('new buffer:', [start, end], bufferDump(getState(ACTION.MEDIA.MEDIA_ELE)));
+      console.log(
+        'new buffer:',
+        [start, end],
+        bufferDump(getState(ACTION.MEDIA.MEDIA_ELE))
+      );
       let len = segments.length - 1;
       for (let i = currentId + 1; i <= len; i++) {
         segments[i].start = segments[i - 1].end;
-        segments[i].end = parseFloat((segments[i].start + segments[i].duration).toFixed(6));
+        segments[i].end = parseFloat(
+          (segments[i].start + segments[i].duration).toFixed(6)
+        );
       }
       //清除无用元素
       dispatch(ACTION.BUFFER.VIDEO_BUFFER, null);
@@ -67,7 +72,7 @@ function createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
   console.log('create source buffer with mime: ', mime);
   let sb = map(
     compose(
-      connect(bindSourceBufferEvent)(type),
+      connect(_bindSourceBufferEvent)(type),
       ms => ms.addSourceBuffer(mime)
     )
   )(mediaSource);
@@ -109,7 +114,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       e => {
         console.log('error: ', e);
       },
-      () => { },
+      () => {},
       chain(doAppend(sb))(bufferInfo)
     );
   });
@@ -121,20 +126,25 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
         'video/mp4; codecs="mp4a.40.2"'
       );
     });
-    maybe(() => { }, () => {
-      dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING)
-    }, bufferInfo)
+    maybe(
+      () => {},
+      () => {
+        dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING);
+      },
+      bufferInfo
+    );
 
     either(
       e => {
         console.log(e);
       },
-      () => { },
+      () => {},
       chain(doAppend(sb))(bufferInfo)
     );
   });
 }
 
+_bindSourceBufferEvent = curry(_bindSourceBufferEvent);
 buffer = curry(buffer);
 
 export { buffer };

@@ -1,7 +1,7 @@
 import { F, Task } from 'vod-fp-utility';
-import { ACTION } from '../store';
+import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
-import loader from "../loader/loader"
+import loader from '../loader/loader';
 
 function getBasePath(url) {
   url = url.split('?');
@@ -9,18 +9,27 @@ function getBasePath(url) {
   return url.slice(0, url.lastIndexOf('/') + 1);
 }
 
+// string -> Task
 function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
   return loader({
     url
   }).map(text => {
-    const level = m3u8Parser(text, getBasePath(url));
-    dispatch(ACTION.PLAYLIST.LEVELS, [level]);
-    return level;
+    return m3u8Parser(text, getBasePath(url))
+      .map(playlist => {
+        console.log(playlist);
+        dispatch(
+          ACTION.PLAYLIST.LEVELS,
+          playlist.type === 'master' ? playlist.levels : [playlist]
+        );
+        return playlist;
+      })
+      .error(e => {
+        dispatch(ACTION.ERROR, e);
+        dispatch(ACTION.PROCESS, PROCESS.ERROR);
+      });
   });
 }
 
 loadPlaylist = F.curry(loadPlaylist);
 
-export {
-  loadPlaylist
-} 
+export { loadPlaylist };

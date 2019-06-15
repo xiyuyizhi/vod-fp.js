@@ -9,14 +9,14 @@ import {
   either,
   maybe,
   maybeToEither,
-  Task
+  Task,
+  Tick
 } from './fp';
 
 const {
   EventBus,
   PipeLine,
   StateMachine,
-  Tick,
   combineActions,
   combineStates,
   createStore

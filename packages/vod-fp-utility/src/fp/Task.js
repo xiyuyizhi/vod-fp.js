@@ -116,7 +116,7 @@ class Task {
     return this;
   }
 
-  // f return another Task
+  // f return another Task,this._value is a function
   chain(f) {
     return Task.of((resolve, reject) =>
       this.map(x =>

@@ -5,7 +5,7 @@ import { buffer } from './buffer';
 const { compose, map, reduce, curry, prop, join, ifElse, trace } = F;
 
 // void -> Maybe
-function bufferSerialize(media) {
+function _bufferSerialize(media) {
   let _serialize = buffered => {
     let arr = [];
     for (let i = 0; i < buffered.length; i++) {
@@ -28,7 +28,7 @@ function bufferDump(media) {
         map(x => x.join('-'))
       )
     )
-  )(bufferSerialize(media))
+  )(_bufferSerialize(media));
 }
 
 function bufferMerge(all, c) {
@@ -71,7 +71,7 @@ function getBufferInfo({ getState }, seeking) {
         reduce(bufferMerge, [])
       )
     ),
-    bufferSerialize
+    _bufferSerialize
   )(media);
 
   return restInfo.getOrElse(() => {
@@ -90,4 +90,4 @@ function getBufferInfo({ getState }, seeking) {
 
 getBufferInfo = F.curry(getBufferInfo);
 
-export { bufferSerialize, getBufferInfo, bufferDump };
+export { getBufferInfo, bufferDump };

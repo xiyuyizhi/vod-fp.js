@@ -1,6 +1,6 @@
 import Base from './Base';
-import { curry } from "./core"
-import { Success } from "./Either"
+import { curry } from './core';
+import { Success, Fail } from './Either';
 class Maybe extends Base {
   static of(value) {
     if (value === undefined || value === null) {
@@ -72,7 +72,12 @@ class Just extends Maybe {
   }
 }
 
-const maybeToEither = (maybe) => maybe.chain(x => Success.of(x))
+const maybeToEither = maybe => {
+  if (maybe.constructor === Just) {
+    return maybe.chain(x => Success.of(x));
+  }
+  return Fail.of();
+};
 
 const maybe = curry((f1, f2, e) => {
   if (e && e.constructor === Empty) {
@@ -81,6 +86,6 @@ const maybe = curry((f1, f2, e) => {
   if (e && e.constructor === Just) {
     return f2(e.value());
   }
-})
+});
 
 export { Empty, Just, Maybe, maybe, maybeToEither };

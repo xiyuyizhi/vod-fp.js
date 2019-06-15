@@ -7,11 +7,9 @@ const { compose, head, map, filter } = F;
 
 function binarySearch(list, start, end, bufferEnd) {
   // start mid end
-  let endIndex = list.length - 1;
-  if (start > endIndex) {
+  if (start > end) {
     return -1;
   }
-  if (end < 0) return 0;
   const mid = start + Math.floor((end - start) / 2);
   if (list[mid].end < bufferEnd + 0.25) {
     start = mid + 1;
@@ -28,9 +26,9 @@ function binarySearch(list, start, end, bufferEnd) {
 const findSegment = F.curry((segments, bufferEnd) => {
   let seg = binarySearch(segments, 0, segments.length - 1, bufferEnd);
   if (seg === -1) {
-    return Empty.of();
+    return;
   }
-  return Success.of(seg);
+  return seg;
 });
 
 const addAbortSegment = F.curry((dispatch, abortable) => {

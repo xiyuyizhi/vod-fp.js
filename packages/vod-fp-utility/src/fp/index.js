@@ -1,7 +1,8 @@
-import * as F from "./core"
-import { Maybe, Just, Empty, maybe, maybeToEither } from "./Maybe"
-import { Fail, Success, either } from "./Either"
-import Task from "./Task"
+import * as F from './core';
+import { Maybe, Just, Empty, maybe, maybeToEither } from './Maybe';
+import { Fail, Success, either } from './Either';
+import Task from './Task';
+import Tick from './Tick';
 
 export {
   F,
@@ -13,5 +14,6 @@ export {
   either,
   maybe,
   maybeToEither,
-  Task
-}
+  Task,
+  Tick
+};

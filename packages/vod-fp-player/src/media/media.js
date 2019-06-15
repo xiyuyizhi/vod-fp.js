@@ -6,9 +6,13 @@ import { getBufferInfo } from '../buffer/buffer-helper';
 
 const { map, compose, curry, prop, trace } = F;
 
-function bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
+function _bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
+  media.addEventListener('playing', () => {
+    dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
+  });
   media.addEventListener('seeking', () => {
     console.log('start seek...', media.currentTime);
+    dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
     map(x => {
       if (x === PROCESS.SEGMENT_LOADING) {
         connect(abortCurrentSegment);
@@ -29,7 +33,7 @@ function bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
   subscribe(ACTION.PROCESS, process => {
     let rest = connect(getBufferInfo)(false);
     Success.of(
-      curry((proce, mediaSource, segmentsLen, currentId) => {
+      curry((proce, mediaSource, currentId) => {
         if (
           proce === PROCESS.IDLE &&
           media.duration - rest.bufferEnd <= 0.2 &&
@@ -43,21 +47,19 @@ function bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
     )
       .ap(maybeToEither(process))
       .ap(maybeToEither(getState(ACTION.MEDIA.MEDIA_SOURCE)))
-      .ap(maybeToEither(getState(ACTION.PLAYLIST.SEGMENTS_LEN)))
       .ap(maybeToEither(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID)))
       .error(e => {
         console.log(e);
       });
   });
 }
-bindMediaEvent = curry(bindMediaEvent);
 
 function createMediaSource({ connect, dispatch, subscribe }, media) {
   if (isSupportMS()) {
     const mediaSource = new MediaSource();
     media.src = URL.createObjectURL(mediaSource);
     dispatch(ACTION.MEDIA.MEDIA_SOURCE, mediaSource);
-    connect(bindMediaEvent)(media);
+    connect(_bindMediaEvent)(media);
     return Task.of(mediaSource);
   }
   return Task.reject('browser not support MSE');
@@ -73,6 +75,7 @@ function updateMediaDuration({ getState }) {
     .ap(getState(ACTION.PLAYLIST.DURATION));
 }
 
+_bindMediaEvent = curry(_bindMediaEvent);
 createMediaSource = curry(createMediaSource);
 updateMediaDuration = curry(updateMediaDuration);
 export { createMediaSource, updateMediaDuration };
