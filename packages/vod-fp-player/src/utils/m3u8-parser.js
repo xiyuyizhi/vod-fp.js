@@ -138,7 +138,7 @@ const compositionMaster = list => {
   const fullfillLevels = fullfillMaster((result, item) => {
     if (item.streamInf) {
       result.levels.push({
-        levelId: result.levels.length,
+        levelId: result.levels.length + 1,
         ...item.streamInf
       });
     }
@@ -201,8 +201,8 @@ const compositionLevel = list => {
   const level = {
     type: 'level',
     segments: [],
-    duration: 0,
-    levelId: 1
+    duration: 0
+    // levelId: 1
   };
   let lastCC = 0;
   const fullfillLevel = fullfillM3u8(level);

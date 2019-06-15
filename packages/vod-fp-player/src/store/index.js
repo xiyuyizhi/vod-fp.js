@@ -74,14 +74,13 @@ let initState = {
         })(state);
       }
     },
-    process(state, payload, type = '') {
+    process(state, payload, dispatch) {
       if (payload) {
+        // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         const { timeStamp, process } = state.value();
         let ts = (performance.now() - timeStamp).toFixed(2);
         console.log(
-          `PROCESS: ${state.value().process}(${ts} ms) -> ${payload}${
-            type ? '[' + type + ']' : ''
-          }`
+          `PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`
         );
         return map(x => {
           x.timeStamp = performance.now();
@@ -93,20 +92,15 @@ let initState = {
     },
     mainLoopHandle(state, payload) {
       if (payload === 'stop') {
-        map(
-          compose(
-            tick => tick.stop(),
-            prop('mainLoop')
-          )
+        compose(
+          map(tick => tick.stop()),
+          map(prop('mainLoop'))
         )(state);
       }
       if (payload === 'resume') {
-        map(
-          compose(
-            tick => tick.immediate(),
-            trace,
-            prop('mainLoop')
-          )
+        compose(
+          map(tick => tick.immediate()),
+          map(prop('mainLoop'))
         )(state);
       }
     }

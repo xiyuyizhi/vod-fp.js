@@ -78,7 +78,7 @@ function createStore(initState, actions = {}) {
         let deriveProp = state.derive[prop];
         if (deriveProp) {
           //只是一个更新已有的某个属性的方法
-          let s = deriveProp(Maybe.of(state), payload);
+          let s = deriveProp(Maybe.of(state), payload, _store.dispatch);
           if (s) {
             state = s.join();
           }
@@ -105,15 +105,15 @@ function createStore(initState, actions = {}) {
           // create the copy of currentState //shadow cpoy
           const newState = currentDerive[prop](
             Maybe.of({ ...currentState }),
-            payload
+            payload,
+            _store.dispatch
           );
-          if (!newState) {
-            throw new Error(`${path} not support set value`);
+          if (newState) {
+            state[parentProp] = {
+              ...currentState,
+              ...newState.join()
+            };
           }
-          state[parentProp] = {
-            ...currentState,
-            ...newState.join()
-          };
         }
       }
       if (events[path]) {

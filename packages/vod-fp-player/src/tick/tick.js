@@ -73,7 +73,7 @@ function tick({ getState, connect, dispatch }, level, mediaSource) {
   }
 
   let t = Tick.of(_startTimer)
-    .interval(1000)
+    .interval(200)
     .immediate();
   dispatch(ACTION.MAIN_LOOP, t);
 }

@@ -4,14 +4,15 @@ import { curry } from '../../../vod-fp-utility/src/fp/core';
 
 const { prop, compose, map, head, filter, trace } = F;
 const ACTION = {
-  LEVELS: 'levels',
+  PL: 'pl',
   CURRENT_LEVEL_ID: 'currentLevelId',
+  CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
   SEGMENTS: 'segments',
-  CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_SEGMENT: 'currentSegment',
   DURATION: 'duration',
-  SEGMENTS_LEN: 'segmentsLen'
+  SEGMENTS_LEN: 'segmentsLen',
+  UPDATE_LEVEL: 'updateLevel'
 };
 
 function getCurrentLevel(state) {
@@ -20,15 +21,23 @@ function getCurrentLevel(state) {
     compose(
       head,
       filter(x => x.levelId === currentLevelId),
-      prop('levels')
+      prop('levels'),
+      prop('pl')
     )
   )(state);
 }
 
 const state = {
+  pl: {
+    levels: [
+      {
+        levelId: 1,
+        detail: {}
+      }
+    ]
+  },
   currentSegmentId: -1,
   currentLevelId: 1,
-  levels: [],
   derive: {
     currentLevelId(state, payload) {
       if (!payload) {
@@ -39,46 +48,61 @@ const state = {
         return x;
       });
     },
-    currentLevel(state, payload) {
-      if (!payload) {
-        return getCurrentLevel(state);
-      }
+    currentLevel(state) {
+      return getCurrentLevel(state);
     },
-    segments(state, payload) {
-      if (!payload) return map(prop('segments'))(getCurrentLevel(state));
-      // return map(
-      //   compose(
-      //     x => {
-      //       x.segments = payload;
-      //       return x;
-      //     },
-      //     prop('currentLevel')
-      //   )
-      // )(state);
-    },
-    currentSegment(state, payload) {
-      if (!payload) {
-        return Maybe.of(
-          curry((segments, id) => {
-            return segments[id];
-          })
+    updateLevel(state, payload) {
+      let { levelId, detail } = payload;
+      map(
+        compose(
+          level => (level.detail = detail),
+          head,
+          filter(x => x.levelId === levelId),
+          prop('levels'),
+          prop('pl')
         )
-          .ap(map(prop('segments'))(getCurrentLevel(state)))
-          .ap(state.map(prop('currentSegmentId')));
-      }
+      )(state);
+    },
+    segments(state) {
+      return compose(
+        map(prop('segments')),
+        map(prop('detail'))
+      )(getCurrentLevel(state));
+    },
+    currentSegment(state) {
+      return Maybe.of(
+        curry((segments, id) => {
+          return segments[id];
+        })
+      )
+        .ap(
+          map(
+            compose(
+              prop('segments'),
+              prop('detail')
+            )
+          )(getCurrentLevel(state))
+        )
+        .ap(state.map(prop('currentSegmentId')));
     },
     duration(state, payload) {
       if (!payload) {
-        return map(prop('duration'))(getCurrentLevel(state))
+        return map(
+          compose(
+            prop('duration'),
+            prop('detail')
+          )
+        )(getCurrentLevel(state));
       }
     },
-    segmentsLen(state, payload) {
-      if (!payload) {
-        return map(compose(
+    segmentsLen(state) {
+      return map(
+        compose(
           prop('length'),
-          prop('segments')
-        ))(getCurrentLevel(state))
-      }
+          prop('segments'),
+          prop('detail')
+        )
+      )(getCurrentLevel(state));
     }
   }
 };

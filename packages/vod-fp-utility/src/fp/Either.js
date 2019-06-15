@@ -20,7 +20,7 @@ class Fail extends Either {
   }
   // 用于 Task中_value为 Fail时
   error(f) {
-    return f(this.value());
+    return Success.of(f(this.value()));
   }
 }
 
