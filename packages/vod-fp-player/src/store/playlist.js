@@ -1,13 +1,14 @@
 import { F } from 'vod-fp-utility';
 import { Maybe } from '../../../vod-fp-utility/src';
-import { curry } from '../../../vod-fp-utility/src/fp/core';
 
-const { prop, compose, map, head, filter, trace } = F;
+const { prop, curry, compose, map, head, join, filter, trace } = F;
 const ACTION = {
   PL: 'pl',
   CURRENT_LEVEL_ID: 'currentLevelId',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
+  CURRENT_MEDIA: 'currentMedia',
+  UPDATE_MEDIA: 'updateMedia',
   SEGMENTS: 'segments',
   CURRENT_SEGMENT: 'currentSegment',
   DURATION: 'duration',
@@ -26,6 +27,17 @@ function getCurrentLevel(state) {
     )
   )(state);
 }
+
+function findMedia(state, type, groupId) {
+  return compose(
+    join,
+    map(head),
+    map(filter(x => x.type === type && x.groupId === groupId)),
+    map(prop('medias')),
+    map(prop('pl'))
+  )(state);
+}
+findMedia = curry(findMedia);
 
 const state = {
   pl: {
@@ -51,6 +63,14 @@ const state = {
     currentLevel(state) {
       return getCurrentLevel(state);
     },
+    currentMedia(state, payload) {
+      if (payload) {
+        return compose(
+          map(findMedia(state, 'AUDIO')),
+          map(prop('audio'))
+        )(getCurrentLevel(state));
+      }
+    },
     updateLevel(state, payload) {
       let { levelId, detail } = payload;
       map(
@@ -62,6 +82,15 @@ const state = {
           prop('pl')
         )
       )(state);
+    },
+    updateMedia(state, payload) {
+      if (payload) {
+        compose(
+          map(x => (x.detail = payload)),
+          map(findMedia(state, 'AUDIO')),
+          map(prop('audio'))
+        )(getCurrentLevel(state));
+      }
     },
     segments(state) {
       return compose(

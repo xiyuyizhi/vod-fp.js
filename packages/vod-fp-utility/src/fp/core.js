@@ -55,10 +55,16 @@ const chain = curry((f, m) => m.map(f).join());
 
 const liftA2 = curry((g, a, b) => a.map(g).ap(b));
 
-
-const trace = a => {
-  console.log(a);
-  return a;
+const trace = (msg, v) => {
+  if (typeof msg === 'string' && msg.indexOf('log:') !== -1) {
+    return v => {
+      console.log(msg, v);
+      return v;
+    };
+  }
+  v = msg;
+  console.log(v);
+  return v;
 };
 
 export {

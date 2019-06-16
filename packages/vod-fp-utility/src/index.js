@@ -9,6 +9,7 @@ import {
   either,
   maybe,
   maybeToEither,
+  emptyToResolve,
   Task,
   Tick
 } from './fp';
@@ -32,6 +33,7 @@ export {
   either,
   maybe,
   maybeToEither,
+  emptyToResolve,
   Task,
   EventBus,
   PipeLine,

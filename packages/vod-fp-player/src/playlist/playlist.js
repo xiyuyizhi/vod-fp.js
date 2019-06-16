@@ -1,9 +1,9 @@
-import { F, Task, Maybe, Empty, Just } from 'vod-fp-utility';
+import { F, Task, Maybe, Empty, Just, emptyToResolve } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
 
-const { curry, compose, map, join, prop, head, trace, chain } = F;
+const { curry, compose, map, join, prop, head, trace, identity, chain } = F;
 
 function _getBasePath(url) {
   url = url.split('?');
@@ -30,7 +30,7 @@ function _checkLevelOrMaster({ dispatch }, playlist) {
   return Just.of(playlist);
 }
 
-// (Just,object) -> object
+// (Just,object) -> Just
 function _updateLevel({ dispatch }, level, levelDetail) {
   level.map(x => {
     dispatch(ACTION.PLAYLIST.UPDATE_LEVEL, {
@@ -38,23 +38,61 @@ function _updateLevel({ dispatch }, level, levelDetail) {
       detail: levelDetail
     });
   });
-  return levelDetail;
+  return level;
+}
+
+function _updateMedia({ dispatch }, mediaDetail) {
+  dispatch(ACTION.PLAYLIST.UPDATE_MEDIA, mediaDetail);
+  return mediaDetail;
+}
+
+// Just --> Maybe
+function _checkHasMatchedMedia({ getState }, level) {
+  return chain(l => getState(ACTION.PLAYLIST.CURRENT_MEDIA, l.levelId))(level);
 }
 
 // Just --> Task   Empty --> Empty
-function _handleMaster({ connect }, master) {
+function _updateLevelAndMedia({ connect }, master) {
   let currentLevel = master.map(
     compose(
       head,
       prop('levels')
     )
   );
+  let matchedMedia = connect(_checkHasMatchedMedia)(currentLevel);
   // throw new Error('....');
-  return compose(
-    map(connect(_updateLevel)(currentLevel)),
-    chain(_loadLevelOrMaster),
-    map(prop('url'))
-  )(currentLevel);
+
+  // Just --> Task  Empty --> Task
+  let _loadMediaDetail = media => {
+    return emptyToResolve(
+      compose(
+        map(connect(_updateMedia)),
+        map(trace('log: load media detail,')),
+        chain(_loadLevelOrMaster),
+        map(prop('uri')),
+        trace('log: find matched media: ')
+      )(media)
+    );
+  };
+
+  // Just --> Task  Empty --> Empty
+  let _loadLevelDetail = level => {
+    return compose(
+      map(connect(_updateLevel)(level)),
+      map(trace('log: load level detail,')),
+      chain(_loadLevelOrMaster),
+      map(prop('url')),
+      trace('log: current Level,')
+    )(level);
+  };
+
+  return currentLevel
+    .map(() => {
+      return Task.resolve(curry((level, mediaDetail) => level))
+        .ap(_loadLevelDetail(currentLevel))
+        .ap(_loadMediaDetail(matchedMedia));
+    })
+    .join();
 }
 
 //  string --> Task
@@ -67,18 +105,16 @@ function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
   return Task.of((resolve, reject) => {
     _loadLevelOrMaster(url)
       .map(connect(_checkLevelOrMaster))
-      .map(connect(_handleMaster))
-      .map(playlist => {
-        console.log('playlist', playlist);
-        return playlist;
-      })
+      .map(connect(_updateLevelAndMedia))
       .map(resolve)
       .error(reject);
   });
 }
 
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
+_updateLevelAndMedia = curry(_updateLevelAndMedia);
 _updateLevel = curry(_updateLevel);
-_handleMaster = curry(_handleMaster);
+_updateMedia = curry(_updateMedia);
+_checkHasMatchedMedia = curry(_checkHasMatchedMedia);
 loadPlaylist = F.curry(loadPlaylist);
 export { loadPlaylist };

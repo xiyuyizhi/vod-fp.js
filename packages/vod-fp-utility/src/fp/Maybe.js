@@ -1,5 +1,6 @@
 import Base from './Base';
 import { curry } from './core';
+import Task from './Task';
 import { Success, Fail } from './Either';
 class Maybe extends Base {
   static of(value) {
@@ -79,6 +80,13 @@ const maybeToEither = maybe => {
   return Fail.of();
 };
 
+const emptyToResolve = empty => {
+  if (empty.constructor === Empty) {
+    return Task.resolve();
+  }
+  return empty;
+};
+
 const maybe = curry((f1, f2, e) => {
   if (e && e.constructor === Empty) {
     return f1(e.value());
@@ -88,4 +96,4 @@ const maybe = curry((f1, f2, e) => {
   }
 });
 
-export { Empty, Just, Maybe, maybe, maybeToEither };
+export { Empty, Just, Maybe, maybe, maybeToEither, emptyToResolve };

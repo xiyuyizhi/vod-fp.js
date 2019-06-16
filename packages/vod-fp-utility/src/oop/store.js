@@ -143,7 +143,7 @@ function createStore(initState, actions = {}) {
         }
       };
     },
-    getState: path => {
+    getState: (path, payload) => {
       if (!path) return Maybe.of(state);
       if (typeof path !== 'string') {
         throw new Error('invalid path');
@@ -158,12 +158,12 @@ function createStore(initState, actions = {}) {
       prop = props.slice(1)[0];
       if (!currentDerive[prop]) {
         if (currentState[prop] !== undefined) {
-          return Maybe.of(currentState[prop]);
+          return Maybe.of(currentState[prop], payload);
         } else {
           return Maybe.of(state[prop]);
         }
       } else {
-        return currentDerive[prop](Maybe.of(currentState));
+        return currentDerive[prop](Maybe.of(currentState), payload);
       }
     }
   };

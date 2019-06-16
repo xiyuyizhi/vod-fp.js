@@ -46,6 +46,7 @@ function _startProcess({ getState, dispatch, connect }, rest) {
 }
 
 function tick({ getState, connect, dispatch }, level, mediaSource) {
+  console.log(level, mediaSource);
   if (!level) return;
   connect(updateMediaDuration);
   connect(createMux);
