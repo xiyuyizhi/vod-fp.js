@@ -51,7 +51,7 @@ function _checkHasMatchedMedia({ getState }, level) {
   return chain(l => getState(ACTION.PLAYLIST.CURRENT_MEDIA, l.levelId))(level);
 }
 
-// Just --> Task   Empty --> Empty
+// Just --> Task
 function _updateLevelAndMedia({ connect }, master) {
   let currentLevel = master.map(
     compose(
@@ -75,15 +75,17 @@ function _updateLevelAndMedia({ connect }, master) {
     );
   };
 
-  // Just --> Task  Empty --> Empty
+  // Just --> Task  Empty --> Task
   let _loadLevelDetail = level => {
-    return compose(
-      map(connect(_updateLevel)(level)),
-      map(trace('log: load level detail,')),
-      chain(_loadLevelOrMaster),
-      map(prop('url')),
-      trace('log: current Level,')
-    )(level);
+    return emptyToResolve(
+      compose(
+        map(connect(_updateLevel)(level)),
+        map(trace('log: load level detail,')),
+        chain(_loadLevelOrMaster),
+        map(prop('url')),
+        trace('log: current Level,')
+      )(level)
+    );
   };
 
   return currentLevel
@@ -106,6 +108,13 @@ function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
     _loadLevelOrMaster(url)
       .map(connect(_checkLevelOrMaster))
       .map(connect(_updateLevelAndMedia))
+      .map(x => {
+        dispatch(
+          ACTION.EVENTS.MANIFEST_LOADED,
+          getState(ACTION.PLAYLIST.PL).join()
+        );
+        return x;
+      })
       .map(resolve)
       .error(reject);
   });

@@ -1,5 +1,6 @@
 export default {
-  ERROR: 'ERROR',
-  DURATION_CHANGE: 'DURATION_CHANGE',
-  LEVEL_CHANGE: 'LEVEL_CHANGE'
+  ERROR: 'error',
+  MANIFEST_LOADED: 'manifestLoaded',
+  DURATION_CHANGE: 'durationChange',
+  LEVEL_CHANGE: 'levelChange'
 };

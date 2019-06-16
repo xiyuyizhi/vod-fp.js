@@ -1,6 +1,5 @@
 node_modules/
 /packages/**/lib
-/packages/vod-fp-player/demo/demo.js
 /dist/
 .DS_Store
 .vscode/

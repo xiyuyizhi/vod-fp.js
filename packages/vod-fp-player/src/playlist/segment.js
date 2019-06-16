@@ -87,7 +87,7 @@ function loadSegment() {
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
         } else {
           dispatch(ACTION.PROCESS, PROCESS.ERROR);
-          dispatch(ACTION.ERROR, e);
+          dispatch(ACTION.EVENTS.ERROR, e);
         }
       });
   };

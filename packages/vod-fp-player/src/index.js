@@ -28,11 +28,15 @@ export default class Vod extends EventBus {
     this.setUp();
   }
 
+  changeLevel() {}
+
   setUp() {
     if (this.media && this.url) {
       const { subscribe, connect } = this.store;
-      subscribe(ACTION.ERROR, e => {
-        this.emit(Events.ERROR, e);
+      Object.keys(ACTION.EVENTS).forEach(eveName => {
+        subscribe(ACTION.EVENTS[eveName], data => {
+          this.emit(Events[eveName], data.join());
+        });
       });
       connect(manage)(this.media, this.url);
     }

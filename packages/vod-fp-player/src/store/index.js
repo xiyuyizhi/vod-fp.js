@@ -1,4 +1,5 @@
 import { combineActions, combineStates, createStore, F } from 'vod-fp-utility';
+import EVENTS from '../events';
 import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
@@ -20,7 +21,7 @@ let PROCESS = {
 };
 
 let ACTION = {
-  ERROR: 'error',
+  EVENTS,
   M3U8_URL: 'm3u8Url',
   MUX: 'mux',
   PROCESS: 'process',
@@ -50,7 +51,7 @@ let initState = {
   derive: {
     error(state, payload) {
       if (payload) {
-        console.log('Error', payload);
+        console.log('Error log:', payload);
         return map(x => {
           x.error = payload;
           return x;

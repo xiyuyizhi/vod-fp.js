@@ -5,16 +5,12 @@ import { loadPlaylist } from './playlist/playlist';
 import { startTick } from './tick/tick';
 
 function manage({ dispatch, connect }, media, url) {
-  let tick = connect(startTick);
-  let m = connect(createMediaSource)(media);
-  let s = connect(loadPlaylist)(url);
-  Task.resolve(tick)
-    .ap(s)
-    .ap(m)
+  Task.resolve(connect(startTick))
+    .ap(connect(loadPlaylist)(url))
+    .ap(connect(createMediaSource)(media))
     .error(e => {
       // handle 那些非显示 emit 自定义error的运行时异常
-      console.log('Error log: ', e);
-      dispatch(ACTION.ERROR, e);
+      dispatch(ACTION.EVENTS.ERROR, e);
       dispatch(ACTION.PROCESS, PROCESS.ERROR);
     });
 }
