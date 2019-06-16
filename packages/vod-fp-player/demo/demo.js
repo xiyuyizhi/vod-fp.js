@@ -25,6 +25,7 @@ vod.on(Vod.Events.MANIFEST_LOADED, pl => {
   if (levels.length > 1) {
     let select = document.createElement('select');
     let selectHtml;
+    select.style.display = 'block';
     selectHtml = levels
       .map(
         ({ levelId, streamtype }) =>
@@ -33,9 +34,13 @@ vod.on(Vod.Events.MANIFEST_LOADED, pl => {
       .join('\n');
     select.innerHTML = selectHtml;
     select.addEventListener('change', e => {
-      console.log(e.target.value);
+      vod.changeLevel(e.target.value);
     });
     document.body.appendChild(select);
   }
   console.log(pl);
+});
+
+vod.on(Vod.Events.LEVEL_CHANGED, levelId => {
+  console.log('level changed to ' + levelId);
 });

@@ -7,6 +7,7 @@ const ACTION = {
   CURRENT_LEVEL_ID: 'currentLevelId',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
+  FIND_LEVEL: 'findLevel',
   CURRENT_MEDIA: 'currentMedia',
   UPDATE_MEDIA: 'updateMedia',
   SEGMENTS: 'segments',
@@ -75,7 +76,13 @@ const state = {
       let { levelId, detail } = payload;
       map(
         compose(
-          level => (level.detail = detail),
+          detail => {
+            detail.segments.forEach(seg => (seg.levelId = levelId));
+          },
+          level => {
+            level.detail = detail;
+            return detail;
+          },
           head,
           filter(x => x.levelId === levelId),
           prop('levels'),
@@ -85,12 +92,27 @@ const state = {
     },
     updateMedia(state, payload) {
       if (payload) {
+        let level = getCurrentLevel(state);
+        let levelId = level.join().levelId;
         compose(
-          map(x => (x.detail = payload)),
+          map(x => {
+            x.detail = payload;
+            x.detail.segments.forEach(seg => (seg.levelId = levelId));
+          }),
           map(findMedia(state, 'AUDIO')),
           map(prop('audio'))
-        )(getCurrentLevel(state));
+        )(level);
       }
+    },
+    findLevel(state, payload) {
+      return map(
+        compose(
+          head,
+          filter(x => x.levelId === payload),
+          prop('levels'),
+          prop('pl')
+        )
+      )(state);
     },
     segments(state) {
       return compose(

@@ -123,6 +123,7 @@ const structureM3u8 = curry((baseUrl, m3u8) => {
   return compose(
     map(ifElse(isTag, extractTag, getUrlWithBase)),
     tail,
+    filter(Boolean),
     splitLines
   )(m3u8);
 });
@@ -197,7 +198,7 @@ const compositionMaster = list => {
   return result;
 };
 
-const compositionLevel = list => {
+const compositionLevel = curry(list => {
   const level = {
     type: 'level',
     segments: [],
@@ -270,7 +271,7 @@ const compositionLevel = list => {
   )(list);
 
   return level;
-};
+});
 
 // string -> Either
 const valid = m3u8 => {

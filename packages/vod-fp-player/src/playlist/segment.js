@@ -68,13 +68,13 @@ function loadSegment() {
         dispatch(ACTION.REMOVE_ABORTABLE, true);
         if (
           (lastSegment && lastSegment.cc !== segment.cc) ||
-          (lastSegment && segment.id - lastSegment.id !== 1)
+          (lastSegment && lastSegment.levelId !== segment.levelId)
         ) {
-          // check to set timeoffset
           connect(setTimeOffset)(segment.start);
-        }
-        if (lastSegment && lastSegment.cc !== segment.cc) {
           connect(resetInitSegment);
+        }
+        if (lastSegment && segment.id - lastSegment.id !== 1) {
+          connect(setTimeOffset)(segment.start);
         }
         dispatch(ACTION.PROCESS, PROCESS.MUXING);
         connect(toMux)(buffer, segment.id);

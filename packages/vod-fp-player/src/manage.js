@@ -1,7 +1,7 @@
 import { Task, F } from 'vod-fp-utility';
 import { ACTION, PROCESS } from './store';
 import { createMediaSource } from './media/media';
-import { loadPlaylist } from './playlist/playlist';
+import { loadPlaylist, changePlaylistLevel } from './playlist/playlist';
 import { startTick } from './tick/tick';
 
 function manage({ dispatch, connect }, media, url) {
@@ -14,5 +14,11 @@ function manage({ dispatch, connect }, media, url) {
       dispatch(ACTION.PROCESS, PROCESS.ERROR);
     });
 }
+function changeLevel({ connect }, levelId) {
+  connect(changePlaylistLevel)(levelId);
+}
 
-export default F.curry(manage);
+manage = F.curry(manage);
+changeLevel = F.curry(changeLevel);
+
+export { manage, changeLevel };
