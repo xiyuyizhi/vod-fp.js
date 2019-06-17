@@ -1,5 +1,5 @@
-function defer(f) {
-  setTimeout(f, 0);
+function defer(f, duration = 0) {
+  setTimeout(f, duration);
 }
 
 export { defer };

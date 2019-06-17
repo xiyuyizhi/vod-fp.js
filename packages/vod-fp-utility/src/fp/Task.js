@@ -14,8 +14,12 @@ class Task {
     this._queueCall = [];
     this._errorCall = null;
     this._value = null;
+    this._retryCount = 0;
+    this._retryInterval = 0;
+    this._filterRetry = x => x;
     this._resolve = this._resolve.bind(this);
     this._reject = this._reject.bind(this);
+    this._f = f;
     try {
       f.apply(this, [this._resolve, this._reject]);
     } catch (e) {
@@ -105,6 +109,13 @@ class Task {
 
   _reject(result) {
     if (this._state != STATE.PENDING) return;
+    if (this._retryCount && this._retryInterval && this._filterRetry(result)) {
+      defer(() => {
+        this._f.apply(this, [this._resolve, this._reject]);
+      }, this._retryInterval);
+      this._retryCount--;
+      return;
+    }
     defer(() => {
       this._deferRun(Fail.of(result));
       this._state = STATE.REJECTED;
@@ -143,6 +154,17 @@ class Task {
 
   error(f) {
     this._errorCall = f;
+    return this;
+  }
+
+  retry(count, interval) {
+    this._retryCount = count;
+    this._retryInterval = interval;
+    return this;
+  }
+
+  filterRetry(f) {
+    this._filterRetry = f;
     return this;
   }
 

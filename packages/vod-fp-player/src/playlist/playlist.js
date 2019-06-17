@@ -78,7 +78,7 @@ function _updateLevelAndMedia({ connect }, level) {
       compose(
         map(connect(_updateMedia)),
         map(trace('log: load media detail,')),
-        chain(_loadLevelOrMaster),
+        chain(connect(_loadLevelOrMaster)),
         map(prop('uri')),
         trace('log: find matched media: ')
       )(media)
@@ -91,7 +91,7 @@ function _updateLevelAndMedia({ connect }, level) {
       compose(
         map(connect(_updateLevel)(l)),
         map(trace('log: load level detail,')),
-        chain(_loadLevelOrMaster),
+        chain(connect(_loadLevelOrMaster)),
         map(prop('url')),
         trace('log: current Level,')
       )(l)
@@ -107,14 +107,17 @@ function _updateLevelAndMedia({ connect }, level) {
 }
 
 //  string --> Task
-function _loadLevelOrMaster(url) {
-  return loader({ url }).chain(x => m3u8Parser(x, _getBasePath(url)));
+function _loadLevelOrMaster({ connect }, url) {
+  return connect(loader)({ url })
+    .filterRetry(x => x.message !== 'Abort')
+    .retry(2, 800)
+    .chain(x => m3u8Parser(x, _getBasePath(url)));
 }
 
 // string -> Task(Either)
 function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
   return Task.of((resolve, reject) => {
-    _loadLevelOrMaster(url)
+    connect(_loadLevelOrMaster)(url)
       .map(connect(_checkLevelOrMaster))
       .map(_findLevelToLoad)
       .map(connect(_updateLevelAndMedia))
@@ -153,7 +156,7 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
     map(prop('detail'), level)
   );
 }
-
+_loadLevelOrMaster = curry(_loadLevelOrMaster);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
 _updateLevelAndMedia = curry(_updateLevelAndMedia);
 _updateLevel = curry(_updateLevel);

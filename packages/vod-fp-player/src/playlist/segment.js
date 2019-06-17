@@ -31,41 +31,28 @@ const findSegment = F.curry((segments, bufferEnd) => {
   return seg;
 });
 
-const addAbortSegment = F.curry((dispatch, abortable) => {
-  dispatch(ACTION.ABORTABLE, abortable);
-});
-
 const abortCurrentSegment = F.curry(({ getState }) => {
-  Success.of(
-    F.curry((abortables, currentSegment) => {
-      compose(
-        x => x.abortAble.abort(),
-        head,
-        filter(x => x.id === currentSegment.url)
-      )(abortables);
-    })
-  )
-    .ap(getState(ACTION.ABORTABLE))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT));
+  let currentSegmentUrl = getState(ACTION.PLAYLIST.CURRENT_SEGMENT).join().url;
+  compose(
+    map(x => x.xhr.abort()),
+    map(head),
+    map(filter(x => x.id === currentSegmentUrl))
+  )(getState(ACTION.ABORTABLE));
 });
 
 // segment -> Task
 function loadSegment() {
   let lastSegment = null;
   return ({ getState, connect, dispatch }, segment) => {
-    return loader(
-      {
-        url: segment.url,
-        options: {
-          responseType: 'arraybuffer'
-          // timeout: 1500
-        }
-      },
-      addAbortSegment(dispatch)
-    )
+    return connect(loader)({
+      url: segment.url,
+      options: {
+        responseType: 'arraybuffer'
+        // timeout: 1500
+      }
+    })
       .map(buffer => {
         dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADED);
-        dispatch(ACTION.REMOVE_ABORTABLE, true);
         if (
           (lastSegment && lastSegment.cc !== segment.cc) ||
           (lastSegment && lastSegment.levelId !== segment.levelId)
@@ -80,8 +67,9 @@ function loadSegment() {
         connect(toMux)(buffer, segment.id);
         lastSegment = segment;
       })
+      .filterRetry(x => x.message !== 'Abort')
+      .retry(3, 1000)
       .error(e => {
-        dispatch(ACTION.REMOVE_ABORTABLE, true);
         if (e.message === 'Abort') {
           dispatch(ACTION.PROCESS, PROCESS.IDLE);
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);

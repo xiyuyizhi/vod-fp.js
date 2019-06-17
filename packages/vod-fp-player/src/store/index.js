@@ -22,6 +22,7 @@ let PROCESS = {
 
 let ACTION = {
   EVENTS,
+  ERROR: 'error',
   M3U8_URL: 'm3u8Url',
   MUX: 'mux',
   PROCESS: 'process',
@@ -70,7 +71,7 @@ let initState = {
     removeAbortAble(state, payload) {
       if (payload !== undefined) {
         return map(x => {
-          x.abortAble = [];
+          x.abortAble = x.abortAble.filter(x => x.id !== payload);
           return x;
         })(state);
       }
