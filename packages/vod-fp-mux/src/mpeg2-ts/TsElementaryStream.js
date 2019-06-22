@@ -1,7 +1,7 @@
-import {PipeLine} from 'vod-fp-utility';
+import { PipeLine } from 'vod-fp-utility';
 import Logger from '../utils/logger';
 
-let logger = new Logger('TsElementaryStream')
+let logger = new Logger('TsElementaryStream');
 
 export default class TsElementaryStream extends PipeLine {
   constructor() {
@@ -13,7 +13,7 @@ export default class TsElementaryStream extends PipeLine {
   }
 
   push(pesInfo) {
-    const {type, starter, data} = pesInfo;
+    const { type, starter, data } = pesInfo;
     if (type === 'metadata') {
       this.emit('data', pesInfo);
       return;
@@ -21,7 +21,7 @@ export default class TsElementaryStream extends PipeLine {
     if (starter) {
       if (this.cache[type]) {
         const pes = this.parsePES(this.cache[type], 0);
-        this.emit('data', {type, pes});
+        this.emit('data', { type, pes });
       }
       this.cache[type] = {
         data: [],
@@ -29,10 +29,7 @@ export default class TsElementaryStream extends PipeLine {
       };
     }
     if (this.cache[type]) {
-      this
-        .cache[type]
-        .data
-        .push(data);
+      this.cache[type].data.push(data);
       this.cache[type].size += data.byteLength;
     }
   }
@@ -75,7 +72,10 @@ export default class TsElementaryStream extends PipeLine {
     let dts;
     const firstPayload = stream.data[0];
     // logger.log(offset, firstPayload);
-    const pscp = (firstPayload[offset] << 16) | (firstPayload[offset + 1] << 8) | firstPayload[offset + 2];
+    const pscp =
+      (firstPayload[offset] << 16) |
+      (firstPayload[offset + 1] << 8) |
+      firstPayload[offset + 2];
     if (pscp === 0x000001) {
       // logger.warn('parse PES');
       offset += 3;
@@ -86,7 +86,7 @@ export default class TsElementaryStream extends PipeLine {
       const pesHdrLen = firstPayload[offset];
       offset += 1;
       if (pdtsFlag) {
-        ({pts, dts} = this.parsePESHeader(firstPayload, offset, pdtsFlag));
+        ({ pts, dts } = this.parsePESHeader(firstPayload, offset, pdtsFlag));
       }
       // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
       let payloadStartOffset = pesHdrLen + 6 + 3;
@@ -116,7 +116,7 @@ export default class TsElementaryStream extends PipeLine {
         // payload size : remove PES header + PES extension
         pesLen = pesLen - pesHdrLen - 3;
       }
-      return {data: pesData, pts, dts, len: pesLen, tsPacket: stream.data};
+      return { data: pesData, pts, dts, len: pesLen, tsPacket: stream.data };
     }
     logger.error(`parse pes error,pscp = ${pscp}`);
     logger.log(stream.data, stream.size, offset);
@@ -127,11 +127,12 @@ export default class TsElementaryStream extends PipeLine {
   parsePESHeader(payload, offset, pdtsFlag) {
     let pts;
     let dts;
-    pts = (payload[offset] & 0x0e) * 536870912 + // 1 << 29
-    (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
-    (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
-    (payload[offset + 3] & 0xff) * 128 + // 1 << 7
-    (payload[offset + 4] & 0xfe) / 2;
+    pts =
+      (payload[offset] & 0x0e) * 536870912 + // 1 << 29
+      (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
+      (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
+      (payload[offset + 3] & 0xff) * 128 + // 1 << 7
+      (payload[offset + 4] & 0xfe) / 2;
     if (pts > 4294967295) {
       // decrement 2^33
       pts -= 8589934592;
@@ -139,23 +140,28 @@ export default class TsElementaryStream extends PipeLine {
     offset += 5;
     if (pdtsFlag === 3) {
       // have dts
-      dts = (payload[offset] & 0x0e) * 536870912 + // 1 << 29
-      (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
-      (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
-      (payload[offset + 3] & 0xff) * 128 + // 1 << 7
-      (payload[offset + 4] & 0xfe) / 2;
+      dts =
+        (payload[offset] & 0x0e) * 536870912 + // 1 << 29
+        (payload[offset + 1] & 0xff) * 4194304 + // 1 << 22
+        (payload[offset + 2] & 0xfe) * 16384 + // 1 << 14
+        (payload[offset + 3] & 0xff) * 128 + // 1 << 7
+        (payload[offset + 4] & 0xfe) / 2;
       // check if greater than 2^32 -1
       if (dts > 4294967295) {
         // decrement 2^33
         dts -= 8589934592;
       }
       if (pts - dts > 60 * 90000) {
-        logger.warn(`${Math.round((pts - dts) / 90000)}s delta between PTS and DTS, align them`);
+        logger.warn(
+          `${Math.round(
+            (pts - dts) / 90000
+          )}s delta between PTS and DTS, align them`
+        );
         pts = dts;
       }
     } else {
       dts = pts;
     }
-    return {pts, dts};
+    return { pts, dts };
   }
 }

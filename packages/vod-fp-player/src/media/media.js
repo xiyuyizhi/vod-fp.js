@@ -1,8 +1,16 @@
-import { Task, F, Maybe, Success, maybeToEither } from 'vod-fp-utility';
+import {
+  Task,
+  F,
+  Maybe,
+  Success,
+  CusError,
+  maybeToEither
+} from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { isSupportMS } from '../utils/probe';
 import { abortCurrentSegment } from '../playlist/segment';
 import { getBufferInfo } from '../buffer/buffer-helper';
+import { SUPPORT_ERROR } from '../error';
 
 const { map, compose, curry, prop, trace } = F;
 
@@ -50,6 +58,7 @@ function _bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
           console.warn('end of stream');
           mediaSource.endOfStream();
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
+          dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         }
       })
     )
@@ -70,7 +79,7 @@ function createMediaSource({ connect, dispatch, subscribe }, media) {
     connect(_bindMediaEvent)(media);
     return Task.of(mediaSource);
   }
-  return Task.reject('browser not support MSE');
+  return Task.reject(CusError.of(SUPPORT_ERROR.NOT_SUPPORT_MSE));
 }
 
 function updateMediaDuration({ getState }) {

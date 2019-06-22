@@ -3,13 +3,17 @@ import { ACTION, PROCESS } from '../store';
 import { getBufferInfo } from '../buffer/buffer-helper';
 import { findSegment, loadSegment } from '../playlist/segment';
 import { createMux } from '../mux/mux';
-import { buffer } from '../buffer/buffer';
+import { startBuffer } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
 
 const { prop, compose, map, curry } = F;
 
 function _loadCheck({ dispatch }, bufferInfo, process, media) {
-  if (bufferInfo.bufferLength > 15 || (process !== PROCESS.IDLE && process !== PROCESS.PLAYLIST_LOADED) || media.ended) {
+  if (
+    bufferInfo.bufferLength > 15 ||
+    (process !== PROCESS.IDLE && process !== PROCESS.PLAYLIST_LOADED) ||
+    media.ended
+  ) {
     if (bufferInfo.bufferLength > 15 && (media.paused || media.ended)) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
@@ -50,7 +54,7 @@ function tick({ getState, connect, dispatch }, level, mediaSource) {
   if (!level) return;
   connect(updateMediaDuration);
   connect(createMux);
-  connect(buffer);
+  connect(startBuffer);
   let timer = null;
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
   let startProcess = connect(_startProcess);

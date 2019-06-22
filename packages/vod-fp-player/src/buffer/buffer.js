@@ -1,6 +1,16 @@
-import { F, Success, Maybe, either, maybe } from 'vod-fp-utility';
+import {
+  F,
+  Success,
+  Maybe,
+  CusError,
+  either,
+  maybe,
+  maybeToEither,
+  eitherToMaybe
+} from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { bufferDump } from './buffer-helper';
+import { MEDIA_ERROR } from '../error';
 
 const { map, compose, curry, join, chain, prop, trace } = F;
 
@@ -15,7 +25,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function (_) {
+  sb.addEventListener('updateend', function(_) {
     if (type === 'video') {
       _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
     }
@@ -24,7 +34,10 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
     }
   });
   sb.addEventListener('error', e => {
-    console.log(e.message);
+    dispatch(
+      ACTION.ERROR,
+      CusError.of(e).merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))
+    );
   });
   return sb;
 }
@@ -67,38 +80,48 @@ function afterAppended({ getState, dispatch }) {
 }
 afterAppended = curry(afterAppended);
 
-// (MediaSource,string,string)  -> Maybe
+// (Maybe,string,string)  -> (sourcebuffer or undefined)
 function createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
   console.log('create source buffer with mime: ', mime);
-  let sb = map(
-    compose(
-      connect(_bindSourceBufferEvent)(type),
-      ms => ms.addSourceBuffer(mime)
-    )
-  )(mediaSource);
-  if (type === 'video') {
-    dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, sb);
-  }
-  if (type === 'audio') {
-    dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, sb);
-  }
-  return sb;
+  return maybeToEither(mediaSource)
+    .map(ms => ms.addSourceBuffer(mime))
+    .map(connect(_bindSourceBufferEvent)(type))
+    .map(sb => {
+      if (type === 'video') {
+        dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, sb);
+      }
+      if (type === 'audio') {
+        dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, sb);
+      }
+      return sb;
+    })
+    .error(e => {
+      dispatch(
+        ACTION.ERROR,
+        e.merge(CusError.of(MEDIA_ERROR.ADD_SOURCEBUFFER_ERROR))
+      );
+    })
+    .join();
 }
 createSourceBuffer = curry(createSourceBuffer);
 
-function buffer({ id, getState, subscribe, dispatch, connect }) {
+function startBuffer({ id, getState, subscribe, dispatch, connect }) {
   let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
-  // (Maybe,object) -> Either
-  let doAppend = F.curry((sb, bufferInfo) => {
-    return Success.of(curry((sb, buffer) => sb.appendBuffer(buffer)))
-      .ap(Success.of(sb.join()))
+  // (Either,Maybe) -> Either
+  let doAppend = (sb, bufferInfo) => {
+    return Success.of(
+      curry((sb, buffer) => {
+        sb.appendBuffer(buffer);
+      })
+    )
+      .ap(sb)
       .ap(
         compose(
-          Success.of,
-          prop('buffer')
+          maybeToEither,
+          map(prop('buffer'))
         )(bufferInfo)
       );
-  });
+  };
 
   createSourceBuffer = connect(createSourceBuffer);
 
@@ -110,15 +133,16 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
         'video/mp4; codecs="avc1.42E01E"'
       );
     });
-
-    either(
-      e => {
-        console.log('error: ', e);
-      },
-      () => { },
-      chain(doAppend(sb))(bufferInfo)
-    );
+    doAppend(maybeToEither(Maybe.of(sb)), bufferInfo).error(e => {
+      if (e) {
+        dispatch(
+          ACTION.ERROR,
+          e.merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))
+        );
+      }
+    });
   });
+
   subscribe(ACTION.BUFFER.AUDIO_BUFFER, bufferInfo => {
     let sb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).getOrElse(() => {
       return createSourceBuffer(
@@ -128,24 +152,24 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       );
     });
     maybe(
-      () => { },
+      () => {},
       () => {
         dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING);
       },
       bufferInfo
     );
-
-    either(
-      e => {
-        console.log(e);
-      },
-      () => { },
-      chain(doAppend(sb))(bufferInfo)
-    );
+    doAppend(maybeToEither(Maybe.of(sb)), bufferInfo).error(e => {
+      if (e) {
+        dispatch(
+          ACTION.ERROR,
+          e.merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))
+        );
+      }
+    });
   });
 }
 
 _bindSourceBufferEvent = curry(_bindSourceBufferEvent);
-buffer = curry(buffer);
+startBuffer = curry(startBuffer);
 
-export { buffer };
+export { startBuffer };

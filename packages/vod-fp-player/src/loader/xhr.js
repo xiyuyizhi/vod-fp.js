@@ -64,7 +64,7 @@ function startXhr(config, resolve, reject) {
     reject(CusError.of(XHR_ERROR.LOAD_ERROR));
   });
   xhr.addEventListener('timeout', () => {
-    reject(CusError.of(XHR_ERROR.TIMEOUT));
+    reject(CusError.of(XHR_ERROR.LOAD_TIMEOUT));
   });
   xhr.send(config.body);
   return xhr;

@@ -1,6 +1,8 @@
 export const SUPPORT_ERROR = {
   NOT_SUPPORT_MSE: {
-    type: 'NOT_SUPPORT_MSE'
+    type: 'SUPPORT_ERROR',
+    detail: 'NOT_SUPPORT_MSE',
+    fatal: true
   }
 };
 
@@ -17,7 +19,7 @@ export const XHR_ERROR = {
   },
   LOAD_TIMEOUT: {
     type: 'XHR_ERROR',
-    detail: 'TIMEOUT',
+    detail: 'LOAD_TIMEOUT',
     message: 'timeout'
   }
 };
@@ -95,9 +97,20 @@ export const SEGMENT_ERROR = {
     detail: 'SEGMENT_LOAD_TIMEOUT'
   },
   SGEMENT_PARSE_ERROR: {
-    type: 'SEGMENT_PARSE_ERROR',
-    detail: 'SEGMENT_PARSE_ERROR'
+    type: 'SEGMENT_ERROR',
+    detail: 'SEGMENT_PARSE_ERROR',
+    fatal: true
   }
 };
 
-export const MEDIA_ERROR = {};
+export const MEDIA_ERROR = {
+  ADD_SOURCEBUFFER_ERROR: {
+    type: 'MEDIA_ERROR',
+    detail: 'ADD_SOURCEBUFFER_ERROR',
+    fatal: true
+  },
+  SOURCEBUFFER_ERROR: {
+    type: 'MEDIA_ERROR',
+    detail: 'SOURCEBUFFER_ERROR'
+  }
+};

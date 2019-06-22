@@ -7,7 +7,7 @@ import {
   maybeToEither,
   emptyToResolve
 } from './Maybe';
-import { Fail, Success, either } from './Either';
+import { Fail, Success, either, eitherToMaybe } from './Either';
 import Task from './Task';
 import Tick from './Tick';
 import CusError from './CusError';
@@ -22,6 +22,7 @@ export {
   either,
   maybe,
   maybeToEither,
+  eitherToMaybe,
   emptyToResolve,
   Task,
   Tick,

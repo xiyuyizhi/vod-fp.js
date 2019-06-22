@@ -58,9 +58,11 @@ let initState = {
           if (s.errorCount >= 3 || s.error.value().fatal === true) {
             console.log('error occur many times.....,emit error out');
             s.errorCount = 0;
+            s.error.fatal(true);
             dispatch(ACTION.EVENTS.ERROR, s.error.value());
             dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
           } else {
+            // 可恢复、继续运行
             dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
             dispatch(ACTION.PROCESS, PROCESS.IDLE);
           }

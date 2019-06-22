@@ -1,6 +1,7 @@
 import { TsToMp4 } from 'vod-fp-mux';
-import { F } from 'vod-fp-utility';
+import { F, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
+import { SEGMENT_ERROR } from '../error';
 
 function createMux({ dispatch }) {
   let mux = new TsToMp4();
@@ -15,8 +16,10 @@ function createMux({ dispatch }) {
       }
     })
     .on('error', e => {
-      dispatch(ACTION.PROCESS, PROCESS.ERROR);
-      dispatch(ACTION.ERROR, e);
+      dispatch(
+        ACTION.ERROR,
+        CusError.of(e).merge(CusError.of(SEGMENT_ERROR['SGEMENT_PARSE_ERROR']))
+      );
     });
   dispatch(ACTION.MUX, mux);
 }

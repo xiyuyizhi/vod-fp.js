@@ -1,5 +1,6 @@
 import Base from './Base';
 import { curry } from './core';
+import { Just, Empty } from './Maybe';
 import CusError from './CusError';
 class Either extends Base {}
 
@@ -59,4 +60,11 @@ const either = curry((fn1, fn2, e) => {
   }
 });
 
-export { Fail, Success, either };
+const eitherToMaybe = either => {
+  if (either.constructor === Success) {
+    return either.chain(x => Just.of(x));
+  }
+  return Empty.of();
+};
+
+export { Fail, Success, either, eitherToMaybe };

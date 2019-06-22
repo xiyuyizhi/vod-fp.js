@@ -10,7 +10,6 @@ function manage({ dispatch, connect }, media, url) {
     .ap(connect(createMediaSource)(media))
     .error(e => {
       // handle 那些非显示 emit 自定义error的运行时异常
-      dispatch(ACTION.PROCESS, PROCESS.ERROR);
       dispatch(ACTION.ERROR, e);
     });
 }

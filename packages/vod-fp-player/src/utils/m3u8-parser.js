@@ -199,7 +199,6 @@ const compositionLevel = curry(list => {
     duration: 0
     // levelId: 1
   };
-  // throw new Error(a);
   let lastCC = 0;
   const fullfillLevel = fullfillM3u8(level);
   const fullfillSegment = fullfillLevel((level, item) => {

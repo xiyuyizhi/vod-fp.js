@@ -48,8 +48,8 @@ function loadSegment() {
     return connect(loader)({
       url: segment.url,
       options: {
-        responseType: 'arraybuffer'
-        // timeout: 1500
+        responseType: 'arraybuffer',
+        timeout: 20 * 1000
       }
     })
       .map(buffer => {
@@ -69,13 +69,13 @@ function loadSegment() {
         lastSegment = segment;
       })
       .filterRetry(e => !e.is(XHR_ERROR.ABORT))
-      .retry(3, 1000)
+      .retry(2, 1000)
       .error(e => {
+        console.log(e);
         if (e.is(XHR_ERROR.ABORT)) {
           dispatch(ACTION.PROCESS, PROCESS.IDLE);
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
         } else {
-          dispatch(ACTION.PROCESS, PROCESS.ERROR);
           dispatch(
             ACTION.ERROR,
             e.merge(CusError.of(SEGMENT_ERROR[e.detail()]))
