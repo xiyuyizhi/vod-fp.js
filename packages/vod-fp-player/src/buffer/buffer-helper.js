@@ -31,13 +31,13 @@ function bufferDump(media) {
   )(_bufferSerialize(media));
 }
 
-function bufferMerge(all, c) {
+function _bufferMerge(maxBufferHole, all, c) {
   if (all.length === 0) {
     all.push(c);
     return all;
   }
   let last = all[all.length - 1];
-  if (c[0] < last[1] + 0.3) {
+  if (c[0] < last[1] + maxBufferHole) {
     last[1] = c[1];
   } else {
     all.push(c);
@@ -45,15 +45,22 @@ function bufferMerge(all, c) {
   return all;
 }
 
-const getCurrentPositionBuffer = F.curry((currentTime, buffered) => {
-  return buffered.filter(
-    ([start, end]) => start <= currentTime + 0.1 && end >= currentTime
-  )[0];
-});
+const _getCurrentPositionBuffer = F.curry(
+  (maxFragLookUpTolerance, currentTime, buffered) => {
+    return buffered.filter(
+      ([start, end]) =>
+        start <= currentTime + maxFragLookUpTolerance && end >= currentTime
+    )[0];
+  }
+);
 
 // boolean -> Maybe
-function getBufferInfo({ getState }, seeking) {
+function getBufferInfo({ getState, getConfig }, seeking) {
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
+  let maxFragLookUpTolerance = getConfig(
+    ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE
+  );
+  let maxBufferHole = getConfig(ACTION.CONFIG.MAX_BUFFER_HOLE);
   let currentTime = compose(
     join,
     map(prop('currentTime'))
@@ -67,8 +74,8 @@ function getBufferInfo({ getState }, seeking) {
     }),
     map(
       compose(
-        getCurrentPositionBuffer(currentTime),
-        reduce(bufferMerge, [])
+        _getCurrentPositionBuffer(maxFragLookUpTolerance, currentTime),
+        reduce(_bufferMerge(maxBufferHole), [])
       )
     ),
     _bufferSerialize
@@ -87,7 +94,7 @@ function getBufferInfo({ getState }, seeking) {
     };
   });
 }
-
+_bufferMerge = F.curry(_bufferMerge);
 getBufferInfo = F.curry(getBufferInfo);
 
 export { getBufferInfo, bufferDump };

@@ -119,12 +119,15 @@ function _updateLevelAndMedia({ connect }, level) {
 }
 
 //  (string,type) --> Task  type:MANIFEST | LEVEL | MEDIA
-function _loadLevelOrMaster({ connect }, type, url) {
-  let maxRetryCount = 1;
+function _loadLevelOrMaster({ connect, getConfig }, type, url) {
+  let maxRetryCount = getConfig(ACTION.CONFIG.MAX_LEVEL_RETRY_COUNT);
   let toLoad = (retryCount, resolve, reject) => {
     connect(loader)({ url })
       .filterRetry(x => !x.is(XHR_ERROR.ABORT))
-      .retry(2, 800)
+      .retry(
+        getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
+        getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
+      )
       .chain(m3u8Parser(_getBasePath(url)))
       .map(resolve)
       .error(e => {

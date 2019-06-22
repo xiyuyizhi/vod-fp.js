@@ -8,13 +8,17 @@ import { updateMediaDuration } from '../media/media';
 
 const { prop, compose, map, curry } = F;
 
-function _loadCheck({ dispatch }, bufferInfo, process, media) {
+function _loadCheck({ dispatch, getConfig }, bufferInfo, process, media) {
+  let MAX_BUFFER_LENGTH = getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH);
   if (
-    bufferInfo.bufferLength > 15 ||
+    bufferInfo.bufferLength > MAX_BUFFER_LENGTH ||
     (process !== PROCESS.IDLE && process !== PROCESS.PLAYLIST_LOADED) ||
     media.ended
   ) {
-    if (bufferInfo.bufferLength > 15 && (media.paused || media.ended)) {
+    if (
+      bufferInfo.bufferLength > MAX_BUFFER_LENGTH &&
+      (media.paused || media.ended)
+    ) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
     return;
@@ -24,7 +28,7 @@ function _loadCheck({ dispatch }, bufferInfo, process, media) {
 
 function _startProcess({ getState, dispatch, connect }, rest) {
   let segments = getState(ACTION.PLAYLIST.SEGMENTS);
-  let segment = segments.map(x => findSegment(x, rest.bufferEnd));
+  let segment = segments.map(x => connect(findSegment)(x, rest.bufferEnd));
   return Maybe.of(
     curry((segment, segments, currentId) => {
       if (currentId === segment.id) {

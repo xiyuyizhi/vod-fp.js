@@ -169,6 +169,15 @@ function createStore(initState, actions = {}) {
       } else {
         return currentDerive[prop](Maybe.of(currentState), payload);
       }
+    },
+    getConfig: path => {
+      if (!state.config) {
+        throw new Error('config not exist in state');
+      }
+      if (!path) return state.config;
+      let props = path.split('.');
+      let prop = props[1];
+      return state.config && state.config[prop];
     }
   };
   return _store;

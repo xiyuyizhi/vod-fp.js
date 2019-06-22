@@ -6,26 +6,35 @@ import { SEGMENT_ERROR, XHR_ERROR } from '../error';
 
 const { compose, head, map, filter } = F;
 
-function binarySearch(list, start, end, bufferEnd) {
+function binarySearch(tolerance, list, start, end, bufferEnd) {
   // start mid end
   if (start > end) {
     return -1;
   }
   const mid = start + Math.floor((end - start) / 2);
-  if (list[mid].end < bufferEnd + 0.25) {
+  if (list[mid].end < bufferEnd + tolerance) {
     start = mid + 1;
-    return binarySearch(list, start, end, bufferEnd);
-  } else if (list[mid].start > bufferEnd + 0.25) {
+    return binarySearch(tolerance, list, start, end, bufferEnd);
+  } else if (list[mid].start > bufferEnd + tolerance) {
     end = mid - 1;
-    return binarySearch(list, start, end, bufferEnd);
+    return binarySearch(tolerance, list, start, end, bufferEnd);
   } else {
     return list[mid];
   }
   return -1;
 }
 
-const findSegment = F.curry((segments, bufferEnd) => {
-  let seg = binarySearch(segments, 0, segments.length - 1, bufferEnd);
+const findSegment = F.curry(({ getConfig }, segments, bufferEnd) => {
+  let maxFragLookUpTolerance = getConfig(
+    ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE
+  );
+  let seg = binarySearch(
+    maxFragLookUpTolerance,
+    segments,
+    0,
+    segments.length - 1,
+    bufferEnd
+  );
   if (seg === -1) {
     return;
   }
@@ -44,12 +53,12 @@ const abortCurrentSegment = F.curry(({ getState }) => {
 // segment -> Task
 function loadSegment() {
   let lastSegment = null;
-  return ({ getState, connect, dispatch }, segment) => {
+  return ({ getConfig, connect, dispatch }, segment) => {
     return connect(loader)({
       url: segment.url,
       options: {
         responseType: 'arraybuffer',
-        timeout: 20 * 1000
+        timeout: getConfig(ACTION.CONFIG.MAX_TIMEOUT)
       }
     })
       .map(buffer => {
@@ -69,7 +78,10 @@ function loadSegment() {
         lastSegment = segment;
       })
       .filterRetry(e => !e.is(XHR_ERROR.ABORT))
-      .retry(2, 1000)
+      .retry(
+        getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
+        getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
+      )
       .error(e => {
         console.log(e);
         if (e.is(XHR_ERROR.ABORT)) {

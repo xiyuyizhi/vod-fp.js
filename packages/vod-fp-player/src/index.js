@@ -8,6 +8,7 @@ export default class Vod extends EventBus {
     super();
     this.media = null;
     this.url = '';
+    initState.config = Object.assign(initState.config, options);
     this.store = createStore(initState, ACTION);
     window.store = this.store;
   }

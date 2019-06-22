@@ -1,9 +1,9 @@
 import { combineActions, combineStates, createStore, F } from 'vod-fp-utility';
 import EVENTS from '../events';
+import config from './config';
 import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
-
 const { map, prop, compose, trace } = F;
 
 let PROCESS = {
@@ -138,8 +138,8 @@ let initState = {
   }
 };
 
-ACTION = combineActions(ACTION, playlist, media, buffer);
-initState = combineStates(initState, playlist, media, buffer);
+ACTION = combineActions(ACTION, config, playlist, media, buffer);
+initState = combineStates(initState, config, playlist, media, buffer);
 
 console.log(ACTION);
 export { createStore, initState, ACTION, PROCESS };
