@@ -10,6 +10,7 @@ import {
 import { Fail, Success, either } from './Either';
 import Task from './Task';
 import Tick from './Tick';
+import CusError from './CusError';
 
 export {
   F,
@@ -23,5 +24,6 @@ export {
   maybeToEither,
   emptyToResolve,
   Task,
-  Tick
+  Tick,
+  CusError
 };

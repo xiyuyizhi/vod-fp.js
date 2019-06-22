@@ -15,7 +15,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function(_) {
+  sb.addEventListener('updateend', function (_) {
     if (type === 'video') {
       _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
     }
@@ -88,6 +88,7 @@ createSourceBuffer = curry(createSourceBuffer);
 
 function buffer({ id, getState, subscribe, dispatch, connect }) {
   let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
+  // (Maybe,object) -> Either
   let doAppend = F.curry((sb, bufferInfo) => {
     return Success.of(curry((sb, buffer) => sb.appendBuffer(buffer)))
       .ap(Success.of(sb.join()))
@@ -114,7 +115,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       e => {
         console.log('error: ', e);
       },
-      () => {},
+      () => { },
       chain(doAppend(sb))(bufferInfo)
     );
   });
@@ -127,7 +128,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       );
     });
     maybe(
-      () => {},
+      () => { },
       () => {
         dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING);
       },
@@ -138,7 +139,7 @@ function buffer({ id, getState, subscribe, dispatch, connect }) {
       e => {
         console.log(e);
       },
-      () => {},
+      () => { },
       chain(doAppend(sb))(bufferInfo)
     );
   });

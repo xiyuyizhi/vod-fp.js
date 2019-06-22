@@ -12,8 +12,8 @@ if (location.search) {
   url = url.replace('?url=', '');
 }
 vod.loadSource(
-  // 'http://localhost:8880/81/index.m3u8'
-  'http://localhost:8880/8/fmp4.m3u8'
+  'http://localhost:8880/8/index.m3u8'
+  // 'http://localhost:8880/8/fmp4.m3u8'
   // url
 );
 vod.on(Vod.Events.ERROR, e => {
@@ -41,5 +41,8 @@ vod.on(Vod.Events.MANIFEST_LOADED, pl => {
 });
 
 vod.on(Vod.Events.LEVEL_CHANGED, levelId => {
-  console.log('level changed to ' + levelId);
+  console.log('level changed to ', levelId);
+});
+vod.on(Vod.Events.LEVEL_CHANGED_ERROR, levelId => {
+  console.log('level changed error ', levelId);
 });

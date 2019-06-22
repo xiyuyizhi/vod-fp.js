@@ -1,18 +1,20 @@
-import { compose, map } from './core';
+import { compose, map, trace } from './core';
 import { Fail, Success } from './Either';
 import { defer } from './_inner/defer';
-
+import CusError from './CusError';
 const STATE = {
   PENDING: 'pending',
   FULFILLED: 'fulfilled',
   REJECTED: 'rejected'
 };
 
+let id = 0;
 class Task {
   constructor(f) {
+    this.id = id++;
     this._state = STATE.PENDING;
     this._queueCall = [];
-    this._errorCall = null;
+    this._errorCall = [];
     this._value = null;
     this._retryCount = 0;
     this._retryInterval = 0;
@@ -68,16 +70,16 @@ class Task {
           this._errorCall
         );
         this._queueCall = [];
-        this._errorCall = null;
+        this._errorCall = [];
         continue;
       }
 
       let current = this._queueCall.shift();
       try {
         if (result instanceof Fail) {
-          if (this._errorCall) {
-            result = Success.of(this._errorCall(result.value()));
-            this._errorCall = null;
+          if (this._errorCall.length) {
+            let errorHandle = this._errorCall.shift();
+            result = Fail.of(errorHandle(result.value()));
             continue;
           }
         }
@@ -89,11 +91,15 @@ class Task {
           result = result.value();
         }
       } catch (e) {
-        result = Fail.of(`${e.constructor && e.constructor.name}:${e.message}`);
+        result = Fail.of(CusError.of(e));
       }
     }
-    if (!this._queueCall.length && result instanceof Fail && this._errorCall) {
-      this._errorCall(result.value());
+    if (
+      !this._queueCall.length &&
+      result instanceof Fail &&
+      this._errorCall.length
+    ) {
+      this._errorCall.shift()(result.value());
       return;
     }
     this._value = result;
@@ -130,11 +136,11 @@ class Task {
   // f return another Task,this._value is a function
   chain(f) {
     return Task.of((resolve, reject) =>
-      this.map(x =>
+      this.map(x => {
         f(x)
           .map(resolve)
-          .error(reject)
-      ).error(reject)
+          .error(reject);
+      }).error(reject)
     );
   }
 
@@ -153,7 +159,7 @@ class Task {
   }
 
   error(f) {
-    this._errorCall = f;
+    this._errorCall.push(f);
     return this;
   }
 

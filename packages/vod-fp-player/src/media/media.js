@@ -30,6 +30,14 @@ function _bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
     console.log('end....');
   });
 
+  subscribe(ACTION.EVENTS.ERROR, () => {
+    getState(ACTION.MEDIA.MEDIA_SOURCE).map(ms => {
+      if (ms.readyState === 'open') {
+        ms.endOfStream();
+      }
+    });
+  });
+
   subscribe(ACTION.PROCESS, process => {
     let rest = connect(getBufferInfo)(false);
     Success.of(

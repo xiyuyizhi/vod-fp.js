@@ -4,14 +4,28 @@ import {
   Maybe,
   Empty,
   Just,
+  Fail,
   emptyToResolve,
   maybe
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
+import { XHR_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
+import { CusError } from '../../../vod-fp-utility/src';
 
-const { curry, compose, map, join, prop, head, trace, identity, chain } = F;
+const {
+  curry,
+  compose,
+  map,
+  join,
+  prop,
+  head,
+  trace,
+  identity,
+  chain,
+  error
+} = F;
 
 function _getBasePath(url) {
   url = url.split('?');
@@ -78,9 +92,9 @@ function _updateLevelAndMedia({ connect }, level) {
       compose(
         map(connect(_updateMedia)),
         map(trace('log: load media detail,')),
-        chain(connect(_loadLevelOrMaster)),
+        chain(connect(_loadLevelOrMaster)('MEDIA')),
         map(prop('uri')),
-        trace('log: find matched media: ')
+        trace('log: find matched media,')
       )(media)
     );
   };
@@ -91,37 +105,63 @@ function _updateLevelAndMedia({ connect }, level) {
       compose(
         map(connect(_updateLevel)(l)),
         map(trace('log: load level detail,')),
-        chain(connect(_loadLevelOrMaster)),
+        chain(connect(_loadLevelOrMaster)('LEVEL')),
         map(prop('url')),
         trace('log: current Level,')
       )(l)
     );
   };
-  return level
-    .map(() => {
-      return Task.resolve(curry((level, mediaDetail) => level))
-        .ap(_loadLevelDetail(level))
-        .ap(_loadMediaDetail(matchedMedia));
-    })
-    .join();
+  return level.chain(() => {
+    return Task.resolve(curry((level, mediaDetail) => level))
+      .ap(_loadLevelDetail(level))
+      .ap(_loadMediaDetail(matchedMedia));
+  });
 }
 
-//  string --> Task
-function _loadLevelOrMaster({ connect }, url) {
-  return connect(loader)({ url })
-    .filterRetry(x => x.message !== 'Abort')
-    .retry(2, 800)
-    .chain(x => m3u8Parser(x, _getBasePath(url)));
+//  (string,type) --> Task  type:MANIFEST | LEVEL | MEDIA
+function _loadLevelOrMaster({ connect }, type, url) {
+  let maxRetryCount = 1;
+  let toLoad = (retryCount, resolve, reject) => {
+    connect(loader)({ url })
+      .filterRetry(x => !x.is(XHR_ERROR.ABORT))
+      .retry(2, 800)
+      .chain(m3u8Parser(_getBasePath(url)))
+      .map(resolve)
+      .error(e => {
+        let err = e;
+        if (e.isType(XHR_ERROR) && !e.is(XHR_ERROR.ABORT)) {
+          err = e.merge(CusError.of(PLAYLIST_ERROR[type][e.detail()]));
+          //对于level和media,在重试几次
+          if (retryCount && type !== 'MANIFEST') {
+            retryCount--;
+            console.log('retry load..');
+            toLoad(retryCount, resolve, reject);
+            return;
+          }
+          err.fatal(true);
+        }
+        if (e.isType(M3U8_PARSE_ERROR)) {
+          err = e.merge(CusError.of(PLAYLIST_ERROR[type][e.type()]));
+        }
+        reject(err);
+      });
+  };
+
+  return Task.of((resolve, reject) => {
+    toLoad(maxRetryCount, resolve, reject);
+  });
 }
 
 // string -> Task(Either)
 function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
+  dispatch(ACTION.PROCESS, PROCESS.PLAYLIST_LOADING);
   return Task.of((resolve, reject) => {
-    connect(_loadLevelOrMaster)(url)
+    connect(_loadLevelOrMaster)('MANIFEST', url)
       .map(connect(_checkLevelOrMaster))
       .map(_findLevelToLoad)
       .map(connect(_updateLevelAndMedia))
       .map(x => {
+        dispatch(ACTION.PROCESS, PROCESS.PLAYLIST_LOADED);
         dispatch(
           ACTION.EVENTS.MANIFEST_LOADED,
           getState(ACTION.PLAYLIST.PL).join()
@@ -142,10 +182,10 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
         .map(join)
         .map(level => {
           dispatch(ACTION.PLAYLIST.CURRENT_LEVEL_ID, level.levelId);
-          dispatch(ACTION.EVENTS.LEVEL_CHANGED, Maybe.of(level.levelId));
+          dispatch(ACTION.EVENTS.LEVEL_CHANGED, level.levelId);
         })
         .error(e => {
-          console.log(e);
+          dispatch(ACTION.EVENTS.LEVEL_CHANGED_ERROR, e.join());
         });
     },
     () => {

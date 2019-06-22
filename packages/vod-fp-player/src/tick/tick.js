@@ -9,8 +9,8 @@ import { updateMediaDuration } from '../media/media';
 const { prop, compose, map, curry } = F;
 
 function _loadCheck({ dispatch }, bufferInfo, process, media) {
-  if (bufferInfo.bufferLength > 15 || process !== PROCESS.IDLE || media.ended) {
-    if (media.paused || media.ended) {
+  if (bufferInfo.bufferLength > 15 || (process !== PROCESS.IDLE && process !== PROCESS.PLAYLIST_LOADED) || media.ended) {
+    if (bufferInfo.bufferLength > 15 && (media.paused || media.ended)) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
     return;

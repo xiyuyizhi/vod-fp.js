@@ -82,7 +82,7 @@ function createStore(initState, actions = {}) {
           if (s) {
             state = s.join();
           }
-        } else {
+        } else if (state[prop] !== undefined) {
           state = {
             ...state,
             ...{
@@ -117,7 +117,9 @@ function createStore(initState, actions = {}) {
         }
       }
       if (events[path]) {
-        events[path].forEach(listener => listener(_store.getState(path)));
+        events[path].forEach(listener =>
+          listener(Maybe.of(_store.getState(path).getOrElse(payload)))
+        );
       }
       // if current update a parent prop,all it's child props listener should be called
       let childs = _store._findAction(path);
@@ -126,7 +128,9 @@ function createStore(initState, actions = {}) {
         if (child === path) return;
         child = childs[child];
         if (child !== path && events[child]) {
-          events[child].forEach(listener => listener(_store.getState(child)));
+          events[child].forEach(listener =>
+            listener(Maybe.of(_store.getState(child).getOrElse(payload)))
+          );
         }
       });
     },

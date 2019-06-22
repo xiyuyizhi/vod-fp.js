@@ -1,7 +1,8 @@
-import { F, Task, Success, Empty } from 'vod-fp-utility';
+import { F, Task, Success, Empty, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { toMux, setTimeOffset, resetInitSegment } from '../mux/mux';
 import loader from '../loader/loader';
+import { SEGMENT_ERROR, XHR_ERROR } from '../error';
 
 const { compose, head, map, filter } = F;
 
@@ -67,15 +68,18 @@ function loadSegment() {
         connect(toMux)(buffer, segment.id);
         lastSegment = segment;
       })
-      .filterRetry(x => x.message !== 'Abort')
+      .filterRetry(e => !e.is(XHR_ERROR.ABORT))
       .retry(3, 1000)
       .error(e => {
-        if (e.message === 'Abort') {
+        if (e.is(XHR_ERROR.ABORT)) {
           dispatch(ACTION.PROCESS, PROCESS.IDLE);
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
         } else {
           dispatch(ACTION.PROCESS, PROCESS.ERROR);
-          dispatch(ACTION.EVENTS.ERROR, e);
+          dispatch(
+            ACTION.ERROR,
+            e.merge(CusError.of(SEGMENT_ERROR[e.detail()]))
+          );
         }
       });
   };

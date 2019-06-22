@@ -52,7 +52,7 @@ const ifElse = curry((condition, fn1, fn2, arg) => {
 const prop = curry((a, b) => b[a]);
 const join = curry(a => a.join());
 const chain = curry((f, m) => m.map(f).join());
-
+const error = curry((f, m) => m.error(f));
 const liftA2 = curry((g, a, b) => a.map(g).ap(b));
 
 const trace = (msg, v) => {
@@ -82,6 +82,7 @@ export {
   splitMap,
   join,
   chain,
+  error,
   liftA2,
   prop,
   ifElse,

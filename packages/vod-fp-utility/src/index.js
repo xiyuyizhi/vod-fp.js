@@ -11,7 +11,8 @@ import {
   maybeToEither,
   emptyToResolve,
   Task,
-  Tick
+  Tick,
+  CusError
 } from './fp';
 
 const {
@@ -39,6 +40,7 @@ export {
   PipeLine,
   StateMachine,
   Tick,
+  CusError,
   combineActions,
   combineStates,
   createStore

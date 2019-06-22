@@ -9,7 +9,7 @@ const { map, prop, compose, trace } = F;
 let PROCESS = {
   IDLE: 'idle',
   PLAYLIST_LOADING: 'playlistLoading',
-  PAYLIST_LOADED: 'playlistLoaded',
+  PLAYLIST_LOADED: 'playlistLoaded',
   SEGMENT_LOADING: 'segmentLoading',
   SEGMENT_LOADED: 'segmentLoaded',
   MUXING: 'muxing',
@@ -22,7 +22,7 @@ let PROCESS = {
 
 let ACTION = {
   EVENTS,
-  ERROR: 'error',
+  ERROR: 'innerError',
   M3U8_URL: 'm3u8Url',
   MUX: 'mux',
   PROCESS: 'process',
@@ -42,6 +42,7 @@ let ACTION = {
  */
 let initState = {
   error: null,
+  errorCount: 0,
   m3u8Url: '',
   mux: null,
   mainLoop: null,
@@ -50,14 +51,55 @@ let initState = {
   process: PROCESS.IDLE,
   // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
   derive: {
-    error(state, payload) {
+    innerError(state, payload, dispatch) {
       if (payload) {
         console.log('Error log:', payload);
-        return map(x => {
-          x.error = payload;
-          return x;
-        })(state);
+        function _handleError(s) {
+          if (s.errorCount >= 3 || s.error.value().fatal === true) {
+            console.log('error occur many times.....,emit error out');
+            s.errorCount = 0;
+            dispatch(ACTION.EVENTS.ERROR, s.error.value());
+            dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+          } else {
+            dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
+            dispatch(ACTION.PROCESS, PROCESS.IDLE);
+          }
+          return s;
+        }
+
+        return compose(
+          map(_handleError),
+          map(x => {
+            x.error = payload;
+            x.errorCount += 1;
+            return x;
+          })
+        )(state);
       }
+    },
+    process(state, payload, dispatch) {
+      if (payload) {
+        // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+        const { timeStamp, process } = state.value();
+        let ts = (performance.now() - timeStamp).toFixed(2);
+        console.log(
+          `PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`
+        );
+        return compose(
+          map(s => {
+            if (s.process === PROCESS.BUFFER_APPENDED) {
+              s.errorCount = 0;
+            }
+            return s;
+          }),
+          map(x => {
+            x.timeStamp = performance.now();
+            x.process = payload;
+            return x;
+          })
+        )(state);
+      }
+      return map(prop('process'))(state);
     },
     abortAble(state, payload) {
       if (!payload) {
@@ -76,24 +118,9 @@ let initState = {
         })(state);
       }
     },
-    process(state, payload, dispatch) {
-      if (payload) {
-        // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-        const { timeStamp, process } = state.value();
-        let ts = (performance.now() - timeStamp).toFixed(2);
-        console.log(
-          `PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`
-        );
-        return map(x => {
-          x.timeStamp = performance.now();
-          x.process = payload;
-          return x;
-        })(state);
-      }
-      return map(prop('process'))(state);
-    },
     mainLoopHandle(state, payload) {
       if (payload === 'stop') {
+        console.log('timer stoped');
         compose(
           map(tick => tick.stop()),
           map(prop('mainLoop'))

@@ -1,5 +1,6 @@
 import Base from './Base';
 import { curry } from './core';
+import CusError from './CusError';
 class Either extends Base {}
 
 class Fail extends Either {
@@ -20,7 +21,7 @@ class Fail extends Either {
   }
   // 用于 Task中_value为 Fail时
   error(f) {
-    return Success.of(f(this.value()));
+    return Fail.of(f(this.value()));
   }
 }
 
@@ -32,7 +33,7 @@ class Success extends Either {
     try {
       return Success.of(f(this.value()));
     } catch (e) {
-      return Fail.of(e);
+      return Fail.of(CusError.of(e));
     }
   }
   join() {

@@ -2,7 +2,8 @@
  * https://tools.ietf.org/html/draft-pantos-http-live-streaming-23
  */
 
-import { F, Maybe, Success, Fail, either } from 'vod-fp-utility';
+import { F, Maybe, Success, Fail, CusError, either } from 'vod-fp-utility';
+import { M3U8_PARSE_ERROR } from '../error';
 
 const {
   curry,
@@ -23,12 +24,6 @@ const {
 
 const TAG_PATTERN = /EXT(?:-X-)(.+)/;
 const SPLIT_COMMA_PATTERN = /,(?:(?=[a-zA-Z-]+(?:=|"|$)))/;
-const Error = {
-  INVALID: {
-    error: 1,
-    message: 'INVALID'
-  }
-};
 const splitOnceByColon = splitOnce(':');
 const splitOnceByEq = splitOnce('=');
 const splitByComma = split(SPLIT_COMMA_PATTERN);
@@ -135,7 +130,6 @@ const compositionMaster = list => {
     levels: []
   };
   const fullfillMaster = fullfillM3u8(result);
-
   const fullfillLevels = fullfillMaster((result, item) => {
     if (item.streamInf) {
       result.levels.push({
@@ -205,9 +199,9 @@ const compositionLevel = curry(list => {
     duration: 0
     // levelId: 1
   };
+  // throw new Error(a);
   let lastCC = 0;
   const fullfillLevel = fullfillM3u8(level);
-
   const fullfillSegment = fullfillLevel((level, item) => {
     if (item.extinf) {
       let duration;
@@ -275,16 +269,17 @@ const compositionLevel = curry(list => {
 
 // string -> Either
 const valid = m3u8 => {
-  if (m3u8.indexOf('#EXTM3U') !== -1) {
+  if (m3u8 && m3u8.indexOf('#EXTM3U') !== -1) {
     return Success.of(m3u8);
   }
-  return Fail.of(Error.INVALID);
+  return Fail.of(CusError.of(M3U8_PARSE_ERROR.INVALID));
 };
 
 const isMaster = m3u8 => m3u8.indexOf('EXT-X-STREAM-INF') !== -1;
 
 // (string,string) -> Either
-export default (m3u8, baseUrl = '') => {
+export default curry((baseUrl, m3u8) => {
+  // throw new Error(a);
   const handleMaster = compose(
     compositionMaster,
     structureM3u8(baseUrl)
@@ -298,10 +293,10 @@ export default (m3u8, baseUrl = '') => {
   // object -> Either
   const usableCheck = res => {
     if (res.levels && res.levels.length === 0) {
-      return Fail.of(Error.INVALID);
+      return Fail.of(CusError.of(M3U8_PARSE_ERROR.INVALID));
     }
     if (res.segments && res.segments.length === 0) {
-      return Fail.of(Error.INVALID);
+      return Fail.of(CusError.of(M3U8_PARSE_ERROR.INVALID));
     }
     return Success.of(res);
   };
@@ -314,5 +309,7 @@ export default (m3u8, baseUrl = '') => {
     map(ifElse(isMaster, handleMaster, handleLevel)),
     valid
   );
-  return handle(m3u8);
-};
+  return handle(m3u8).error(e => {
+    return e.getOrElse(CusError.of(M3U8_PARSE_ERROR.PARSE_ERROR));
+  });
+});

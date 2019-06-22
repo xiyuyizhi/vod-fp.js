@@ -1,4 +1,5 @@
-import { Task } from 'vod-fp-utility';
+import { Task, Fail, CusError } from 'vod-fp-utility';
+import { XHR_ERROR } from '../error';
 
 function createXhr() {
   let xhr;
@@ -45,31 +46,25 @@ function startXhr(config, resolve, reject) {
         return;
       }
       if (xhr.status) {
-        reject({
-          code: xhr.status,
-          message: xhr.statusText
-        });
+        reject(
+          CusError.of({
+            ...XHR_ERROR.LOAD_ERROR,
+            code: xhr.status,
+            message: xhr.statusText
+          })
+        );
       }
     }
   });
   xhr.addEventListener('abort', () => {
     console.warn('Abort');
-    reject({
-      code: 0,
-      message: 'Abort'
-    });
+    reject(CusError.of(XHR_ERROR.ABORT));
   });
   xhr.addEventListener('error', e => {
-    reject({
-      code: 0,
-      message: 'xhr Error'
-    });
+    reject(CusError.of(XHR_ERROR.LOAD_ERROR));
   });
   xhr.addEventListener('timeout', () => {
-    reject({
-      code: 0,
-      message: 'Timeout'
-    });
+    reject(CusError.of(XHR_ERROR.TIMEOUT));
   });
   xhr.send(config.body);
   return xhr;
