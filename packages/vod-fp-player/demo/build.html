@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>vod-fp-player demo build</title>
+  </head>
+  <body>
+    <video autoplay controls width="600" height="400"></video>
+  </body>
+  <script src="../lib/vod-fp-player.min.js"></script>
+  <script>
+    const vod = new window.Vod({
+      maxBufferLength: 100
+    });
+    vod.attachMedia(document.querySelector('video'));
+    vod.loadSource('http://localhost:8880/8/index.m3u8');
+  </script>
+</html>

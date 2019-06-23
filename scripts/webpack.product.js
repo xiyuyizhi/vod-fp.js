@@ -12,9 +12,19 @@ const config = {
     filename: path.join(ROOT, PACKAGE_ROOT, 'src/index.js')
   },
   output: {
+    library: 'Vod',
     libraryTarget: 'umd',
-    path: path.join(ROOT, PACKAGE_ROOT, 'lib/'),
-    filename: `vod-fp-${process.env.BUILD}.min.js`
+    libraryExport: 'default',
+    globalObject: 'this',
+    filename: `vod-fp-${process.env.BUILD}.min.js`,
+    path: path.join(ROOT, PACKAGE_ROOT, 'lib/')
+  },
+  resolve: {
+    alias: {
+      'vod-fp-utility': 'vod-fp-utility/src',
+      'vod-fp-mux': 'vod-fp-mux/src',
+      'vod-fp-player': 'vod-fp-player/src'
+    }
   },
   optimization: {
     minimizer: [
@@ -48,10 +58,15 @@ const config = {
     rules: [
       {
         test: /\.js$/,
-        include: [/vod-fp-mux/, /vod-fp-player/, /vod-fp-utility/, /src/],
+        include: [
+          /vod-fp-mux/,
+          /vod-fp-player/,
+          /vod-fp-utility/,
+          new RegExp(path.join(PACKAGE_ROOT, '/src/'))
+        ],
         loader: require.resolve('babel-loader'),
         options: {
-          ...JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.babelrc'))),
+          ...JSON.parse(fs.readFileSync(path.resolve(__dirname, '../.babelrc')))
         }
       }
     ]
