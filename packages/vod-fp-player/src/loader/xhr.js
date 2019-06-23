@@ -57,6 +57,7 @@ function startXhr(config, resolve, reject) {
     }
   });
   xhr.addEventListener('abort', () => {
+    console.warn('ABORT');
     reject(CusError.of(XHR_ERROR.ABORT));
   });
   xhr.addEventListener('error', e => {

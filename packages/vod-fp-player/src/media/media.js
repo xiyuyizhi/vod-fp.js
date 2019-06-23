@@ -43,7 +43,7 @@ function _bindMediaEvent(
   });
   media.addEventListener('waiting', () => {
     logger.log('waiting....,is seeking?', media.seeking);
-    media.currentTime += 0.1;
+    media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
   });
   media.addEventListener('ended', () => {
     logger.log('end....');
@@ -103,7 +103,21 @@ function updateMediaDuration({ getState }) {
     .ap(getState(ACTION.PLAYLIST.DURATION));
 }
 
+function checkManualSeek({ getConfig, getState }, start) {
+  getState(ACTION.MEDIA.MEDIA_ELE).map(media => {
+    if (
+      media.seeking &&
+      Math.abs(start - media.currentTime) <
+        getConfig(ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE)
+    ) {
+      logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
+      media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
+    }
+  });
+}
+
 _bindMediaEvent = curry(_bindMediaEvent);
 createMediaSource = curry(createMediaSource);
 updateMediaDuration = curry(updateMediaDuration);
-export { createMediaSource, updateMediaDuration };
+checkManualSeek = curry(checkManualSeek);
+export { createMediaSource, updateMediaDuration, checkManualSeek };

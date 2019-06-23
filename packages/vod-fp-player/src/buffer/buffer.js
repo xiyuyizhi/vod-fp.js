@@ -10,6 +10,7 @@ import {
   Logger
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
+import { checkManualSeek } from '../media/media';
 import { bufferDump } from './buffer-helper';
 import { MEDIA_ERROR } from '../error';
 
@@ -45,12 +46,12 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   return sb;
 }
 
-function afterAppended({ getState, dispatch }) {
+function afterAppended({ getState, dispatch, connect }) {
   dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDED);
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
   Maybe.of(
-    curry((segments, currentId, videoBufferInfo, audioBufferInfo) => {
+    curry((segments, currentId, videoBufferInfo, audioBufferInfo, media) => {
       let start = Math.min(videoBufferInfo.startPTS, audioBufferInfo.startPTS);
       start = parseFloat((start / 90000).toFixed(6));
       let end = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
@@ -58,6 +59,9 @@ function afterAppended({ getState, dispatch }) {
       segments[currentId].start = start;
       segments[currentId].end = end;
       segments[currentId].duration = end - start;
+
+      connect(checkManualSeek)(start);
+
       logger.log(
         'new buffer:',
         [start, end],
@@ -79,7 +83,8 @@ function afterAppended({ getState, dispatch }) {
     .ap(getState(ACTION.PLAYLIST.SEGMENTS))
     .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
     .ap(getState(ACTION.BUFFER.VIDEO_BUFFER))
-    .ap(getState(ACTION.BUFFER.AUDIO_BUFFER));
+    .ap(getState(ACTION.BUFFER.AUDIO_BUFFER))
+    .ap(getState(ACTION.MEDIA.MEDIA_ELE));
 }
 afterAppended = curry(afterAppended);
 

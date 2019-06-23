@@ -28,13 +28,16 @@ function _loadCheck({ dispatch, getConfig }, bufferInfo, process, media) {
   return bufferInfo;
 }
 
-function _startProcess({ getState, dispatch, connect }, rest) {
+function _startProcess({ getState, getConfig, dispatch, connect }, rest) {
   let segments = getState(ACTION.PLAYLIST.SEGMENTS);
   let segment = segments.map(x => connect(findSegment)(x, rest.bufferEnd));
   return Maybe.of(
     curry((segment, segments, currentId) => {
       if (currentId === segment.id) {
         segment = segments[currentId + 1];
+        getState(ACTION.MEDIA.MEDIA_ELE).map(
+          media => (media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK))
+        );
         logger.warn(`segment ${currentId} 已下载,下载下一分片`);
       }
       return segment;
