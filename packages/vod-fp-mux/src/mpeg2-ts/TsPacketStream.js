@@ -1,9 +1,8 @@
-import { PipeLine } from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import { probe } from '../probe/ts-probe';
 import { NOT_VALID_TS_FORMAT } from '../error';
-import Logger from '../utils/logger';
 
-let logger = new Logger('TsPacketStream');
+let logger = new Logger('mux');
 
 export default class TsPacketStream extends PipeLine {
   push(buffer) {

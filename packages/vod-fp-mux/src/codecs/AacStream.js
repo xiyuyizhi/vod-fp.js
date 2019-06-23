@@ -1,8 +1,7 @@
-import { PipeLine } from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import { FREQUENCIES_MAP, getDefaultAACTrack } from '../default';
-import Logger from '../utils/logger';
 
-let logger = new Logger('AacStream');
+let logger = new Logger('mux');
 
 export default class AacStream extends PipeLine {
   constructor() {

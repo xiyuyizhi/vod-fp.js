@@ -34,7 +34,7 @@ function changeLevel() {
       let flushStart = connect(findSegmentOfCurrentPosition)
         .map(x => x.start || 0)
         .join();
-      connect(flushBuffer)(0, Infinity).map(() => {
+      connect(flushBuffer)(flushStart, Infinity).map(() => {
         getState(ACTION.MEDIA.MEDIA_ELE).map(x => {
           x.currentTime += 0.005;
           dispatch(ACTION.PROCESS, PROCESS.IDLE);

@@ -1,5 +1,6 @@
 import {
   F,
+  Logger,
   Task,
   Maybe,
   Empty,
@@ -26,6 +27,7 @@ const {
   chain,
   error
 } = F;
+let logger = new Logger('player');
 
 function _getBasePath(url) {
   url = url.split('?');
@@ -137,7 +139,7 @@ function _loadLevelOrMaster({ connect, getConfig }, type, url) {
           //对于level和media,在重试几次
           if (retryCount && type !== 'MANIFEST') {
             retryCount--;
-            console.log('retry load..');
+            logger.log('retry load..');
             toLoad(retryCount, resolve, reject);
             return;
           }
@@ -180,7 +182,7 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   let level = getState(ACTION.PLAYLIST.FIND_LEVEL, Number(levelId));
   maybe(
     () => {
-      console.log(`start load level ${level.map(prop('levelId'))} detail`);
+      logger.log(`start load level ${level.map(prop('levelId'))} detail`);
       connect(_updateLevelAndMedia)(level)
         .map(join)
         .map(l => {

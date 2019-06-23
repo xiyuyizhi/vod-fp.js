@@ -1,9 +1,8 @@
-import { PipeLine } from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
 import ptsNormalize from '../utils/ptsNormalize';
-import Logger from '../utils/logger';
 
-let logger = new Logger('VideoFragmentStream');
+let logger = new Logger('mux');
 
 export default class VideoFragmentStream extends PipeLine {
   constructor() {
@@ -25,10 +24,9 @@ export default class VideoFragmentStream extends PipeLine {
     if (data.type === 'video') {
       this.avcTrack = data;
       if (!this.initSegmentGenerate) {
-        console.log('gene init segment');
+        logger.log('gene init segment...');
         this.initSegmentGenerate = true;
         this.initSegment = MP4.initSegment([data]);
-        console.log(this.initSegment);
       }
     }
     if (data.videoTimeOffset !== undefined) {
@@ -189,7 +187,6 @@ export default class VideoFragmentStream extends PipeLine {
     let bf = new Uint8Array(
       this.initSegment.byteLength + moof.byteLength + mdat.byteLength
     );
-    console.log(this.initSegment);
     bf.set(this.initSegment, 0);
     bf.set(moof, this.initSegment.byteLength);
     bf.set(mdat, this.initSegment.byteLength + moof.byteLength);

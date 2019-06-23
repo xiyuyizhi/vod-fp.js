@@ -1,10 +1,9 @@
-import { PipeLine, oop } from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
 import AAC from '../utils/aac';
 import ptsNormalize from '../utils/ptsNormalize';
-import Logger from '../utils/logger';
 
-let logger = new Logger('AudioFragmentStream');
+let logger = new Logger('mux');
 
 const TIME_SCALE = 90000;
 
@@ -96,13 +95,15 @@ export default class AudioFragmentStream extends PipeLine {
 
     logger.warn(
       `audio remux:【initDTS:${
-      this.initDTS
-      } , nextAacPts:${nextAudioPts}, originPTS:${inputSamples[0].originPts} ,  originDTS:${
-      inputSamples[0].originDts
-      } , samples[0]:${inputSamples[0].dts}】`
+        this.initDTS
+      } , nextAacPts:${nextAudioPts}, originPTS:${
+        inputSamples[0].originPts
+      } ,  originDTS:${inputSamples[0].originDts} , samples[0]:${
+        inputSamples[0].dts
+      }】`
     );
 
-    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
+    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
       let sample = inputSamples[i];
       let delta;
       let pts = sample.pts;
@@ -132,7 +133,7 @@ export default class AudioFragmentStream extends PipeLine {
           if (!fillFrame) {
             logger.log(
               'Unable to get silent frame for given audio codec; duplicating last frame instead' +
-              '.'
+                '.'
             );
             fillFrame = sample.data.subarray();
           }

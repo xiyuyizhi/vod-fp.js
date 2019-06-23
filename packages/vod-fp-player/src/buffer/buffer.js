@@ -6,13 +6,16 @@ import {
   either,
   maybe,
   maybeToEither,
-  eitherToMaybe
+  eitherToMaybe,
+  Logger
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { bufferDump } from './buffer-helper';
 import { MEDIA_ERROR } from '../error';
 
 const { map, compose, curry, join, chain, prop, trace } = F;
+
+let logger = new Logger('player');
 
 function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   const _waitFinished = (other, me) => {
@@ -55,7 +58,7 @@ function afterAppended({ getState, dispatch }) {
       segments[currentId].start = start;
       segments[currentId].end = end;
       segments[currentId].duration = end - start;
-      console.log(
+      logger.log(
         'new buffer:',
         [start, end],
         bufferDump(getState(ACTION.MEDIA.MEDIA_ELE))
@@ -82,7 +85,7 @@ afterAppended = curry(afterAppended);
 
 // (Maybe,string,string)  -> (sourcebuffer or undefined)
 function createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
-  console.log('create source buffer with mime: ', mime);
+  logger.log('create source buffer with mime: ', mime);
   return maybeToEither(mediaSource)
     .map(ms => ms.addSourceBuffer(mime))
     .map(connect(_bindSourceBufferEvent)(type))

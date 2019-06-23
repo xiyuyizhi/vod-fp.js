@@ -1,9 +1,8 @@
-import { PipeLine } from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import ExpGolomb from '../utils/exp-golomb';
 import { getDefaultAVCTrack } from '../default';
-import Logger from '../utils/logger';
 
-let logger = new Logger('AvcStream');
+let logger = new Logger('mux');
 
 export default class AvcStream extends PipeLine {
   constructor() {

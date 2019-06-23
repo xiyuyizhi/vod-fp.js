@@ -1,7 +1,6 @@
-import { PipeLine } from 'vod-fp-utility';
-import Logger from '../utils/logger';
+import { PipeLine, Logger } from 'vod-fp-utility';
 
-let logger = new Logger('RemuxStream');
+let logger = new Logger('mux');
 
 export default class RemuxStream extends PipeLine {
   constructor() {

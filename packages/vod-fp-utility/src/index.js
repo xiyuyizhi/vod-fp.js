@@ -15,6 +15,7 @@ import {
   Tick,
   CusError
 } from './fp';
+import Logger from './logger';
 
 const {
   EventBus,
@@ -45,5 +46,6 @@ export {
   CusError,
   combineActions,
   combineStates,
-  createStore
+  createStore,
+  Logger
 };

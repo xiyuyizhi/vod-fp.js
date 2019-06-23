@@ -1,3 +1,6 @@
+import Logger from '../logger';
+let logger = new Logger('base');
+
 const curry = fn => {
   const len = fn.length;
   return function _curry(...args) {
@@ -12,7 +15,7 @@ const compose = (...fns) => {
   const fnReversed = fns.reverse();
   const filterd = fnReversed.filter(fn => typeof fn !== 'function');
   if (filterd.length) {
-    console.error(filterd.join(',') + ' not function ');
+    logger.error(filterd.join(',') + ' not function ');
     return;
   }
   return args => {
@@ -58,12 +61,12 @@ const liftA2 = curry((g, a, b) => a.map(g).ap(b));
 const trace = (msg, v) => {
   if (typeof msg === 'string' && msg.indexOf('log:') !== -1) {
     return v => {
-      console.log(msg, v);
+      logger.log(msg, v);
       return v;
     };
   }
   v = msg;
-  console.log(v);
+  logger.log(v);
   return v;
 };
 

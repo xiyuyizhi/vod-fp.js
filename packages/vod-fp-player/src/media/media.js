@@ -4,7 +4,8 @@ import {
   Maybe,
   Success,
   CusError,
-  maybeToEither
+  maybeToEither,
+  Logger
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { isSupportMS } from '../utils/probe';
@@ -13,6 +14,7 @@ import { getBufferInfo } from '../buffer/buffer-helper';
 import { SUPPORT_ERROR } from '../error';
 
 const { map, compose, curry, prop, trace } = F;
+let logger = new Logger('player');
 
 function _bindMediaEvent(
   { getState, getConfig, dispatch, connect, subscribe },
@@ -24,7 +26,7 @@ function _bindMediaEvent(
     dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
   });
   media.addEventListener('seeking', () => {
-    console.log('start seek...', media.currentTime);
+    logger.log('start seek...', media.currentTime);
     let rest = connect(getBufferInfo)(false);
     if (media.duration - rest.bufferEnd >= endStreamTolerance) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
@@ -37,14 +39,14 @@ function _bindMediaEvent(
     }
   });
   media.addEventListener('seeked', () => {
-    console.log('seek end , can play', media.currentTime);
+    logger.log('seek end , can play', media.currentTime);
   });
   media.addEventListener('waiting', () => {
-    console.log('waiting....,is seeking?', media.seeking);
+    logger.log('waiting....,is seeking?', media.seeking);
     media.currentTime += 0.1;
   });
   media.addEventListener('ended', () => {
-    console.log('end....');
+    logger.log('end....');
   });
 
   subscribe(ACTION.EVENTS.ERROR, () => {
@@ -64,7 +66,7 @@ function _bindMediaEvent(
           media.duration - rest.bufferEnd <= endStreamTolerance &&
           mediaSource.readyState === 'open'
         ) {
-          console.warn('end of stream');
+          logger.warn('end of stream');
           mediaSource.endOfStream();
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
           dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
@@ -75,7 +77,7 @@ function _bindMediaEvent(
       .ap(maybeToEither(ms))
       .ap(maybeToEither(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID)))
       .error(e => {
-        console.log(e);
+        logger.log(e);
       });
   });
 }

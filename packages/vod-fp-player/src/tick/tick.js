@@ -1,4 +1,4 @@
-import { F, Tick, Maybe, Success, Empty } from 'vod-fp-utility';
+import { F, Tick, Maybe, Success, Empty, Logger } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { getBufferInfo } from '../buffer/buffer-helper';
 import { findSegment, loadSegment } from '../playlist/segment';
@@ -7,6 +7,8 @@ import { startBuffer } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
 
 const { prop, compose, map, curry } = F;
+
+let logger = new Logger('player');
 
 function _loadCheck({ dispatch, getConfig }, bufferInfo, process, media) {
   let MAX_BUFFER_LENGTH = getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH);
@@ -33,7 +35,7 @@ function _startProcess({ getState, dispatch, connect }, rest) {
     curry((segment, segments, currentId) => {
       if (currentId === segment.id) {
         segment = segments[currentId + 1];
-        console.warn(`segment ${currentId} 已下载,下载下一分片`);
+        logger.warn(`segment ${currentId} 已下载,下载下一分片`);
       }
       return segment;
     })
@@ -42,14 +44,14 @@ function _startProcess({ getState, dispatch, connect }, rest) {
     .ap(segments)
     .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
     .map(segment => {
-      console.groupEnd();
-      console.group(
+      logger.groupEnd();
+      logger.group(
         'current segment ',
         segment.id,
         ' of level ',
-        segment.levelId
+        segment.levelId || 1
       );
-      console.log('restBuffer: ', rest);
+      logger.log('restBuffer: ', rest);
       dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
       connect(loadSegment)(segment);
       return true;
@@ -80,7 +82,7 @@ function tick({ getState, getConfig, connect, dispatch }, level, mediaSource) {
       .ap(media)
       .map(startProcess)
       .getOrElse(e => {
-        console.log(e || 'continue check');
+        logger.log(e || 'continue check');
       });
   }
 

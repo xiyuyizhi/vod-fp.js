@@ -32,10 +32,10 @@
  * mdat
  */
 
-import Logger from './utils/logger';
-import {BytesForward, getBoxType} from './utils/BytesForward';
+import { Logger } from 'vod-fp-utility';
+import { BytesForward, getBoxType } from './utils/BytesForward';
 
-let logger = new Logger('mp4-parser');
+let logger = new Logger('mux');
 
 const MAX_UINT32_COUNT = Math.pow(2, 32);
 
@@ -50,17 +50,21 @@ function fmp4Probe() {}
  */
 function parseMp4(buffer) {
   logger.log(`--------mp4 parser,${buffer.byteLength}-----------`);
-  const boxStore = splitBox(buffer instanceof ArrayBuffer
-    ? new Uint8Array(buffer)
-    : buffer);
+  const boxStore = splitBox(
+    buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer
+  );
   extractBoxsList(boxStore);
   return boxStore;
 }
 
 function splitBox(buffer, offset = 0) {
   let boxStore = [];
-  for (; offset < buffer.byteLength;) {
-    const len = buffer[offset] * (1 << 24) + buffer[offset + 1] * (1 << 16) + buffer[offset + 2] * (1 << 8) + buffer[offset + 3];
+  for (; offset < buffer.byteLength; ) {
+    const len =
+      buffer[offset] * (1 << 24) +
+      buffer[offset + 1] * (1 << 16) +
+      buffer[offset + 2] * (1 << 8) +
+      buffer[offset + 3];
     if (len === 0) {
       continue;
     }
@@ -158,10 +162,8 @@ function parseFtypBox(payload, length) {
   ftypBox.version = bf.read32bitsValue();
   bf.forward(4);
   let compatible = [];
-  for (let i = bf.offset; i < length;) {
-    ftypBox
-      .compatible
-      .push(getBoxType(payload, i));
+  for (let i = bf.offset; i < length; ) {
+    ftypBox.compatible.push(getBoxType(payload, i));
     i += 4;
   }
   bf = null;
@@ -362,9 +364,7 @@ function parseTrun(payload) {
       sample.ctOffset = bf.read32bitsValue();
       bf.forward(4);
     }
-    res
-      .samples
-      .push(sample);
+    res.samples.push(sample);
     i++;
   }
   bf = null;
@@ -372,9 +372,7 @@ function parseTrun(payload) {
 }
 
 function parseTfFlags(flags) {
-  const [,
-    recordFlag,
-    optionsFlags] = flags;
+  const [, recordFlag, optionsFlags] = flags;
   return {
     dataOffset: optionsFlags & 0x01,
     firstSampleFlags: optionsFlags & 0x04,
@@ -421,7 +419,7 @@ function parseTfdt(payload) {
     baseMediaDecodeTime = bf.read32bitsValue();
   }
   bf = null;
-  return {baseMediaDecodeTime};
+  return { baseMediaDecodeTime };
 }
 
 function parseAvc1(payload) {
@@ -453,9 +451,7 @@ function parseAvcC(payload) {
   for (let i = 0; i < nbSps; i++) {
     const spsLen = bf.read16bitsValue();
     bf.forward(2);
-    ret
-      .sps
-      .push(bf.subarray(spsLen));
+    ret.sps.push(bf.subarray(spsLen));
     bf.forward(spsLen);
   }
   const nbPps = bf.readBytes(1);
@@ -463,9 +459,7 @@ function parseAvcC(payload) {
   for (let i = 0; i < nbPps; i++) {
     const ppsLen = bf.read16bitsValue();
     bf.forward(2);
-    ret
-      .pps
-      .push(bf.subarray(ppsLen));
+    ret.pps.push(bf.subarray(ppsLen));
     bf.forward(ppsLen);
   }
   bf = null;
@@ -480,7 +474,7 @@ function parseBtrt(payload) {
   bf.forward(4);
   let avgBitrate = bf.read32bitsValue();
   bf = null;
-  return {bufferSizeDB, maxBitrate, avgBitrate};
+  return { bufferSizeDB, maxBitrate, avgBitrate };
 }
 
 function parsePssh(payload) {
@@ -495,9 +489,7 @@ function parsePssh(payload) {
     ret.kids = [];
     let i = 0;
     while (i < kidCount) {
-      ret
-        .kids
-        .push(bf.readBytes(16));
+      ret.kids.push(bf.readBytes(16));
       bf.forward(16);
     }
   }
@@ -508,4 +500,4 @@ function parsePssh(payload) {
   return ret;
 }
 
-export {parseMp4, fmp4Probe};
+export { parseMp4, fmp4Probe };

@@ -1,4 +1,7 @@
+import { Logger } from 'vod-fp-utility';
 import Vod from 'vod-fp-player';
+
+Logger.use(['mux', 'player']);
 
 const vod = new Vod();
 vod.attachMedia(document.querySelector('video'));

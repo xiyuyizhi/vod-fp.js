@@ -1,11 +1,18 @@
-import { combineActions, combineStates, createStore, F } from 'vod-fp-utility';
+import {
+  Logger,
+  combineActions,
+  combineStates,
+  createStore,
+  F
+} from 'vod-fp-utility';
 import EVENTS from '../events';
 import config from './config';
 import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
-const { map, prop, compose, trace } = F;
 
+const { map, prop, compose, trace } = F;
+let logger = new Logger('player');
 let PROCESS = {
   IDLE: 'idle',
   PLAYLIST_LOADING: 'playlistLoading',
@@ -54,10 +61,10 @@ let initState = {
   derive: {
     innerError(state, payload, dispatch) {
       if (payload) {
-        console.log('Error log:', payload);
+        logger.log('Error log:', payload);
         function _handleError(s) {
           if (s.errorCount >= 3 || s.error.value().fatal === true) {
-            console.log('error occur many times.....,emit error out');
+            logger.log('error occur many times.....,emit error out');
             s.errorCount = 0;
             s.error.fatal(true);
             dispatch(ACTION.EVENTS.ERROR, s.error.value());
@@ -85,9 +92,7 @@ let initState = {
         // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         const { timeStamp, process } = state.value();
         let ts = (performance.now() - timeStamp).toFixed(2);
-        console.log(
-          `PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`
-        );
+        logger.log(`PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`);
         return compose(
           map(s => {
             if (s.process === PROCESS.BUFFER_APPENDED) {
@@ -123,7 +128,7 @@ let initState = {
     },
     mainLoopHandle(state, payload) {
       if (payload === 'stop') {
-        console.log('timer stoped');
+        logger.log('timer stoped');
         compose(
           map(tick => tick.stop()),
           map(prop('mainLoop'))
@@ -144,5 +149,5 @@ ACTION = combineActions(ACTION, config, playlist, media, buffer);
 function getInitState() {
   return combineStates(initState, config, playlist, media, buffer);
 }
-console.log(ACTION);
+logger.log(ACTION);
 export { createStore, getInitState, ACTION, PROCESS };

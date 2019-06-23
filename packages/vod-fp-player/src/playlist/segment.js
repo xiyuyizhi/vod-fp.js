@@ -90,7 +90,6 @@ function loadSegment() {
           (lastSegment && lastSegment.levelId !== segment.levelId)
         ) {
           connect(resetInitSegment);
-          console.warn('resetInitSegment');
         }
         if (
           (lastSegment && lastSegment.cc !== segment.cc) ||
@@ -98,7 +97,6 @@ function loadSegment() {
           (lastSegment && segment.id - lastSegment.id !== 1)
         ) {
           connect(setTimeOffset)(segment.start);
-          console.warn('setTimeOffset');
         }
         dispatch(ACTION.PROCESS, PROCESS.MUXING);
         connect(toMux)(buffer, segment.id);
