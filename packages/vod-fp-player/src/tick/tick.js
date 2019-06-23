@@ -43,9 +43,13 @@ function _startProcess({ getState, dispatch, connect }, rest) {
     .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
     .map(segment => {
       console.groupEnd();
-      console.group('current segment ', segment.id);
+      console.group(
+        'current segment ',
+        segment.id,
+        ' of level ',
+        segment.levelId
+      );
       console.log('restBuffer: ', rest);
-      dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADING);
       dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
       connect(loadSegment)(segment);
       return true;
@@ -53,8 +57,7 @@ function _startProcess({ getState, dispatch, connect }, rest) {
     .getOrElse(Empty.of('no found segement'));
 }
 
-function tick({ getState, connect, dispatch }, level, mediaSource) {
-  console.log(level, mediaSource);
+function tick({ getState, getConfig, connect, dispatch }, level, mediaSource) {
   if (!level) return;
   connect(updateMediaDuration);
   connect(createMux);
@@ -82,7 +85,7 @@ function tick({ getState, connect, dispatch }, level, mediaSource) {
   }
 
   let t = Tick.of(_startTimer)
-    .interval(200)
+    .interval(getConfig(ACTION.CONFIG.TICK_INTERVAL))
     .immediate();
   dispatch(ACTION.MAIN_LOOP, t);
 }

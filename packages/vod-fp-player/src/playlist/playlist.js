@@ -183,9 +183,9 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
       console.log(`start load level ${level.map(prop('levelId'))} detail`);
       connect(_updateLevelAndMedia)(level)
         .map(join)
-        .map(level => {
-          dispatch(ACTION.PLAYLIST.CURRENT_LEVEL_ID, level.levelId);
-          dispatch(ACTION.EVENTS.LEVEL_CHANGED, level.levelId);
+        .map(l => {
+          dispatch(ACTION.PLAYLIST.CURRENT_LEVEL_ID, l.levelId);
+          dispatch(ACTION.EVENTS.LEVEL_CHANGED, l.levelId);
         })
         .error(e => {
           dispatch(ACTION.EVENTS.LEVEL_CHANGED_ERROR, e.join());
@@ -194,9 +194,9 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
     () => {
       let levelId = level.map(prop('levelId'));
       dispatch(ACTION.PLAYLIST.CURRENT_LEVEL_ID, levelId.join());
-      dispatch(ACTION.EVENTS.LEVEL_CHANGED, levelId);
+      dispatch(ACTION.EVENTS.LEVEL_CHANGED, levelId.join());
     },
-    map(prop('detail'), level)
+    level.map(prop('detail'))
   );
 }
 _loadLevelOrMaster = curry(_loadLevelOrMaster);

@@ -17,7 +17,7 @@ const { map, compose, curry, join, chain, prop, trace } = F;
 function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   const _waitFinished = (other, me) => {
     map(x => {
-      if (x) {
+      if (x === true) {
         // video audio all append
         connect(afterAppended);
       } else {
@@ -169,7 +169,27 @@ function startBuffer({ id, getState, subscribe, dispatch, connect }) {
   });
 }
 
+function flushBuffer({ getState, dispatch }, start, end) {
+  let videoSb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER);
+  let audioSb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER);
+
+  return Success.of(
+    curry((videoSb, audioSb) => {
+      videoSb.remove(start, end);
+      audioSb.remove(start, end);
+    })
+  )
+    .ap(maybeToEither(videoSb))
+    .ap(maybeToEither(audioSb))
+    .error(e => {
+      dispatch(
+        ACTION.ERROR,
+        e.merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))
+      );
+    });
+}
+
 _bindSourceBufferEvent = curry(_bindSourceBufferEvent);
 startBuffer = curry(startBuffer);
-
-export { startBuffer };
+flushBuffer = curry(flushBuffer);
+export { startBuffer, flushBuffer };

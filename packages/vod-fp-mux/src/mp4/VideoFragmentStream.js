@@ -25,8 +25,10 @@ export default class VideoFragmentStream extends PipeLine {
     if (data.type === 'video') {
       this.avcTrack = data;
       if (!this.initSegmentGenerate) {
+        console.log('gene init segment');
         this.initSegmentGenerate = true;
         this.initSegment = MP4.initSegment([data]);
+        console.log(this.initSegment);
       }
     }
     if (data.videoTimeOffset !== undefined) {
@@ -76,16 +78,18 @@ export default class VideoFragmentStream extends PipeLine {
     let delta = samples[0].dts - nextAvcDts;
 
     logger.log(
-      `originPts:${samples[0].originPts} ,originDts:${samples[0].originDts} , dts:${
-      samples[0].dts
+      `originPts:${samples[0].originPts} ,originDts:${
+        samples[0].originDts
+      } , dts:${
+        samples[0].dts
       } , nextAvcDts:${nextAvcDts} , delta:${delta} , mp4SampleDuration:${
-      this.mp4SampleDuration
+        this.mp4SampleDuration
       }`
     );
     if (nextAvcDts && samples[0].dts - nextAvcDts >= this.mp4SampleDuration) {
       logger.warn(
         `两个分片之间差了 ${(samples[0].dts - nextAvcDts) /
-        this.mp4SampleDuration} 帧！`
+          this.mp4SampleDuration} 帧！`
       );
     }
     samples.forEach(sample => {
@@ -93,7 +97,7 @@ export default class VideoFragmentStream extends PipeLine {
       sample.pts -= delta;
     });
     // 按dts排序
-    samples.sort(function (a, b) {
+    samples.sort(function(a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
@@ -101,7 +105,7 @@ export default class VideoFragmentStream extends PipeLine {
 
     logger.warn(
       `video remux:【initDTS:${
-      this.initDTS
+        this.initDTS
       } , nextAvcDts:${nextAvcDts}, samples[0]:${samples[0].dts}】`
     );
 
@@ -185,6 +189,7 @@ export default class VideoFragmentStream extends PipeLine {
     let bf = new Uint8Array(
       this.initSegment.byteLength + moof.byteLength + mdat.byteLength
     );
+    console.log(this.initSegment);
     bf.set(this.initSegment, 0);
     bf.set(moof, this.initSegment.byteLength);
     bf.set(mdat, this.initSegment.byteLength + moof.byteLength);

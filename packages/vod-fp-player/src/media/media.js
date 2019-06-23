@@ -14,24 +14,33 @@ import { SUPPORT_ERROR } from '../error';
 
 const { map, compose, curry, prop, trace } = F;
 
-function _bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
+function _bindMediaEvent(
+  { getState, getConfig, dispatch, connect, subscribe },
+  media
+) {
+  let endStreamTolerance = getConfig(ACTION.CONFIG.END_STREAM_TOLERANCE);
+  let ms = getState(ACTION.MEDIA.MEDIA_SOURCE);
   media.addEventListener('playing', () => {
     dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
   });
   media.addEventListener('seeking', () => {
     console.log('start seek...', media.currentTime);
-    dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
-    map(x => {
-      if (x === PROCESS.SEGMENT_LOADING) {
-        connect(abortCurrentSegment);
-      }
-    })(getState(ACTION.PROCESS));
+    let rest = connect(getBufferInfo)(false);
+    if (media.duration - rest.bufferEnd >= endStreamTolerance) {
+      dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
+    } else if (ms.join().readyState === 'open') {
+      ms.endOfStream();
+      dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+    }
+    if (rest.bufferLength === 0) {
+      connect(abortCurrentSegment);
+    }
   });
   media.addEventListener('seeked', () => {
-    console.log('seek end , can play');
+    console.log('seek end , can play', media.currentTime);
   });
   media.addEventListener('waiting', () => {
-    console.log('waiting....');
+    console.log('waiting....,is seeking?', media.seeking);
     media.currentTime += 0.1;
   });
   media.addEventListener('ended', () => {
@@ -52,7 +61,7 @@ function _bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
       curry((proce, mediaSource, currentId) => {
         if (
           proce === PROCESS.IDLE &&
-          media.duration - rest.bufferEnd <= 0.2 &&
+          media.duration - rest.bufferEnd <= endStreamTolerance &&
           mediaSource.readyState === 'open'
         ) {
           console.warn('end of stream');
@@ -63,7 +72,7 @@ function _bindMediaEvent({ getState, dispatch, connect, subscribe }, media) {
       })
     )
       .ap(maybeToEither(process))
-      .ap(maybeToEither(getState(ACTION.MEDIA.MEDIA_SOURCE)))
+      .ap(maybeToEither(ms))
       .ap(maybeToEither(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID)))
       .error(e => {
         console.log(e);

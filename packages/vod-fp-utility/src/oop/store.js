@@ -140,11 +140,9 @@ function createStore(initState, actions = {}) {
         path = 'all';
       }
       events[path] ? events[path].push(listener) : (events[path] = [listener]);
-      return {
-        unsubscribe() {
-          let index = events[push].indexOf(listener);
-          events[path] = events[path].filter((_, i) => i !== index);
-        }
+      return () => {
+        let index = events[path].indexOf(listener);
+        events[path] = events[path].filter((_, i) => i !== index);
       };
     },
     getState: (path, payload) => {

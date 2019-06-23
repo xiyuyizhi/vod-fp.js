@@ -17,7 +17,8 @@ let PROCESS = {
   BUFFER_APPENDING: 'bufferAppending',
   BUFFER_APPENDED: 'bufferAppended',
   ABORT: 'abort',
-  ERROR: 'error'
+  ERROR: 'error',
+  LEVEL_CHANGING: 'levelChanging'
 };
 
 let ACTION = {
@@ -139,7 +140,9 @@ let initState = {
 };
 
 ACTION = combineActions(ACTION, config, playlist, media, buffer);
-initState = combineStates(initState, config, playlist, media, buffer);
 
+function getInitState() {
+  return combineStates(initState, config, playlist, media, buffer);
+}
 console.log(ACTION);
-export { createStore, initState, ACTION, PROCESS };
+export { createStore, getInitState, ACTION, PROCESS };

@@ -3,7 +3,7 @@ import Vod from '../src';
 console.log('%c player start', 'background: #222; color: #bada55');
 
 const vod = new Vod({
-  maxBufferLength: 30
+  maxBufferLength: 100
 });
 vod.attachMedia(document.querySelector('video'));
 
