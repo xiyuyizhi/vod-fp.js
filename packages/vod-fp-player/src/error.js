@@ -84,6 +84,16 @@ export const PLAYLIST_ERROR = {
       detail: 'MEDIA_PARSE_ERROR',
       fatal: true
     }
+  },
+  KEY: {
+    LOAD_ERROR: {
+      type: 'PLAYLIST_ERROR',
+      detail: 'kEY_LOAD_ERROR'
+    },
+    LOAD_TIMEOUT: {
+      type: 'PLAYLIST_ERROR',
+      detail: 'KEY_LOAD_TIMEOUT'
+    },
   }
 };
 

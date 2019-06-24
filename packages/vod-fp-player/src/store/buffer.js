@@ -10,7 +10,9 @@ export default {
     AUDIO_BUFFER: 'audioBuffer',
     VIDEO_BUFFER: 'videoBuffer',
     AUDIO_APPENDED: 'audioAppended',
-    VIDEO_APPENDED: 'videoAppended'
+    VIDEO_APPENDED: 'videoAppended',
+    VIDEO_BUFFER_REMOVE: 'videoBufferRemove',
+    AUDIO_BUFFER_REMOVE: 'audioBufferRemove'
   },
   state: {
     audioSourceBuffer: null,
@@ -18,6 +20,20 @@ export default {
     audioBuffer: null,
     videoBuffer: null,
     audioAppended: false,
-    videoAppended: false
+    videoAppended: false,
+    derive: {
+      videoBufferRemove: state => {
+        return state.map(x => {
+          x.videoBuffer = null;
+          return x;
+        });
+      },
+      audioBufferRemove: state => {
+        return state.map(x => {
+          x.audioBuffer = null;
+          return x;
+        });
+      }
+    }
   }
 };

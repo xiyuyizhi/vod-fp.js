@@ -7,6 +7,7 @@ let logger = new Logger('mux');
 export default class VideoFragmentStream extends PipeLine {
   constructor() {
     super();
+    this.combine = false;
     this.avcTrack = null;
     this.initSegmentGenerate = false;
     this.initSegment = new Uint8Array();
@@ -21,6 +22,9 @@ export default class VideoFragmentStream extends PipeLine {
   }
 
   push(data) {
+    if (data.type === 'metadata') {
+      this.combine = Object.values(data.data).filter(x => x !== -1).length == 2;
+    }
     if (data.type === 'video') {
       this.avcTrack = data;
       if (!this.initSegmentGenerate) {
@@ -29,14 +33,13 @@ export default class VideoFragmentStream extends PipeLine {
         this.initSegment = MP4.initSegment([data]);
       }
     }
-    if (data.videoTimeOffset !== undefined) {
+    if (this.avcTrack && data.videoTimeOffset !== undefined) {
       this.avcTrack['sequenceNumber'] = this.sequenceNumber;
       this.remuxVideo(this.avcTrack, data.videoTimeOffset, data.contiguous);
     }
   }
 
   flush() {
-    // this.avcTrack = null;
     this.initSegment = new Uint8Array();
     this.emit('done');
   }
@@ -191,6 +194,7 @@ export default class VideoFragmentStream extends PipeLine {
     bf.set(moof, this.initSegment.byteLength);
     bf.set(mdat, this.initSegment.byteLength + moof.byteLength);
     this.emit('data', {
+      combine: this.combine,
       type: 'video',
       buffer: bf,
       startPTS: firstPTS,

@@ -85,9 +85,9 @@ export default class TsPacketParseStream extends PipeLine {
       return;
     }
     if (header.pid === this.pmtId) {
-      logger.warn('parse PMT');
       offset += 1 + payload[offset]; // table start position
       this.streamInfo = this.parsePMT(payload, offset);
+      logger.warn('parse PMT', this.streamInfo);
       this.emit('data', {
         type: 'metadata',
         data: this.streamInfo
@@ -95,7 +95,6 @@ export default class TsPacketParseStream extends PipeLine {
       return;
     }
     if (!this.streamInfo) {
-      logger.error('not found PMT');
       return;
     }
     const { videoId, audioId } = this.streamInfo;

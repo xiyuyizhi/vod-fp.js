@@ -149,5 +149,6 @@ ACTION = combineActions(ACTION, config, playlist, media, buffer);
 function getInitState() {
   return combineStates(initState, config, playlist, media, buffer);
 }
-logger.log(ACTION);
+console.log('....', ACTION);
+
 export { createStore, getInitState, ACTION, PROCESS };

@@ -7,13 +7,14 @@ import {
   Just,
   Fail,
   emptyToResolve,
-  maybe
+  maybe,
+  CusError,
+  Success
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
 import { XHR_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
-import { CusError } from '../../../vod-fp-utility/src';
 
 const {
   curry,
@@ -35,25 +36,6 @@ function _getBasePath(url) {
   return url.slice(0, url.lastIndexOf('/') + 1);
 }
 
-// object --> Maybe
-function _checkLevelOrMaster({ dispatch }, playlist) {
-  if (playlist.type === 'level') {
-    playlist = {
-      levels: [
-        {
-          levelId: 1,
-          detail: playlist,
-          type: 'level'
-        }
-      ]
-    };
-    dispatch(ACTION.PLAYLIST.PL, playlist);
-    return Empty.of();
-  }
-  dispatch(ACTION.PLAYLIST.PL, playlist);
-  return Just.of(playlist);
-}
-
 // (Just,object) -> Just
 function _updateLevel({ dispatch }, level, levelDetail) {
   level.map(x => {
@@ -65,16 +47,25 @@ function _updateLevel({ dispatch }, level, levelDetail) {
   return level;
 }
 
-function _updateMedia({ dispatch }, mediaDetail) {
-  dispatch(ACTION.PLAYLIST.UPDATE_MEDIA, mediaDetail);
+function _updateMedia({ dispatch }, level, mediaDetail) {
+  level.map(l => {
+    dispatch(ACTION.PLAYLIST.UPDATE_MEDIA, {
+      levelId: l.levelId,
+      detail: mediaDetail
+    });
+  });
   return mediaDetail;
+}
+function _updateKey({ dispatch }, levelId, key) {
+  dispatch(ACTION.PLAYLIST.UPDATE_KEY, { levelId, key });
 }
 
 // Just --> Maybe
 function _checkHasMatchedMedia({ getState }, level) {
-  return chain(l => getState(ACTION.PLAYLIST.CURRENT_MEDIA, l.levelId))(level);
+  return chain(l => getState(ACTION.PLAYLIST.FIND_MEDIA, l.levelId))(level);
 }
 
+// Maybe --> Maybe
 function _findLevelToLoad(master) {
   return master.map(
     compose(
@@ -85,16 +76,16 @@ function _findLevelToLoad(master) {
 }
 
 // Just --> Task
-function _updateLevelAndMedia({ connect }, level) {
+function _updateLevelAndMediaAndKey({ connect }, level) {
   let matchedMedia = connect(_checkHasMatchedMedia)(level);
 
   // Just --> Task  Empty --> Task
   let _loadMediaDetail = media => {
     return emptyToResolve(
       compose(
-        map(connect(_updateMedia)),
+        map(connect(_updateMedia)(level)),
         map(trace('log: load media detail,')),
-        chain(connect(_loadLevelOrMaster)('MEDIA')),
+        chain(connect(_loadResource)('MEDIA')),
         map(prop('uri')),
         trace('log: find matched media,')
       )(media)
@@ -107,30 +98,53 @@ function _updateLevelAndMedia({ connect }, level) {
       compose(
         map(connect(_updateLevel)(l)),
         map(trace('log: load level detail,')),
-        chain(connect(_loadLevelOrMaster)('LEVEL')),
+        chain(connect(_loadResource)('LEVEL')),
         map(prop('url')),
         trace('log: current Level,')
       )(l)
     );
   };
   return level.chain(() => {
-    return Task.resolve(curry((level, mediaDetail) => level))
+    return Task.resolve(curry((level, mediaDetail, key) => level))
       .ap(_loadLevelDetail(level))
-      .ap(_loadMediaDetail(matchedMedia));
+      .ap(_loadMediaDetail(matchedMedia))
+      .ap(connect(_checkloadDecryptKey)(level));
   });
 }
 
-//  (string,type) --> Task  type:MANIFEST | LEVEL | MEDIA
-function _loadLevelOrMaster({ connect, getConfig }, type, url) {
+// Just -> Task
+function _checkloadDecryptKey({ getState, connect }, level) {
+  return Task.of((resolve, reject) => {
+    emptyToResolve(
+      compose(
+        map(connect(_updateKey)(level.join().levelId)),
+        map(trace('log: load key detail,')),
+        chain(connect(_loadResource)('KEY')),
+        map(prop('uri')),
+        trace('log: find matched key info,'),
+        map(prop('key')),
+        map(prop('detail'))
+      )(level)
+    )
+      .map(() => {
+        resolve(level);
+      })
+      .error(reject);
+  });
+}
+
+//  (string,type) --> Task  type:MANIFEST | LEVEL | MEDIA |KEY
+function _loadResource({ connect, getConfig }, type, url) {
   let maxRetryCount = getConfig(ACTION.CONFIG.MAX_LEVEL_RETRY_COUNT);
   let toLoad = (retryCount, resolve, reject) => {
-    connect(loader)({ url })
+    let options = type === 'KEY' ? { responseType: 'arraybuffer' } : {};
+    connect(loader)({ url, options })
       .filterRetry(x => !x.is(XHR_ERROR.ABORT))
       .retry(
         getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
         getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
       )
-      .chain(m3u8Parser(_getBasePath(url)))
+      .chain(type === 'KEY' ? Success.of : m3u8Parser(_getBasePath(url)))
       .map(resolve)
       .error(e => {
         let err = e;
@@ -157,14 +171,39 @@ function _loadLevelOrMaster({ connect, getConfig }, type, url) {
   });
 }
 
+// object --> Task
+function _checkLevelOrMaster({ dispatch, connect }, playlist) {
+  if (playlist.type === 'level') {
+    playlist = {
+      levels: [
+        {
+          levelId: 1,
+          detail: playlist,
+          type: 'level'
+        }
+      ]
+    };
+    dispatch(ACTION.PLAYLIST.PL, playlist);
+    return compose(
+      connect(_checkloadDecryptKey),
+      _findLevelToLoad,
+      Maybe.of
+    )(playlist);
+  }
+  dispatch(ACTION.PLAYLIST.PL, playlist);
+  return compose(
+    connect(_updateLevelAndMediaAndKey),
+    _findLevelToLoad,
+    Maybe.of
+  )(playlist);
+}
+
 // string -> Task(Either)
 function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
   dispatch(ACTION.PROCESS, PROCESS.PLAYLIST_LOADING);
   return Task.of((resolve, reject) => {
-    connect(_loadLevelOrMaster)('MANIFEST', url)
+    connect(_loadResource)('MANIFEST', url)
       .map(connect(_checkLevelOrMaster))
-      .map(_findLevelToLoad)
-      .map(connect(_updateLevelAndMedia))
       .map(x => {
         dispatch(ACTION.PROCESS, PROCESS.PLAYLIST_LOADED);
         dispatch(
@@ -183,7 +222,7 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   maybe(
     () => {
       logger.log(`start load level ${level.map(prop('levelId'))} detail`);
-      connect(_updateLevelAndMedia)(level)
+      connect(_updateLevelAndMediaAndKey)(level)
         .map(join)
         .map(l => {
           dispatch(ACTION.PLAYLIST.CURRENT_LEVEL_ID, l.levelId);
@@ -201,11 +240,14 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
     level.map(prop('detail'))
   );
 }
-_loadLevelOrMaster = curry(_loadLevelOrMaster);
+
+_checkloadDecryptKey = curry(_checkloadDecryptKey);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
-_updateLevelAndMedia = curry(_updateLevelAndMedia);
+_loadResource = curry(_loadResource);
+_updateLevelAndMediaAndKey = curry(_updateLevelAndMediaAndKey);
 _updateLevel = curry(_updateLevel);
 _updateMedia = curry(_updateMedia);
+_updateKey = curry(_updateKey);
 _checkHasMatchedMedia = curry(_checkHasMatchedMedia);
 loadPlaylist = F.curry(loadPlaylist);
 changePlaylistLevel = F.curry(changePlaylistLevel);

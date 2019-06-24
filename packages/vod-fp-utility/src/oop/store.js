@@ -117,9 +117,9 @@ function createStore(initState, actions = {}) {
         }
       }
       if (events[path]) {
-        events[path].forEach(listener =>
-          listener(Maybe.of(_store.getState(path).getOrElse(payload)))
-        );
+        events[path].forEach(listener => {
+          listener(Maybe.of(_store.getState(path).getOrElse(payload)));
+        });
       }
       // if current update a parent prop,all it's child props listener should be called
       let childs = _store._findAction(path);

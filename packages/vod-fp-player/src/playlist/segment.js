@@ -99,7 +99,11 @@ function loadSegment() {
           connect(setTimeOffset)(segment.start);
         }
         dispatch(ACTION.PROCESS, PROCESS.MUXING);
-        connect(toMux)(buffer, segment.id);
+        connect(toMux)(
+          buffer,
+          segment.id,
+          getState(ACTION.PLAYLIST.FIND_KEY_INFO).value()
+        );
         lastSegment = segment;
       })
       .filterRetry(e => !e.is(XHR_ERROR.ABORT))

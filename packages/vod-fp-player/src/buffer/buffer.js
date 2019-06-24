@@ -23,7 +23,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
     map(x => {
       if (x === true) {
         // video audio all append
-        connect(afterAppended);
+        connect(afterAppended)(true);
       } else {
         dispatch(me, true);
       }
@@ -31,10 +31,28 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   };
   sb.addEventListener('updateend', function(_) {
     if (type === 'video') {
-      _waitFinished(ACTION.BUFFER.AUDIO_APPENDED, ACTION.BUFFER.VIDEO_APPENDED);
+      getState(ACTION.BUFFER.VIDEO_BUFFER).map(x => {
+        if (x.combine) {
+          _waitFinished(
+            ACTION.BUFFER.AUDIO_APPENDED,
+            ACTION.BUFFER.VIDEO_APPENDED
+          );
+        } else {
+          connect(afterAppended)(false);
+        }
+      });
     }
     if (type === 'audio') {
-      _waitFinished(ACTION.BUFFER.VIDEO_APPENDED, ACTION.BUFFER.AUDIO_APPENDED);
+      getState(ACTION.BUFFER.VIDEO_BUFFER).map(x => {
+        if (x.combine) {
+          _waitFinished(
+            ACTION.BUFFER.VIDEO_APPENDED,
+            ACTION.BUFFER.AUDIO_APPENDED
+          );
+        } else {
+          connect(afterAppended)(false);
+        }
+      });
     }
   });
   sb.addEventListener('error', e => {
@@ -46,22 +64,43 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   return sb;
 }
 
-function afterAppended({ getState, dispatch, connect }) {
+function afterAppended({ getState, dispatch, connect }, combine) {
   dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDED);
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
+
+  let segBound;
+  if (!combine) {
+    segBound = getState(ACTION.BUFFER.VIDEO_BUFFER).getOrElse(() => {
+      return getState(ACTION.BUFFER.AUDIO_BUFFER).value();
+    });
+  } else {
+    Maybe.of(
+      curry((videoBufferInfo, audioBufferInfo) => {
+        let startPTS = Math.min(
+          videoBufferInfo.startPTS,
+          audioBufferInfo.startPTS
+        );
+        let endPTS = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
+        segBound = {
+          startPTS,
+          endPTS
+        };
+      })
+    )
+      .ap(getState(ACTION.BUFFER.VIDEO_BUFFER))
+      .ap(getState(ACTION.BUFFER.AUDIO_BUFFER));
+  }
+
   Maybe.of(
-    curry((segments, currentId, videoBufferInfo, audioBufferInfo, media) => {
-      let start = Math.min(videoBufferInfo.startPTS, audioBufferInfo.startPTS);
-      start = parseFloat((start / 90000).toFixed(6));
-      let end = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
-      end = parseFloat((end / 90000).toFixed(6));
+    curry((segments, currentId, media) => {
+      let start = parseFloat((segBound.startPTS / 90000).toFixed(6));
+      let end = parseFloat((segBound.endPTS / 90000).toFixed(6));
       segments[currentId].start = start;
       segments[currentId].end = end;
       segments[currentId].duration = end - start;
 
       connect(checkManualSeek)(start);
-
       logger.log(
         'new buffer:',
         [start, end],
@@ -75,15 +114,13 @@ function afterAppended({ getState, dispatch, connect }) {
         );
       }
       //清除无用元素
-      dispatch(ACTION.BUFFER.VIDEO_BUFFER, null);
-      dispatch(ACTION.BUFFER.AUDIO_BUFFER, null);
+      dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
+      dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
       dispatch(ACTION.PROCESS, PROCESS.IDLE);
     })
   )
     .ap(getState(ACTION.PLAYLIST.SEGMENTS))
     .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
-    .ap(getState(ACTION.BUFFER.VIDEO_BUFFER))
-    .ap(getState(ACTION.BUFFER.AUDIO_BUFFER))
     .ap(getState(ACTION.MEDIA.MEDIA_ELE));
 }
 afterAppended = curry(afterAppended);

@@ -36,9 +36,9 @@ function setTimeOffset({ getState }, offset) {
   });
 }
 
-function toMux({ getState }, buffer, id) {
+function toMux({ getState }, buffer, sequeueNum, keyInfo) {
   getState(ACTION.MUX).map(mux => {
-    mux.push(buffer, id);
+    mux.push(buffer, sequeueNum, keyInfo);
     mux.flush();
   });
 }

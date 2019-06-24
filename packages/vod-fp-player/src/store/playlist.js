@@ -8,8 +8,10 @@ const ACTION = {
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
   FIND_LEVEL: 'findLevel',
-  CURRENT_MEDIA: 'currentMedia',
+  FIND_MEDIA: 'findMedia',
+  FIND_KEY_INFO: 'findKeyInfo',
   UPDATE_MEDIA: 'updateMedia',
+  UPDATE_KEY: 'updateKey',
   SEGMENTS: 'segments',
   CURRENT_SEGMENT: 'currentSegment',
   DURATION: 'duration',
@@ -19,10 +21,14 @@ const ACTION = {
 
 function getCurrentLevel(state) {
   let currentLevelId = state.map(prop('currentLevelId')).join();
+  return getLevelById(state, currentLevelId);
+}
+
+function getLevelById(state, id) {
   return map(
     compose(
       head,
-      filter(x => x.levelId === currentLevelId),
+      filter(x => x.levelId === id),
       prop('levels'),
       prop('pl')
     )
@@ -64,11 +70,29 @@ const state = {
     currentLevel(state) {
       return getCurrentLevel(state);
     },
-    currentMedia(state, payload) {
+    findLevel(state, payload) {
+      return map(
+        compose(
+          head,
+          filter(x => x.levelId === payload),
+          prop('levels'),
+          prop('pl')
+        )
+      )(state);
+    },
+    findMedia(state, payload) {
       if (payload) {
         return compose(
           map(findMedia(state, 'AUDIO')),
           map(prop('audio'))
+        )(getLevelById(state, payload));
+      }
+    },
+    findKeyInfo(state, payload) {
+      if (!payload) {
+        return compose(
+          map(prop('key')),
+          map(prop('detail'))
         )(getCurrentLevel(state));
       }
     },
@@ -92,27 +116,27 @@ const state = {
     },
     updateMedia(state, payload) {
       if (payload) {
-        let level = getCurrentLevel(state);
-        let levelId = level.join().levelId;
+        let { levelId, detail } = payload;
         compose(
           map(x => {
-            x.detail = payload;
+            x.detail = detail;
             x.detail.segments.forEach(seg => (seg.levelId = levelId));
           }),
           map(findMedia(state, 'AUDIO')),
           map(prop('audio'))
-        )(level);
+        )(getLevelById(state, levelId));
       }
     },
-    findLevel(state, payload) {
-      return map(
-        compose(
-          head,
-          filter(x => x.levelId === payload),
-          prop('levels'),
-          prop('pl')
-        )
-      )(state);
+    updateKey(state, payload) {
+      let { levelId, key } = payload;
+      let level = getLevelById(state, levelId);
+      compose(
+        map(x => {
+          x.key = key;
+        }),
+        map(prop('key')),
+        map(prop('detail'))
+      )(level);
     },
     segments(state) {
       return compose(

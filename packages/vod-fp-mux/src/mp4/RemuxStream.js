@@ -18,7 +18,8 @@ export default class RemuxStream extends PipeLine {
   push(track) {
     if (!track) return;
     if (track.type === 'metadata') {
-      this.trackLen = Object.keys(track.data).length;
+      this.trackLen = Object.values(track.data).filter(x => x !== -1).length;
+      this.emit('data', track);
       return;
     }
     this.incomeTrackLen += 1;
@@ -32,8 +33,7 @@ export default class RemuxStream extends PipeLine {
       const { audioTrack, videoTrack } = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;
-      if (!videoTrack) return;
-      if (videoTrack.samples.length) {
+      if (videoTrack && audioTrack) {
         let firstVideoSampleDts = videoTrack.samples[0].dts;
         let audiovideoDeltaDts =
           (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
@@ -55,6 +55,12 @@ export default class RemuxStream extends PipeLine {
           videoTimeOffset,
           audiovideoDeltaDts
         );
+        this.emit('data', {
+          videoTimeOffset,
+          audioTimeOffset,
+          contiguous: this.timeOffset === undefined
+        });
+      } else if (videoTrack || audioTrack) {
         this.emit('data', {
           audioTimeOffset,
           videoTimeOffset,

@@ -10,6 +10,7 @@ const TIME_SCALE = 90000;
 export default class AudioFragmentStream extends PipeLine {
   constructor() {
     super();
+    this.combine = false;
     this.nextAacDts = 0;
     this.initDTS = 0;
     this.initSegmentGenerate = false;
@@ -23,6 +24,9 @@ export default class AudioFragmentStream extends PipeLine {
   }
 
   push(data) {
+    if (data.type === 'metadata') {
+      this.combine = Object.values(data.data).filter(x => x !== -1).length == 2;
+    }
     if (data.type === 'audio') {
       this.aacTrack = data;
       if (!this.initSegmentGenerate) {
@@ -30,7 +34,7 @@ export default class AudioFragmentStream extends PipeLine {
         this.initSegment = MP4.initSegment([data]);
       }
     }
-    if (data.audioTimeOffset !== undefined) {
+    if (this.aacTrack && data.audioTimeOffset !== undefined) {
       this.aacTrack['sequenceNumber'] = this.sequenceNumber;
       this.remuxAudio(this.aacTrack, data.audioTimeOffset, data.contiguous);
     }
@@ -233,6 +237,7 @@ export default class AudioFragmentStream extends PipeLine {
       bf.set(moof, this.initSegment.byteLength);
       bf.set(mdat, this.initSegment.byteLength + moof.byteLength);
       this.emit('data', {
+        combine: this.combine,
         type: 'audio',
         buffer: bf,
         startPTS: firstPTS,

@@ -51,10 +51,13 @@ const keyFormat = key => {
   );
 };
 
-const combinePair = args => {
+const combinePair = curry((baseUrl, args) => {
   let [key, value] = args;
   if (key === 'discontinuity') {
     return { discontinuity: true };
+  }
+  if (key === 'uri' || key === 'url') {
+    return { [key]: getUrl(baseUrl, value).url };
   }
   if (!value) return {};
   if (value.length === 1) {
@@ -62,7 +65,7 @@ const combinePair = args => {
     value = isNaN(value) ? value : Number(value);
   }
   return { [key]: value };
-};
+});
 
 const combineObjs = list => {
   let specialAttrs = list.every(x => typeof x !== 'object');
@@ -72,33 +75,34 @@ const combineObjs = list => {
   return list;
 };
 
-const extractAttrs = attrs => {
+const extractAttrs = curry((baseUrl, attrs) => {
   const extractAttr = compose(
     ifElse(
       x => x.length === 1,
       head, //eg: EXTINF:duration
       compose(
-        combinePair,
+        combinePair(baseUrl),
         splitMap(keyFormat, identity)
       ) // eg: EXT-X-MEDIA:TYPE=AUDIO,URI="XXXX"
     ),
     splitOnceByEq
   );
-
   return compose(
     combineObjs,
     map(extractAttr),
     filterEmpty,
     splitByComma
   )(attrs);
-};
+});
 
-const extractTag = compose(
-  combinePair,
-  splitMap(keyFormat, extractAttrs),
-  splitOnceByColon,
-  tail
-);
+const extractTag = curry((baseUrl, tag) => {
+  return compose(
+    combinePair(baseUrl),
+    splitMap(keyFormat, extractAttrs(baseUrl)),
+    splitOnceByColon,
+    tail
+  )(tag);
+});
 
 const getUrl = curry((baseUrl, url) => {
   if (!/^https?/.test(url)) {
@@ -116,7 +120,7 @@ const fullfillM3u8 = curry((a, fn, b) => fn(a, b));
 const structureM3u8 = curry((baseUrl, m3u8) => {
   const getUrlWithBase = getUrl(baseUrl);
   return compose(
-    map(ifElse(isTag, extractTag, getUrlWithBase)),
+    map(ifElse(isTag, extractTag(baseUrl), getUrlWithBase)),
     tail,
     filter(Boolean),
     splitLines
