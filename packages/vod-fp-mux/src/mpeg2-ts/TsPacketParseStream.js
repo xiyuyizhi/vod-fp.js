@@ -1,5 +1,5 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
-
+import { NOT_FOUNT_PMT } from '../error';
 let logger = new Logger('mux');
 
 export default class TsPacketParseStream extends PipeLine {
@@ -59,6 +59,11 @@ export default class TsPacketParseStream extends PipeLine {
     return Math.min(adaptationLength, 188 - 5);
   }
 
+  _equalPmtId(pid, pmtId) {
+    if (pid === pmtId) return true;
+    if (pid % 256 && pid % 256 === pmtId % 256) return true;
+  }
+
   parsePayload(payload, offset, header = {}) {
     /**
      * https://en.wikipedia.org/wiki/Program-specific_information
@@ -84,7 +89,7 @@ export default class TsPacketParseStream extends PipeLine {
       this.pmtId = this.parsePAT(payload, offset);
       return;
     }
-    if (header.pid === this.pmtId) {
+    if (this._equalPmtId(header.pid, this.pmtId)) {
       offset += 1 + payload[offset]; // table start position
       this.streamInfo = this.parsePMT(payload, offset);
       logger.warn('parse PMT', this.streamInfo);
@@ -120,7 +125,7 @@ export default class TsPacketParseStream extends PipeLine {
 
   parsePAT(payload, offset) {
     const pNum = (payload[offset + 8] << 8) | payload[offset + 9];
-    const pmtId = ((payload[offset + 10] & 0x1f) << 8) | payload[offset + 11];
+    let pmtId = ((payload[offset + 10] & 0x1f) << 8) | payload[offset + 11];
     logger.log('program number: ' + pNum, ',pmtId: ' + pmtId);
     return pmtId;
   }
@@ -165,9 +170,20 @@ export default class TsPacketParseStream extends PipeLine {
         case 0x0f:
           result.audioId = ePid;
           break;
+        case 0x03:
+        case 0x04:
+          logger.warn('mp3 audio found,not support yet');
+          break;
         default:
       }
     }
     return result;
+  }
+
+  flush() {
+    if (!this.streamInfo) {
+      this.emit('error', NOT_FOUNT_PMT);
+    }
+    this.emit('done');
   }
 }

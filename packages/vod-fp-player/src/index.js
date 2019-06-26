@@ -1,6 +1,6 @@
 import { EventBus } from 'vod-fp-utility';
 import Events from './events';
-import { createStore, getInitState, ACTION } from './store';
+import { createStore, getState, ACTION } from './store';
 import { manage, changeLevel } from './manage';
 
 export default class Vod extends EventBus {
@@ -8,7 +8,7 @@ export default class Vod extends EventBus {
     super();
     this.media = null;
     this.url = '';
-    let initState = getInitState();
+    let initState = getState();
     initState.config = Object.assign(initState.config, options);
     this.store = createStore(initState, ACTION);
     this._changeLevel = changeLevel();

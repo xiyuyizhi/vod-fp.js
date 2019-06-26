@@ -14,25 +14,27 @@ export default {
     VIDEO_BUFFER_REMOVE: 'videoBufferRemove',
     AUDIO_BUFFER_REMOVE: 'audioBufferRemove'
   },
-  state: {
-    audioSourceBuffer: null,
-    videoSourceBuffer: null,
-    audioBuffer: null,
-    videoBuffer: null,
-    audioAppended: false,
-    videoAppended: false,
-    derive: {
-      videoBufferRemove: state => {
-        return state.map(x => {
-          x.videoBuffer = null;
-          return x;
-        });
-      },
-      audioBufferRemove: state => {
-        return state.map(x => {
-          x.audioBuffer = null;
-          return x;
-        });
+  getState() {
+    return {
+      audioSourceBuffer: null,
+      videoSourceBuffer: null,
+      audioBuffer: null,
+      videoBuffer: null,
+      audioAppended: false,
+      videoAppended: false,
+      derive: {
+        videoBufferRemove: state => {
+          return state.map(x => {
+            x.videoBuffer = null;
+            return x;
+          });
+        },
+        audioBufferRemove: state => {
+          return state.map(x => {
+            x.audioBuffer = null;
+            return x;
+          });
+        }
       }
     }
   }

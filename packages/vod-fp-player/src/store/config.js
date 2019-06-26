@@ -24,4 +24,4 @@ const state = {
   requestRetryDelay: 800
 };
 
-export default { module: 'CONFIG', ACTION, state };
+export default { module: 'CONFIG', ACTION, getState() { return state } };

@@ -8,8 +8,10 @@ export default {
     MEDIA_ELE: 'mediaEle',
     MEDIA_SOURCE: 'mediaSource'
   },
-  state: {
-    mediaEle: null,
-    mediaSource: null
+  getState() {
+    return {
+      mediaEle: null,
+      mediaSource: null
+    }
   }
 };

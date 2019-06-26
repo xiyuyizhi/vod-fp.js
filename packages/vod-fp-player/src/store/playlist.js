@@ -98,21 +98,19 @@ const state = {
     },
     updateLevel(state, payload) {
       let { levelId, detail } = payload;
-      map(
+      return state.map(x => {
         compose(
-          detail => {
-            detail.segments.forEach(seg => (seg.levelId = levelId));
-          },
           level => {
+            detail.segments.forEach(seg => (seg.levelId = levelId));
             level.detail = detail;
-            return detail;
           },
           head,
           filter(x => x.levelId === levelId),
           prop('levels'),
           prop('pl')
-        )
-      )(state);
+        )(x)
+        return x
+      });
     },
     updateMedia(state, payload) {
       if (payload) {
@@ -182,4 +180,4 @@ const state = {
   }
 };
 
-export default { module: 'PLAYLIST', ACTION, state };
+export default { module: 'PLAYLIST', ACTION, getState() { return state } };

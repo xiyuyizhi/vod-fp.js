@@ -6,7 +6,5 @@ export default class MetaDataStream extends PipeLine {
       this.emit('data', data);
     }
   }
-  // flush() {
 
-  // }
 }

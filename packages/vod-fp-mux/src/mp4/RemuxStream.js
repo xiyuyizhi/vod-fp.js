@@ -1,5 +1,5 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
-
+import { NOT_FOUNT_IDR_FRAME } from "../error"
 let logger = new Logger('mux');
 
 export default class RemuxStream extends PipeLine {
@@ -28,6 +28,10 @@ export default class RemuxStream extends PipeLine {
   }
 
   flush() {
+    if (!this.audioTrack && !this.videoTrack) {
+      this.emit('done');
+      return;
+    }
     if (this.incomeTrackLen === this.trackLen) {
       this.incomeTrackLen = 0;
       const { audioTrack, videoTrack } = this;
@@ -68,7 +72,7 @@ export default class RemuxStream extends PipeLine {
         });
       } else {
         logger.warn('不存在采样,应该是缺少IDR帧');
-        this.emit('error', new Error('NOT_FOUNT_IDR'));
+        this.emit('error', NOT_FOUNT_IDR_FRAME);
       }
       this.emit('done');
       this.timeOffset = undefined;

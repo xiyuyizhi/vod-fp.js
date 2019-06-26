@@ -1,8 +1,8 @@
 import { Logger } from 'vod-fp-utility';
 import Vod from '../src';
 
-// Logger.use(['base', 'mux', 'player']);
-Logger.use(['base', 'player']);
+Logger.use(['base', 'mux', 'player']);
+// Logger.use(['base', 'player']);
 
 console.log('%c player start', 'background: #222; color: #bada55');
 
@@ -11,6 +11,12 @@ const vod = new Vod({
 });
 vod.attachMedia(document.querySelector('video'));
 
+document.addEventListener('keyup', e => {
+  if (e.keyCode === 38) {
+    document.querySelector('video').currentTime += 2;
+  }
+});
+
 let url;
 
 if (location.search) {
@@ -18,9 +24,9 @@ if (location.search) {
   url = url.replace('?url=', '');
 }
 vod.loadSource(
-  'http://localhost:8880/8/index.m3u8'
+  // 'http://localhost:8880/11/index.m3u8'
   // 'http://localhost:8880/8/fmp4.m3u8'
-  // url
+  url
 );
 vod.on(Vod.Events.ERROR, e => {
   console.log(e);

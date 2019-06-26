@@ -23,10 +23,11 @@ function combineActions(...actions) {
 function combineStates(...states) {
   return states.reduce(
     (all, c) => {
-      let { module, state } = c;
+      let { module, getState } = c;
       if (!module) {
-        return { ...all, ...c };
+        return { ...all, ...getState() };
       }
+      let state = getState();
       let currentDerive = state.derive;
       module = module.toLowerCase();
       let derive = {
@@ -58,6 +59,7 @@ function createStore(initState, actions = {}) {
     all: []
   };
   const _store = {
+    ACTION: actions,
     id: storeId++,
     _findAction(path) {
       path = path.split('.');

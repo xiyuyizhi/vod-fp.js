@@ -144,11 +144,11 @@ let initState = {
   }
 };
 
+
 ACTION = combineActions(ACTION, config, playlist, media, buffer);
 
-function getInitState() {
-  return combineStates(initState, config, playlist, media, buffer);
+function getState() {
+  return combineStates({ getState: () => initState }, config, playlist, media, buffer);
 }
-console.log('....', ACTION);
 
-export { createStore, getInitState, ACTION, PROCESS };
+export { createStore, getState, ACTION, PROCESS };

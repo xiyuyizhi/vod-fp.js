@@ -137,7 +137,6 @@ const compositionMaster = list => {
   const fullfillLevels = fullfillMaster((result, item) => {
     if (item.streamInf) {
       result.levels.push({
-        levelId: result.levels.length + 1,
         ...item.streamInf
       });
     }
@@ -192,7 +191,10 @@ const compositionMaster = list => {
       fullfillLevels
     )
   )(list);
-
+  result.levels.sort((a, b) => parseFloat(a.bandwidth) > parseFloat(b.bandwidth) ? 1 : -1)
+  result.levels.forEach((x, index) => {
+    x.levelId = index + 1;
+  })
   return result;
 };
 

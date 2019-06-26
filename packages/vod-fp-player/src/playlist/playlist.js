@@ -96,6 +96,7 @@ function _updateLevelAndMediaAndKey({ connect }, level) {
   let _loadLevelDetail = l => {
     return emptyToResolve(
       compose(
+        map(connect(_checkloadDecryptKey)),
         map(connect(_updateLevel)(l)),
         map(trace('log: load level detail,')),
         chain(connect(_loadResource)('LEVEL')),
@@ -105,10 +106,9 @@ function _updateLevelAndMediaAndKey({ connect }, level) {
     );
   };
   return level.chain(() => {
-    return Task.resolve(curry((level, mediaDetail, key) => level))
+    return Task.resolve(curry((level, mediaDetail) => level))
       .ap(_loadLevelDetail(level))
       .ap(_loadMediaDetail(matchedMedia))
-      .ap(connect(_checkloadDecryptKey)(level));
   });
 }
 

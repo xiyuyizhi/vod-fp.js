@@ -2,6 +2,12 @@ class Logger {
   constructor(module) {
     this._module = module;
     this.setUp();
+    let debug = document.cookie.split(';').map(x => x.replace(/\s+/, '')).filter(x => x.indexOf('debug') !== -1)[0]
+    if (debug) {
+      try {
+        Logger.usedModules = debug.split('=')[1].split(',')
+      } catch{ }
+    }
   }
 
   static use(modules) {
