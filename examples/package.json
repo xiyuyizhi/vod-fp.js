@@ -46,5 +46,6 @@
     "ignore": [
       "**/build/**.js"
     ]
-  }
+  },
+  "homepage": "https://xiyuyizhi.github.io/vod-fp.js/"
 }
