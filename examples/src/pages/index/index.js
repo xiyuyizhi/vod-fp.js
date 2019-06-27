@@ -1,7 +1,7 @@
-import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
-import routes from "./routes";
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import routes, { Player } from './routes';
 
-import "./index.less"
+import './index.less';
 
 ReactDOM.render(
   <Router>
@@ -15,11 +15,12 @@ ReactDOM.render(
           component={route.component}
         />
       ))}
+      <Route component={Player} />
     </Switch>
   </Router>,
-  document.getElementById("root"),
+  document.getElementById('root')
 );
 
 if (module.hot) {
-  module.hot.accept(() => { });
+  module.hot.accept(() => {});
 }

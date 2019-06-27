@@ -1,6 +1,7 @@
 const ACTION = {
-  TICK_INTERVAL: 'tickInterval',
   MAX_BUFFER_LENGTH: 'maxBufferLength',
+  START_POSITION: 'startPosition',
+  TICK_INTERVAL: 'tickInterval',
   MAX_FRGA_LOOKUP_TOLERANCE: 'maxFragLookUpTolerance',
   MAX_BUFFER_HOLE: 'maxBufferHole',
   END_STREAM_TOLERANCE: 'endStreamTolerance',
@@ -12,8 +13,9 @@ const ACTION = {
 };
 
 const state = {
-  tickInterval: 200,
   maxBufferLength: 60,
+  startPosition: 0,
+  tickInterval: 200,
   maxTimeout: 20 * 1000,
   manualSeek: 0.08,
   maxFragLookUpTolerance: 0.2,

@@ -48,107 +48,109 @@ let ACTION = {
  * 对状态的操作定义只能声明在state.derive中！！。
  * 各个模块需要接触state的function都必须是curry化的！！,第一个参数必须是_store对象。
  */
-let initState = {
-  error: null,
-  errorCount: 0,
-  m3u8Url: '',
-  mux: null,
-  mainLoop: null,
-  abortAble: [],
-  timeStamp: performance.now(),
-  process: PROCESS.IDLE,
-  // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
-  derive: {
-    innerError(state, payload, dispatch) {
-      if (payload) {
-        logger.log('Error log:', payload);
-        function _handleError(s) {
-          if (s.errorCount >= 3 || s.error.value().fatal === true) {
-            logger.log('error occur many times.....,emit error out');
-            s.errorCount = 0;
-            s.error.fatal(true);
-            dispatch(ACTION.EVENTS.ERROR, s.error.value());
-            dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-          } else {
-            // 可恢复、继续运行
-            dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
-            dispatch(ACTION.PROCESS, PROCESS.IDLE);
-          }
-          return s;
-        }
-
-        return compose(
-          map(_handleError),
-          map(x => {
-            x.error = payload;
-            x.errorCount += 1;
-            return x;
-          })
-        )(state);
-      }
-    },
-    process(state, payload, dispatch) {
-      if (payload) {
-        // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-        const { timeStamp, process } = state.value();
-        let ts = (performance.now() - timeStamp).toFixed(2);
-        logger.log(`PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`);
-        return compose(
-          map(s => {
-            if (s.process === PROCESS.BUFFER_APPENDED) {
+function getGlobalState() {
+  return {
+    error: null,
+    errorCount: 0,
+    m3u8Url: '',
+    mux: null,
+    mainLoop: null,
+    abortAble: [],
+    timeStamp: performance.now(),
+    process: PROCESS.IDLE,
+    // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
+    derive: {
+      innerError(state, payload, dispatch) {
+        if (payload) {
+          logger.log('Error log:', payload);
+          function _handleError(s) {
+            if (s.errorCount >= 3 || s.error.value().fatal === true) {
+              logger.log('error occur many times.....,emit error out');
               s.errorCount = 0;
+              s.error.fatal(true);
+              dispatch(ACTION.EVENTS.ERROR, s.error.value());
+              dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+            } else {
+              // 可恢复、继续运行
+              dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
+              dispatch(ACTION.PROCESS, PROCESS.IDLE);
             }
             return s;
-          }),
-          map(x => {
-            x.timeStamp = performance.now();
-            x.process = payload;
-            return x;
-          })
-        )(state);
-      }
-      return map(prop('process'))(state);
-    },
-    abortAble(state, payload) {
-      if (!payload) {
-        return map(prop('abortAble'))(state);
-      }
-      return map(x => {
-        x.abortAble = x.abortAble.concat([payload]);
-        return x;
-      })(state);
-    },
-    removeAbortAble(state, payload) {
-      if (payload !== undefined) {
+          }
+
+          return compose(
+            map(_handleError),
+            map(x => {
+              x.error = payload;
+              x.errorCount += 1;
+              return x;
+            })
+          )(state);
+        }
+      },
+      process(state, payload, dispatch) {
+        if (payload) {
+          // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+          const { timeStamp, process } = state.value();
+          let ts = (performance.now() - timeStamp).toFixed(2);
+          logger.log(`PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`);
+          return compose(
+            map(s => {
+              if (s.process === PROCESS.BUFFER_APPENDED) {
+                s.errorCount = 0;
+              }
+              return s;
+            }),
+            map(x => {
+              x.timeStamp = performance.now();
+              x.process = payload;
+              return x;
+            })
+          )(state);
+        }
+        return map(prop('process'))(state);
+      },
+      abortAble(state, payload) {
+        if (!payload) {
+          return map(prop('abortAble'))(state);
+        }
         return map(x => {
-          x.abortAble = x.abortAble.filter(x => x.id !== payload);
+          x.abortAble = x.abortAble.concat([payload]);
           return x;
         })(state);
-      }
-    },
-    mainLoopHandle(state, payload) {
-      if (payload === 'stop') {
-        logger.log('timer stoped');
-        compose(
-          map(tick => tick.stop()),
-          map(prop('mainLoop'))
-        )(state);
-      }
-      if (payload === 'resume') {
-        compose(
-          map(tick => tick.immediate()),
-          map(prop('mainLoop'))
-        )(state);
+      },
+      removeAbortAble(state, payload) {
+        if (payload !== undefined) {
+          return map(x => {
+            x.abortAble = x.abortAble.filter(x => x.id !== payload);
+            return x;
+          })(state);
+        }
+      },
+      mainLoopHandle(state, payload) {
+        if (payload === 'stop') {
+          logger.log('timer stoped');
+          compose(
+            map(tick => tick.stop()),
+            map(prop('mainLoop'))
+          )(state);
+        }
+        if (payload === 'resume') {
+          compose(
+            map(tick => tick.immediate()),
+            map(prop('mainLoop'))
+          )(state);
+        }
       }
     }
-  }
-};
+  };
+}
 
 
 ACTION = combineActions(ACTION, config, playlist, media, buffer);
 
 function getState() {
-  return combineStates({ getState: () => initState }, config, playlist, media, buffer);
+  return combineStates({ getState: getGlobalState }, config, playlist, media, buffer);
 }
 
 export { createStore, getState, ACTION, PROCESS };

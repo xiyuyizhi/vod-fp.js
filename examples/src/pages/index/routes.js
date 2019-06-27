@@ -1,10 +1,11 @@
-import Player from "modules/player";
+import Player from 'modules/player';
 
 export default [
   {
-    path: "/",
+    path: '/',
     exact: true,
-    component: Player,
-  },
-
+    component: Player
+  }
 ];
+
+export { Player };

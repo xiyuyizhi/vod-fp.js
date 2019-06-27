@@ -7,6 +7,7 @@ import { M3U8_PARSE_ERROR } from '../error';
 
 const {
   curry,
+  prop,
   compose,
   map,
   forEach,
@@ -136,9 +137,7 @@ const compositionMaster = list => {
   const fullfillMaster = fullfillM3u8(result);
   const fullfillLevels = fullfillMaster((result, item) => {
     if (item.streamInf) {
-      result.levels.push({
-        ...item.streamInf
-      });
+      result.levels.push(item.streamInf);
     }
     return item;
   });
@@ -171,7 +170,8 @@ const compositionMaster = list => {
 
   const fullfillLevelUrl = fullfillMaster((result, item) => {
     if (item.url) {
-      result.levels[result.levels.length - 1].url = item.url;
+      let len = result.levels.length;
+      result.levels[len - 1].url = item.url;
     }
     return item;
   });
@@ -203,7 +203,6 @@ const compositionLevel = curry(list => {
     type: 'level',
     segments: [],
     duration: 0
-    // levelId: 1
   };
   let lastCC = 0;
   const fullfillLevel = fullfillM3u8(level);

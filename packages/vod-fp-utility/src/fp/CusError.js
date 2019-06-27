@@ -1,7 +1,7 @@
 import Base from './Base';
 
-Error.prototype.is = () => {};
-Error.prototype.getOrElse = () => {};
+Error.prototype.is = () => { };
+Error.prototype.getOrElse = () => { };
 
 export default class CusError {
   constructor(value) {
@@ -11,7 +11,7 @@ export default class CusError {
         fatal: true,
         type: value.constructor.name,
         message: value.message + ',' + value.stack.slice(0, 120),
-        origin: true // 非自定义错误
+        originType: value.constructor.name // 非自定义错误
       };
     } else {
       this._value = value;
@@ -22,10 +22,8 @@ export default class CusError {
     return new CusError(value);
   }
 
-  translate(another) {}
-
   getOrElse(e) {
-    if (!this._value.origin) return this;
+    if (!this._value.originType) return this;
     return this._merge(e);
   }
 

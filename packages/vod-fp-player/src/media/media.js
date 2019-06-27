@@ -93,10 +93,21 @@ function createMediaSource({ connect, dispatch, subscribe }, media) {
   return Task.reject(CusError.of(SUPPORT_ERROR.NOT_SUPPORT_MSE));
 }
 
+function destroyMediaSource({ getState, dispatch }) {
+  getState(ACTION.MEDIA.MEDIA_ELE).map(media => {
+    URL.revokeObjectURL(media.src);
+    media.removeAttribute('src')
+    media.load()
+    dispatch(ACTION.MEDIA.MEDIA_SOURCE, null)
+  })
+}
+
 function updateMediaDuration({ getState }) {
   Maybe.of(
     F.curry((ms, duration) => {
-      ms.duration = duration;
+      if (ms.readyState === 'open') {
+        ms.duration = duration;
+      }
     })
   )
     .ap(getState(ACTION.MEDIA.MEDIA_SOURCE))
@@ -108,7 +119,7 @@ function checkManualSeek({ getConfig, getState }, start) {
     if (
       media.seeking &&
       Math.abs(start - media.currentTime) <
-        getConfig(ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE)
+      getConfig(ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
@@ -118,6 +129,7 @@ function checkManualSeek({ getConfig, getState }, start) {
 
 _bindMediaEvent = curry(_bindMediaEvent);
 createMediaSource = curry(createMediaSource);
+destroyMediaSource = curry(destroyMediaSource);
 updateMediaDuration = curry(updateMediaDuration);
 checkManualSeek = curry(checkManualSeek);
-export { createMediaSource, updateMediaDuration, checkManualSeek };
+export { createMediaSource, destroyMediaSource, updateMediaDuration, checkManualSeek };

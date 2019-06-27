@@ -72,6 +72,7 @@ function createStore(initState, actions = {}) {
       return fn(_store);
     },
     dispatch: (path, payload) => {
+      if (!state) return;
       let props = path.split('.');
       let prop = props[0];
       let currentState = null;
@@ -148,6 +149,7 @@ function createStore(initState, actions = {}) {
       };
     },
     getState: (path, payload) => {
+      if (!state) return Maybe.of();
       if (!path) return Maybe.of(state);
       if (typeof path !== 'string') {
         throw new Error('invalid path');
@@ -171,6 +173,7 @@ function createStore(initState, actions = {}) {
       }
     },
     getConfig: path => {
+      if (!state) return;
       if (!state.config) {
         throw new Error('config not exist in state');
       }
@@ -178,6 +181,11 @@ function createStore(initState, actions = {}) {
       let props = path.split('.');
       let prop = props[1];
       return state.config && state.config[prop];
+    },
+    destroy() {
+      events = {
+        all: []
+      }
     }
   };
   return _store;

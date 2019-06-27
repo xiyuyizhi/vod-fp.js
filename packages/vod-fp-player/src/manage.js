@@ -1,13 +1,15 @@
-import { Task, F } from 'vod-fp-utility';
+import { Task, F, Logger } from 'vod-fp-utility';
 import { ACTION, PROCESS } from './store';
-import { createMediaSource } from './media/media';
+import { createMediaSource, destroyMediaSource } from './media/media';
 import { loadPlaylist, changePlaylistLevel } from './playlist/playlist';
 import { startTick } from './tick/tick';
 import {
   abortCurrentSegment,
   findSegmentOfCurrentPosition
 } from './playlist/segment';
-import { flushBuffer } from './buffer/buffer';
+import { flushBuffer, abortBuffer } from './buffer/buffer';
+
+let logger = new Logger('player')
 
 function manage({ dispatch, connect }, media, url) {
   Task.resolve(connect(startTick))
@@ -28,7 +30,7 @@ function changeLevel() {
       unSubChangedError();
     }
     unSubChanged = subscribe(ACTION.EVENTS.LEVEL_CHANGED, levelId => {
-      console.log('level changed to ', levelId);
+      logger.log('level changed to ', levelId);
       unSubChanged();
       unSubChangedError();
       let flushStart = connect(findSegmentOfCurrentPosition)
@@ -46,13 +48,21 @@ function changeLevel() {
       unSubChanged();
       dispatch(ACTION.PROCESS, PROCESS.IDLE);
     });
-
     dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGING);
     connect(abortCurrentSegment);
     connect(changePlaylistLevel)(levelId);
   });
 }
 
-manage = F.curry(manage);
 
-export { manage, changeLevel };
+function destroy({ connect, dispatch }) {
+  logger.log('destroy...')
+  connect(abortCurrentSegment);
+  connect(abortBuffer);
+  connect(destroyMediaSource);
+  dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+}
+
+manage = F.curry(manage);
+destroy = F.curry(destroy)
+export { manage, changeLevel, destroy };

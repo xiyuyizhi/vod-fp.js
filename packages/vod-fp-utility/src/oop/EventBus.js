@@ -32,6 +32,12 @@ export default class EventBus {
     return this;
   }
 
+  offAllEvents() {
+    Object.keys(this.events).forEach(eveName => {
+      this.events[eveName] = [];
+    })
+  }
+
   off(eventName, handler) {
     if (!eventName) return;
     if (!handler) {

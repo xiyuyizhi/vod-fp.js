@@ -2,7 +2,7 @@ import Base from './Base';
 import { curry } from './core';
 import { Just, Empty } from './Maybe';
 import CusError from './CusError';
-class Either extends Base {}
+class Either extends Base { }
 
 class Fail extends Either {
   static of(value) {
@@ -62,7 +62,7 @@ const either = curry((fn1, fn2, e) => {
 
 const eitherToMaybe = either => {
   if (either.constructor === Success) {
-    return either.chain(x => Just.of(x));
+    return Just.of(either.value());
   }
   return Empty.of();
 };

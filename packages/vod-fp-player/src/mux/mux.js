@@ -8,11 +8,11 @@ function createMux({ dispatch }) {
   mux
     .on('data', data => {
       if (data.type === 'video') {
-        dispatch(ACTION.BUFFER.VIDEO_BUFFER, data);
+        dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, data);
       }
       if (data.type === 'audio') {
         dispatch(ACTION.PROCESS, PROCESS.MUXED);
-        dispatch(ACTION.BUFFER.AUDIO_BUFFER, data);
+        dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
       }
     })
     .on('error', e => {

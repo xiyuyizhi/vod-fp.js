@@ -1,7 +1,7 @@
 import { EventBus } from 'vod-fp-utility';
 import Events from './events';
 import { createStore, getState, ACTION } from './store';
-import { manage, changeLevel } from './manage';
+import { manage, changeLevel, destroy } from './manage';
 
 export default class Vod extends EventBus {
   constructor(options) {
@@ -46,4 +46,11 @@ export default class Vod extends EventBus {
       connect(manage)(this.media, this.url);
     }
   }
+
+  destroy() {
+    this.store.connect(destroy);
+    this.store.destroy();
+    this.store = null;
+  }
+
 }

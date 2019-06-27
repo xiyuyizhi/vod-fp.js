@@ -29,7 +29,7 @@ class Empty extends Maybe {
     return this;
   }
   value() {
-    return this._value || this.toString();
+    return this._value;
   }
   getOrElse(f) {
     if (typeof f === 'function') {

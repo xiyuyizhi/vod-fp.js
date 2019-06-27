@@ -9,9 +9,12 @@
   "scripts": {
     "dev": " BABEL_ENV=dev DEV=player PORT=9000 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
     "mux": " BABEL_ENV=dev DEV=mux PORT=9001 webpack-dev-server --config ./scripts/webpack.dev.js --display-error-details",
+    "demo": "cd examples && npm run start",
     "build:mux": "BABEL_ENV=dev BUILD=mux webpack --config ./scripts/webpack.product.js --display-error-details",
     "build:player": "BABEL_ENV=dev BUILD=player webpack --config ./scripts/webpack.product.js --display-error-details",
-    "build:util": "BABEL_ENV=dev BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details"
+    "build:util": "BABEL_ENV=dev BUILD=utility webpack --config ./scripts/webpack.product.js --display-error-details",
+    "build:demo": "cd examples && npm run build",
+    "build:deploy": "rm -rf docs &&  mv examples/build  docs && echo 'move to docs' "
   },
   "husky": {
     "hooks": {

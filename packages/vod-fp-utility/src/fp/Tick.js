@@ -22,6 +22,7 @@ export default class Tick {
   }
 
   run() {
+    if (this._duration === undefined) return;
     this._timer = setTimeout(() => {
       this.immediate();
     }, this._duration);
