@@ -1,6 +1,6 @@
 {
   "name": "vod-fp-utility",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "",
   "main": "lib/vod-fp-utility.min.js",
   "scripts": {
@@ -14,9 +14,9 @@
     "@babel/core": "^7.2.0",
     "@babel/preset-env": "^7.2.0",
     "@babel/register": "^7.0.0",
-    "mocha": "^6.0.2",
     "chai": "^4.2.0",
-    "chai-spies": "^1.0.0"
+    "chai-spies": "^1.0.0",
+    "mocha": "^6.0.2"
   },
   "author": "xiyuyizhi",
   "license": "ISC",
