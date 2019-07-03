@@ -11,7 +11,6 @@ import {
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { checkManualSeek } from '../media/media';
-import { bufferDump } from './buffer-helper';
 import { MEDIA_ERROR } from '../error';
 
 const { map, compose, curry, join, chain, prop, trace } = F;
@@ -29,7 +28,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function (_) {
+  sb.addEventListener('updateend', function(_) {
     if (type === 'video') {
       getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).map(x => {
         if (x.combine) {
@@ -92,35 +91,19 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
       .ap(getState(ACTION.BUFFER.AUDIO_BUFFER_INFO));
   }
 
-  Maybe.of(
-    curry((segments, currentId, media) => {
-      let start = parseFloat((segBound.startPTS / 90000).toFixed(6));
-      let end = parseFloat((segBound.endPTS / 90000).toFixed(6));
-      segments[currentId].start = start;
-      segments[currentId].end = end;
-      segments[currentId].duration = end - start;
-      connect(checkManualSeek)(start);
-      logger.log(
-        'new buffer:',
-        [start, end],
-        bufferDump(getState(ACTION.MEDIA.MEDIA_ELE))
-      );
-      let len = segments.length - 1;
-      for (let i = currentId + 1; i <= len; i++) {
-        segments[i].start = segments[i - 1].end;
-        segments[i].end = parseFloat(
-          (segments[i].start + segments[i].duration).toFixed(6)
-        );
-      }
-      //清除无用元素
-      dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
-      dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
-      dispatch(ACTION.PROCESS, PROCESS.IDLE);
-    })
-  )
-    .ap(getState(ACTION.PLAYLIST.SEGMENTS))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
-    .ap(getState(ACTION.MEDIA.MEDIA_ELE));
+  segBound = {
+    start: parseFloat((segBound.startPTS / 90000).toFixed(6)),
+    end: parseFloat((segBound.endPTS / 90000).toFixed(6))
+  };
+  connect(checkManualSeek)(segBound.start);
+  dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, {
+    segBound,
+    media: getState(ACTION.MEDIA.MEDIA_ELE)
+  });
+  //清除无用元素
+  dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
+  dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
+  dispatch(ACTION.PROCESS, PROCESS.IDLE);
 }
 
 // (Maybe,string,string)  -> Maybe
@@ -144,10 +127,9 @@ function _createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
           ACTION.ERROR,
           e.merge(CusError.of(MEDIA_ERROR.ADD_SOURCEBUFFER_ERROR))
         );
-      })
-    return eitherToMaybe(_create)
-  })
-
+      });
+    return eitherToMaybe(_create);
+  });
 }
 
 function startBuffer({ id, getState, subscribe, dispatch, connect }) {
@@ -156,9 +138,11 @@ function startBuffer({ id, getState, subscribe, dispatch, connect }) {
   // (Maybe,Maybe) -> Either
   let doAppend = (sourcebuffer, bufferInfo) => {
     sourcebuffer.map(sb => {
-      return Success.of(curry((buffer) => {
-        sb.appendBuffer(buffer);
-      }))
+      return Success.of(
+        curry(buffer => {
+          sb.appendBuffer(buffer);
+        })
+      )
         .ap(
           compose(
             maybeToEither,
@@ -173,7 +157,7 @@ function startBuffer({ id, getState, subscribe, dispatch, connect }) {
             );
           }
         });
-    })
+    });
   };
   let createSourceBuffer = connect(_createSourceBuffer);
 
@@ -183,7 +167,7 @@ function startBuffer({ id, getState, subscribe, dispatch, connect }) {
         mediaSource,
         'video',
         'video/mp4; codecs="avc1.42E01E"'
-      ).value()
+      ).value();
     });
     doAppend(Maybe.of(sb), bufferInfo);
   });
@@ -194,10 +178,10 @@ function startBuffer({ id, getState, subscribe, dispatch, connect }) {
         mediaSource,
         'audio',
         'video/mp4; codecs="mp4a.40.2"'
-      ).value()
+      ).value();
     });
-    bufferInfo.map(() => dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING))
-    doAppend(Maybe.of(sb), bufferInfo)
+    bufferInfo.map(() => dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDING));
+    doAppend(Maybe.of(sb), bufferInfo);
   });
 }
 
@@ -221,14 +205,16 @@ function flushBuffer({ getState, dispatch }, start, end) {
 }
 
 function abortBuffer({ getState, dispatch }) {
-  Maybe.of(curry((vsb, asb) => {
-    dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, null)
-    dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, null)
-    vsb.abort()
-    asb.abort()
-  }))
+  Maybe.of(
+    curry((vsb, asb) => {
+      dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, null);
+      dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, null);
+      vsb.abort();
+      asb.abort();
+    })
+  )
     .ap(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER))
-    .ap(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER))
+    .ap(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER));
 }
 
 _afterAppended = curry(_afterAppended);
@@ -237,5 +223,5 @@ _createSourceBuffer = curry(_createSourceBuffer);
 
 startBuffer = curry(startBuffer);
 flushBuffer = curry(flushBuffer);
-abortBuffer = curry(abortBuffer)
+abortBuffer = curry(abortBuffer);
 export { startBuffer, flushBuffer, abortBuffer };

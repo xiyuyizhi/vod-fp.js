@@ -96,10 +96,10 @@ function createMediaSource({ connect, dispatch, subscribe }, media) {
 function destroyMediaSource({ getState, dispatch }) {
   getState(ACTION.MEDIA.MEDIA_ELE).map(media => {
     URL.revokeObjectURL(media.src);
-    media.removeAttribute('src')
-    media.load()
-    dispatch(ACTION.MEDIA.MEDIA_SOURCE, null)
-  })
+    media.removeAttribute('src');
+    media.load();
+    dispatch(ACTION.MEDIA.MEDIA_SOURCE, null);
+  });
 }
 
 function updateMediaDuration({ getState }) {
@@ -114,12 +114,17 @@ function updateMediaDuration({ getState }) {
     .ap(getState(ACTION.PLAYLIST.DURATION));
 }
 
+/**
+ *
+ * @param {number} start  the next segment.start
+ */
 function checkManualSeek({ getConfig, getState }, start) {
   getState(ACTION.MEDIA.MEDIA_ELE).map(media => {
     if (
       media.seeking &&
-      Math.abs(start - media.currentTime) <
-      getConfig(ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE)
+      start > media.currentTime &&
+      start - media.currentTime <=
+        getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
@@ -132,4 +137,9 @@ createMediaSource = curry(createMediaSource);
 destroyMediaSource = curry(destroyMediaSource);
 updateMediaDuration = curry(updateMediaDuration);
 checkManualSeek = curry(checkManualSeek);
-export { createMediaSource, destroyMediaSource, updateMediaDuration, checkManualSeek };
+export {
+  createMediaSource,
+  destroyMediaSource,
+  updateMediaDuration,
+  checkManualSeek
+};

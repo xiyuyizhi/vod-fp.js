@@ -1,10 +1,19 @@
-import { F, Task, Success, Empty, Maybe, CusError } from 'vod-fp-utility';
+import {
+  F,
+  Task,
+  Success,
+  Empty,
+  Maybe,
+  CusError,
+  Logger
+} from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
-import { toMux, setTimeOffset, resetInitSegment } from '../mux/mux';
+import { toMuxTs } from '../mux/mux';
 import loader from '../loader/loader';
 import { SEGMENT_ERROR, XHR_ERROR } from '../error';
 
 const { compose, head, map, filter } = F;
+let logger = new Logger('player');
 
 function _binarySearch(tolerance, list, start, end, bufferEnd) {
   if (start > end) {
@@ -25,7 +34,7 @@ function _binarySearch(tolerance, list, start, end, bufferEnd) {
 
 function findSegment({ getConfig }, segments, bufferEnd) {
   let maxFragLookUpTolerance = getConfig(
-    ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE
+    ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE
   );
   let seg = _binarySearch(
     maxFragLookUpTolerance,
@@ -76,6 +85,14 @@ function loadSegment() {
   let lastSegment = null;
   return ({ getConfig, getState, connect, dispatch }, segment) => {
     dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADING);
+    logger.log(
+      'matched audio segment,',
+      getState(ACTION.PLAYLIST.FIND_MEDIA_SEGEMENT, {
+        levelId: segment.levelId,
+        id: segment.id
+      })
+    );
+
     return connect(loader)({
       url: segment.url,
       options: {
@@ -83,34 +100,20 @@ function loadSegment() {
         timeout: getConfig(ACTION.CONFIG.MAX_TIMEOUT)
       }
     })
-      .map(buffer => {
-        dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADED);
-        if (
-          (lastSegment && lastSegment.cc !== segment.cc) ||
-          (lastSegment && lastSegment.levelId !== segment.levelId)
-        ) {
-          connect(resetInitSegment);
-        }
-        if (
-          (lastSegment && lastSegment.cc !== segment.cc) ||
-          (lastSegment && lastSegment.levelId !== segment.levelId) ||
-          (lastSegment && segment.id - lastSegment.id !== 1)
-        ) {
-          connect(setTimeOffset)(segment.start);
-        }
-        dispatch(ACTION.PROCESS, PROCESS.MUXING);
-        connect(toMux)(
-          buffer,
-          segment.id,
-          getState(ACTION.PLAYLIST.FIND_KEY_INFO).value()
-        );
-        lastSegment = segment;
-      })
       .filterRetry(e => !e.is(XHR_ERROR.ABORT))
       .retry(
         getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
         getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
       )
+      .map(buffer => {
+        dispatch(ACTION.PROCESS, PROCESS.SEGMENT_LOADED);
+        connect(toMuxTs)(
+          segment,
+          buffer,
+          segment.id,
+          getState(ACTION.PLAYLIST.FIND_KEY_INFO).value()
+        );
+      })
       .error(e => {
         if (e.is(XHR_ERROR.ABORT)) {
           getState(ACTION.PROCESS)

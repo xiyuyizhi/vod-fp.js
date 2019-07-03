@@ -1,7 +1,9 @@
-import { F } from 'vod-fp-utility';
+import { F, Logger } from 'vod-fp-utility';
 import { Maybe } from '../../../vod-fp-utility/src';
+import { bufferDump } from '../buffer/buffer-helper';
 
 const { prop, curry, compose, map, head, join, filter, trace } = F;
+let logger = new Logger('player');
 const ACTION = {
   PL: 'pl',
   CURRENT_LEVEL_ID: 'currentLevelId',
@@ -16,15 +18,17 @@ const ACTION = {
   CURRENT_SEGMENT: 'currentSegment',
   DURATION: 'duration',
   SEGMENTS_LEN: 'segmentsLen',
-  UPDATE_LEVEL: 'updateLevel'
+  UPDATE_LEVEL: 'updateLevel',
+  UPDATE_SEGMENTS_BOUND: 'updateSegmentsBound',
+  FIND_MEDIA_SEGEMENT: 'findMediaSegment'
 };
 
-function getCurrentLevel(state) {
+function _getCurrentLevel(state) {
   let currentLevelId = state.map(prop('currentLevelId')).join();
-  return getLevelById(state, currentLevelId);
+  return _getLevelById(state, currentLevelId);
 }
 
-function getLevelById(state, id) {
+function _getLevelById(state, id) {
   return map(
     compose(
       head,
@@ -35,7 +39,7 @@ function getLevelById(state, id) {
   )(state);
 }
 
-function findMedia(state, type, groupId) {
+function _findMedia(state, type, groupId) {
   return compose(
     join,
     map(head),
@@ -44,7 +48,7 @@ function findMedia(state, type, groupId) {
     map(prop('pl'))
   )(state);
 }
-findMedia = curry(findMedia);
+_findMedia = curry(_findMedia);
 
 export default {
   module: 'PLAYLIST',
@@ -72,7 +76,7 @@ export default {
           });
         },
         currentLevel(state) {
-          return getCurrentLevel(state);
+          return _getCurrentLevel(state);
         },
         findLevel(state, payload) {
           return map(
@@ -85,20 +89,24 @@ export default {
           )(state);
         },
         findMedia(state, payload) {
-          if (payload) {
-            return compose(
-              map(findMedia(state, 'AUDIO')),
-              map(prop('audio'))
-            )(getLevelById(state, payload));
-          }
+          return compose(
+            map(_findMedia(state, 'AUDIO')),
+            map(prop('audio'))
+          )(_getLevelById(state, payload));
         },
-        findKeyInfo(state, payload) {
-          if (!payload) {
-            return compose(
-              map(prop('key')),
-              map(prop('detail'))
-            )(getCurrentLevel(state));
-          }
+        findMediaSegment(state, payload) {
+          let { levelId, id } = payload;
+          return compose(
+            map(prop(`${id}`)),
+            map(prop('segments')),
+            map(prop('detail'))
+          )(this.findMedia(state, levelId));
+        },
+        findKeyInfo(state) {
+          return compose(
+            map(prop('key')),
+            map(prop('detail'))
+          )(_getCurrentLevel(state));
         },
         updateLevel(state, payload) {
           let { levelId, detail } = payload;
@@ -112,8 +120,8 @@ export default {
               filter(x => x.levelId === levelId),
               prop('levels'),
               prop('pl')
-            )(x)
-            return x
+            )(x);
+            return x;
           });
         },
         updateMedia(state, payload) {
@@ -123,15 +131,13 @@ export default {
               map(x => {
                 x.detail = detail;
                 x.detail.segments.forEach(seg => (seg.levelId = levelId));
-              }),
-              map(findMedia(state, 'AUDIO')),
-              map(prop('audio'))
-            )(getLevelById(state, levelId));
+              })
+            )(this.findMedia(state, levelId));
           }
         },
         updateKey(state, payload) {
           let { levelId, key } = payload;
-          let level = getLevelById(state, levelId);
+          let level = _getLevelById(state, levelId);
           compose(
             map(x => {
               x.key = key;
@@ -144,7 +150,7 @@ export default {
           return compose(
             map(prop('segments')),
             map(prop('detail'))
-          )(getCurrentLevel(state));
+          )(_getCurrentLevel(state));
         },
         currentSegment(state) {
           return Maybe.of(
@@ -158,7 +164,7 @@ export default {
                   prop('segments'),
                   prop('detail')
                 )
-              )(getCurrentLevel(state))
+              )(_getCurrentLevel(state))
             )
             .ap(state.map(prop('currentSegmentId')));
         },
@@ -169,7 +175,7 @@ export default {
                 prop('duration'),
                 prop('detail')
               )
-            )(getCurrentLevel(state));
+            )(_getCurrentLevel(state));
           }
         },
         segmentsLen(state) {
@@ -179,9 +185,32 @@ export default {
               prop('segments'),
               prop('detail')
             )
-          )(getCurrentLevel(state));
+          )(_getCurrentLevel(state));
+        },
+        updateSegmentsBound(state, payload) {
+          let { segBound, media } = payload;
+          Maybe.of(
+            curry((segments, currentId) => {
+              let { start, end } = segBound;
+              segments[currentId].start = start;
+              segments[currentId].end = end;
+              segments[currentId].duration = parseFloat(
+                (end + start).toFixed(6)
+              );
+              logger.log('new buffer:', [start, end], bufferDump(media));
+              let len = segments.length - 1;
+              for (let i = currentId + 1; i <= len; i++) {
+                segments[i].start = segments[i - 1].end;
+                segments[i].end = parseFloat(
+                  (segments[i].start + segments[i].duration).toFixed(6)
+                );
+              }
+            })
+          )
+            .ap(this.segments(state))
+            .ap(state.map(prop('currentSegmentId')));
         }
       }
-    }
+    };
   }
 };

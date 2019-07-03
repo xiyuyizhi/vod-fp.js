@@ -58,9 +58,9 @@ const _getCurrentPositionBuffer = F.curry(
 function getBufferInfo({ getState, getConfig }, seeking) {
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
   let maxFragLookUpTolerance = getConfig(
-    ACTION.CONFIG.MAX_FRGA_LOOKUP_TOLERANCE
+    ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE
   );
-  let maxBufferHole = getConfig(ACTION.CONFIG.MAX_BUFFER_HOLE);
+  let maxBufferHole = getConfig(ACTION.CONFIG.MAX_BUFFER_GAP_TOLERANCE);
   let currentTime = compose(
     join,
     map(prop('currentTime'))

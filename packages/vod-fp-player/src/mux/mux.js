@@ -36,15 +36,34 @@ function setTimeOffset({ getState }, offset) {
   });
 }
 
-function toMux({ getState }, buffer, sequeueNum, keyInfo) {
-  getState(ACTION.MUX).map(mux => {
+function toMuxTs() {
+  let lastSegment = null;
+
+  return ({ getState, dispatch }, segment, buffer, sequeueNum, keyInfo) => {
+    let mux = getState(ACTION.MUX).join();
+    if (
+      (lastSegment && lastSegment.cc !== segment.cc) ||
+      (lastSegment && lastSegment.levelId !== segment.levelId)
+    ) {
+      mux.resetInitSegment();
+    }
+    if (
+      (lastSegment && lastSegment.cc !== segment.cc) ||
+      (lastSegment && lastSegment.levelId !== segment.levelId) ||
+      (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1)
+    ) {
+      mux.setTimeOffset(segment.start);
+    }
+    dispatch(ACTION.PROCESS, PROCESS.MUXING);
     mux.push(buffer, sequeueNum, keyInfo);
     mux.flush();
-  });
+    lastSegment = segment;
+  }
 }
+
 resetInitSegment = F.curry(resetInitSegment);
 setTimeOffset = F.curry(setTimeOffset);
 createMux = F.curry(createMux);
-toMux = F.curry(toMux);
+toMuxTs = F.curry(toMuxTs())
 
-export { createMux, resetInitSegment, setTimeOffset, toMux };
+export { createMux, resetInitSegment, setTimeOffset, toMuxTs };

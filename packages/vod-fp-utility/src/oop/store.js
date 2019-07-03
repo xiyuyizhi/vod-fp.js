@@ -148,6 +148,22 @@ function createStore(initState, actions = {}) {
         events[path] = events[path].filter((_, i) => i !== index);
       };
     },
+    subOnce(path, listener) {
+      let _destroy;
+      let _listener;
+      _destroy = () => {
+        let index = events[path].indexOf(_listener);
+        events[path] = events[path].filter((_, i) => i !== index);
+      };
+      _listener = (...args) => {
+        _destroy();
+        listener(...args);
+      };
+      events[path]
+        ? events[path].push(_listener)
+        : (events[path] = [_listener]);
+      return _destroy;
+    },
     getState: (path, payload) => {
       if (!state) return Maybe.of();
       if (!path) return Maybe.of(state);
@@ -185,7 +201,7 @@ function createStore(initState, actions = {}) {
     destroy() {
       events = {
         all: []
-      }
+      };
     }
   };
   return _store;

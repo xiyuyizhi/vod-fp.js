@@ -25,9 +25,9 @@ function initPlayer(url) {
   });
   vod.attachMedia(document.querySelector('video'));
   vod.loadSource(
-    // 'http://localhost:8880/11/index.m3u8'
+    'http://localhost:8880/12/index.m3u8'
     // 'http://localhost:8880/8/fmp4.m3u8'
-    url
+    // url
   );
   vod.on(Vod.Events.ERROR, e => {
     console.log(e);
@@ -38,9 +38,10 @@ function initPlayer(url) {
     if (levels.length > 1) {
       let select = document.createElement('select');
       let selectHtml;
-      select.className = 'resolutionList'
+      select.className = 'resolutionList';
       select.style.display = 'block';
-      selectHtml = levels.filter(x => x.resolution || x.streamtype)
+      selectHtml = levels
+        .filter(x => x.resolution || x.streamtype)
         .map(
           ({ levelId, streamtype, resolution }) =>
             `<option value='${levelId}'>${resolution || streamtype}</option>`
@@ -62,10 +63,10 @@ function initPlayer(url) {
   });
 }
 
-initPlayer(url)
-
+initPlayer(url);
 
 setTimeout(() => {
+  return;
   vod.destroy();
-  initPlayer(url)
+  initPlayer(url);
 }, 1000);

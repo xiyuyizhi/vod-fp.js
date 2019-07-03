@@ -1,26 +1,26 @@
+---
 
----------------------
 todo
 
--  loader 的 Task 封装
+- loader 的 Task 封装
 
--  abort 能力
+- abort 能力
 
--  Timer 封装
+- Timer 封装
 
 - 异常的完善、重试
 
--  最大缓存buffer控制,动态调整,sb.remove()
+- 最大缓存 buffer 控制,动态调整,sb.remove()
 
--  playlist  主从
+- playlist 主从
 
--  主从pl 手动切level
+- 主从 pl 手动切 level
 
 - worker
 
 - 只有音频、只有视频、音视频都有 codecs
 
-- log统一
+- log 统一
 
 - fragment mp4
 
@@ -28,18 +28,20 @@ todo
 
 - debug info
 
-----------------  
-demo相关
+---
 
-- player  rxjs
+demo 相关
+
+- player rxjs
 
 - ts 在线解析
 
 - fmp4 在线解析
 
-- ts在线转mp4
+- ts 在线转 mp4
 
---------------------
+---
+
 最后
 
 - abr
