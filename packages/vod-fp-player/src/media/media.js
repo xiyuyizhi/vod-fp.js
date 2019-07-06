@@ -10,7 +10,6 @@ import {
 import { ACTION, PROCESS } from '../store';
 import { isSupportMS } from '../utils/probe';
 import { abortLoadingSegment } from '../playlist/segment';
-import { getBufferInfo } from '../buffer/buffer-helper';
 import { SUPPORT_ERROR } from '../error';
 
 const { map, compose, curry, prop, trace } = F;
@@ -27,16 +26,18 @@ function _bindMediaEvent(
   });
   media.addEventListener('seeking', () => {
     logger.log('start seek...', media.currentTime);
-    let rest = connect(getBufferInfo)(media.currentTime, true);
-    if (media.duration - rest.bufferEnd >= endStreamTolerance) {
+    let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO);
+    if (media.duration - rest.join().bufferEnd >= endStreamTolerance) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
     } else if (ms.join().readyState === 'open') {
       ms.endOfStream();
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
-    if (rest.bufferLength === 0) {
-      connect(abortLoadingSegment);
-    }
+    rest.map(rest => {
+      if (rest.bufferLength === 0) {
+        connect(abortLoadingSegment);
+      }
+    });
   });
   media.addEventListener('seeked', () => {
     logger.log('seek end , can play', media.currentTime);
@@ -58,7 +59,7 @@ function _bindMediaEvent(
   });
 
   subscribe(PROCESS.IDLE, () => {
-    let rest = connect(getBufferInfo)(media.currentTime, false);
+    let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO).join();
     maybeToEither(ms)
       .map(x => {
         if (
@@ -67,16 +68,13 @@ function _bindMediaEvent(
         ) {
           logger.warn('end of stream');
           x.endOfStream();
-          dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
           dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         }
       })
       .error(e => {
         logger.log(e);
       });
-
-  })
-
+  });
 }
 
 function createMediaSource({ connect, dispatch, subscribe }, media) {
@@ -121,7 +119,7 @@ function checkManualSeek({ getConfig, getState }, start) {
       media.seeking &&
       start > media.currentTime &&
       start - media.currentTime <=
-      getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
+        getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);

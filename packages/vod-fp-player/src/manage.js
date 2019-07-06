@@ -27,15 +27,16 @@ function changeLevel() {
   let unSubProcess;
   return F.curry(
     ({ connect, getState, dispatch, subscribe, subOnce, offSub }, levelId) => {
-      offSub(unSubChanged)
-      offSub(unSubChangedError)
-      offSub(unSubProcess)
+      offSub(unSubChanged);
+      offSub(unSubChangedError);
+      offSub(unSubProcess);
       unSubChanged = subOnce(ACTION.EVENTS.LEVEL_CHANGED, levelId => {
         logger.log('level changed to ', levelId);
         let flushStart = connect(findSegmentOfCurrentPosition)
           .map(x => x.start || 0)
           .join();
         connect(flushBuffer)(flushStart, Infinity).map(() => {
+          dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE);
           getState(ACTION.MEDIA.MEDIA_ELE).map(x => {
             x.currentTime += 0.005;
             dispatch(ACTION.PROCESS, PROCESS.IDLE);

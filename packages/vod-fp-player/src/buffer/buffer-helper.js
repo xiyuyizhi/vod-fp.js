@@ -49,12 +49,19 @@ const _getCurrentPositionBuffer = F.curry(
   (maxFragLookUpTolerance, currentTime, buffered) => {
     return buffered.filter(
       ([start, end]) =>
-        start <= currentTime + maxFragLookUpTolerance && end + maxFragLookUpTolerance >= currentTime
+        start <= currentTime + maxFragLookUpTolerance &&
+        end + maxFragLookUpTolerance >= currentTime
     )[0];
   }
 );
 
-function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition, isSeeking) {
+function _bufferInfoCacl(
+  getState,
+  getConfig,
+  bufferRanges,
+  currentPosition,
+  isSeeking
+) {
   let maxFragLookUpTolerance = getConfig(
     ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE
   );
@@ -62,7 +69,10 @@ function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition, isS
   let restInfo = compose(
     map(x => {
       return {
-        bufferLength: Math.max(0, parseFloat((x[1] - currentPosition).toFixed(6))),
+        bufferLength: Math.max(
+          0,
+          parseFloat((x[1] - currentPosition).toFixed(6))
+        ),
         bufferEnd: x[1]
       };
     }),
@@ -71,7 +81,7 @@ function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition, isS
         _getCurrentPositionBuffer(maxFragLookUpTolerance, currentPosition),
         reduce(_bufferMerge(maxBufferHole), [])
       )
-    ),
+    )
   )(bufferRanges);
   return restInfo.getOrElse(() => {
     if (isSeeking) {
@@ -96,21 +106,20 @@ function getBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
     _bufferSerialize(media),
     currentPosition,
     isSeeking
-  )
+  );
 }
 
 function getFlyBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
-
   return _bufferInfoCacl(
     getState,
     getConfig,
     getState(ACTION.FLYBUFFER.FLY_BUFFER_RANGES),
     currentPosition,
     isSeeking
-  )
+  );
 }
 
 _bufferMerge = F.curry(_bufferMerge);
 getBufferInfo = F.curry(getBufferInfo);
-getFlyBufferInfo = F.curry(getFlyBufferInfo)
+getFlyBufferInfo = F.curry(getFlyBufferInfo);
 export { getBufferInfo, bufferDump, getFlyBufferInfo };

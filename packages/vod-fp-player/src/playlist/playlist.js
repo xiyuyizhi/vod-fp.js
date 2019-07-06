@@ -108,7 +108,7 @@ function _updateLevelAndMediaAndKey({ connect }, level) {
   return level.chain(() => {
     return Task.resolve(curry((level, mediaDetail) => level))
       .ap(_loadLevelDetail(level))
-      .ap(_loadMediaDetail(matchedMedia))
+      .ap(_loadMediaDetail(matchedMedia));
   });
 }
 

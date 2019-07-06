@@ -81,7 +81,7 @@ function createStore(initState, actions = {}) {
         let deriveProp = state.derive[prop];
         if (deriveProp) {
           //只是一个更新已有的某个属性的方法
-          let s = deriveProp(Maybe.of(state), payload, _store.dispatch);
+          let s = deriveProp(Maybe.of(state), payload, _store);
           if (s) {
             state = s.join();
           }
@@ -104,14 +104,14 @@ function createStore(initState, actions = {}) {
           } else if (state[prop] !== undefined) {
             state[prop] = payload;
           } else if (state[parentProp] !== undefined) {
-            state[parentProp] = prop
+            state[parentProp] = prop;
           }
         } else if (currentDerive[prop]) {
           // create the copy of currentState //shadow cpoy
           const newState = currentDerive[prop](
             Maybe.of({ ...currentState }),
             payload,
-            _store.dispatch
+            _store
           );
           if (newState) {
             state[parentProp] = {
@@ -182,9 +182,9 @@ function createStore(initState, actions = {}) {
       if (props.length === 1) {
         if (state[prop]) return Maybe.of(state[prop]);
         if (state.derive[prop]) {
-          return state.derive[prop](Maybe.of(state), payload)
+          return state.derive[prop](Maybe.of(state), payload, _store);
         }
-        return Maybe.of()
+        return Maybe.of();
       }
       let currentState = state[prop];
       let currentDerive = state.derive[prop];
@@ -196,7 +196,7 @@ function createStore(initState, actions = {}) {
           return Maybe.of(state[prop]);
         }
       } else {
-        return currentDerive[prop](Maybe.of(currentState), payload);
+        return currentDerive[prop](Maybe.of(currentState), payload, _store);
       }
     },
     getConfig: path => {

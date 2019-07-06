@@ -60,7 +60,7 @@ function findSegmentOfCurrentPosition({ getState, connect, getConfig }) {
 }
 
 function abortLoadingSegment({ dispatch }) {
-  dispatch(ACTION.REMOVE_ABORTABLE)
+  dispatch(ACTION.REMOVE_ABORTABLE);
 }
 
 // segment -> Task
@@ -92,7 +92,7 @@ function loadSegment() {
         dispatch(ACTION.FLYBUFFER.STORE_NEW_SEGMENT, {
           segment,
           buffer
-        })
+        });
         dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
       })
       .error(e => {
@@ -102,8 +102,6 @@ function loadSegment() {
           //   .map(() => {
           //   });
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
-          dispatch(ACTION.PROCESS, PROCESS.IDLE);
-          dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
         } else {
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
           dispatch(
@@ -115,32 +113,37 @@ function loadSegment() {
   };
 }
 
-function drainSegmentFromStore({ getState, connect, dispatch, subOnce }, findedSeg) {
-  return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findedSeg).map(segInfo => {
-    let { segment, buffer } = segInfo;
-    dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
-    connect(toMuxTs)(
-      segment,
-      buffer,
-      segment.id,
-      getState(ACTION.PLAYLIST.FIND_KEY_INFO).value()
-    );
-    return true;
-  })
+function drainSegmentFromStore(
+  { getState, connect, dispatch, subOnce },
+  findedSeg
+) {
+  return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findedSeg).map(
+    segInfo => {
+      let { segment, buffer } = segInfo;
+      dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
+      connect(toMuxTs)(
+        segment,
+        buffer,
+        segment.id,
+        getState(ACTION.PLAYLIST.FIND_KEY_INFO).value()
+      );
+      return true;
+    }
+  );
 }
 
 function removeSegmentFromStore({ getState, dispatch }) {
   getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID).map(id => {
-    dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE, id)
-  })
+    dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE, id);
+  });
 }
 
 abortLoadingSegment = F.curry(abortLoadingSegment);
 findSegment = F.curry(findSegment);
 loadSegment = F.curry(loadSegment());
 findSegmentOfCurrentPosition = F.curry(findSegmentOfCurrentPosition);
-drainSegmentFromStore = F.curry(drainSegmentFromStore)
-removeSegmentFromStore = F.curry(removeSegmentFromStore)
+drainSegmentFromStore = F.curry(drainSegmentFromStore);
+removeSegmentFromStore = F.curry(removeSegmentFromStore);
 export {
   findSegment,
   loadSegment,

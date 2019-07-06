@@ -2,7 +2,7 @@ import { TsToMp4 } from 'vod-fp-mux';
 import { F, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { SEGMENT_ERROR } from '../error';
-import { removeSegmentFromStore } from "../playlist/segment"
+import { removeSegmentFromStore } from '../playlist/segment';
 
 function createMux({ dispatch, connect }) {
   let mux = new TsToMp4();
@@ -17,7 +17,7 @@ function createMux({ dispatch, connect }) {
       }
     })
     .on('error', e => {
-      connect(removeSegmentFromStore)
+      connect(removeSegmentFromStore);
       dispatch(
         ACTION.ERROR,
         CusError.of(e).merge(CusError.of(SEGMENT_ERROR['SGEMENT_PARSE_ERROR']))
@@ -60,12 +60,12 @@ function toMuxTs() {
     mux.push(buffer, sequeueNum, keyInfo);
     mux.flush();
     lastSegment = segment;
-  }
+  };
 }
 
 resetInitSegment = F.curry(resetInitSegment);
 setTimeOffset = F.curry(setTimeOffset);
 createMux = F.curry(createMux);
-toMuxTs = F.curry(toMuxTs())
+toMuxTs = F.curry(toMuxTs());
 
 export { createMux, resetInitSegment, setTimeOffset, toMuxTs };

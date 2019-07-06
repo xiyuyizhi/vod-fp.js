@@ -69,7 +69,7 @@ function getGlobalState() {
     loadProcessTs: performance.now(),
     // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
     derive: {
-      innerError(state, payload, dispatch) {
+      innerError(state, payload, { dispatch }) {
         if (payload) {
           logger.log('Error log:', payload);
           function _handleError(s) {
@@ -81,7 +81,6 @@ function getGlobalState() {
               dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
             } else {
               // 可恢复、继续运行
-              dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
               dispatch(ACTION.PROCESS, PROCESS.IDLE);
             }
             return s;
@@ -97,7 +96,7 @@ function getGlobalState() {
           )(state);
         }
       },
-      process(state, payload, dispatch) {
+      process(state, payload, { dispatch }) {
         if (payload) {
           const { processTs, process } = state.value();
           let ts = (performance.now() - processTs).toFixed(2);

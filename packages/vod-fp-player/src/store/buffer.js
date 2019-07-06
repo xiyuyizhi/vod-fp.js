@@ -1,5 +1,5 @@
 import { F } from 'vod-fp-utility';
-
+import { getBufferInfo, getFlyBufferInfo } from '../buffer/buffer-helper';
 const { prop, compose } = F;
 
 export default {
@@ -12,7 +12,9 @@ export default {
     AUDIO_APPENDED: 'audioAppended',
     VIDEO_APPENDED: 'videoAppended',
     VIDEO_BUFFER_REMOVE: 'videoBufferRemove',
-    AUDIO_BUFFER_REMOVE: 'audioBufferRemove'
+    AUDIO_BUFFER_REMOVE: 'audioBufferRemove',
+    GET_BUFFER_INFO: 'getBufferInfo',
+    GET_FLY_BUFFER_INFO: 'getFlyBufferInfo'
   },
   getState() {
     return {
@@ -34,8 +36,18 @@ export default {
             x.audioBufferInfo = null;
             return x;
           });
+        },
+        getBufferInfo(state, payload, { ACTION, getState, connect }) {
+          return getState(ACTION.MEDIA.MEDIA_ELE).map(m =>
+            connect(getBufferInfo)(m.currentTime, m.seeking)
+          );
+        },
+        getFlyBufferInfo(state, payload, _store) {
+          return this.getBufferInfo(null, null, _store).map(relBuffer => {
+            return _store.connect(getFlyBufferInfo)(relBuffer.bufferEnd, true);
+          });
         }
       }
-    }
+    };
   }
 };

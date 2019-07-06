@@ -27,8 +27,16 @@ export default {
           state.map(x => x.segmentsStore.push(segment));
         },
         removeSegmentFromStore(state, id) {
+          if (id) {
+            return state.map(s => {
+              s.segmentsStore = s.segmentsStore.filter(
+                x => x.segment.id !== id
+              );
+              return s;
+            });
+          }
           return state.map(s => {
-            s.segmentsStore = s.segmentsStore.filter(x => x.segment.id !== id);
+            s.segmentsStore = [];
             return s;
           });
         },
