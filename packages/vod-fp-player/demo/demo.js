@@ -30,6 +30,7 @@ function initPlayer(url) {
     // 'http://localhost:8880/8/fmp4.m3u8'
     // url
   );
+  vod.useDebug(document.querySelector('#player'));
   vod.on(Vod.Events.ERROR, e => {
     console.log(e);
   });

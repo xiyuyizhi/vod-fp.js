@@ -12,13 +12,13 @@ export default class Player extends React.Component {
     };
   }
 
-  //-------------events------------//
+  // -------------events------------//
 
   _bindPlayerEvent(player) {
     player.on(Vod.Events.ERROR, e => {
       this.setState({
         error: e
-      })
+      });
     });
     player.on(Vod.Events.MANIFEST_LOADED, pl => {
       // 创建清晰度选项
@@ -26,30 +26,32 @@ export default class Player extends React.Component {
       if (levels.length > 1) {
         this.setState({
           resolutionList: levels
-        })
+        });
       }
     });
   }
 
   changeResolution = e => {
-    this.vod.changeLevel(e.target.value)
-  }
+    this.vod.changeLevel(e.target.value);
+  };
 
   load = () => {
     if (this.state.url) {
       this._destroy();
       this.setState({
         resolutionList: [],
-        error: null,
-      })
-      this._startPlayer(this.state.url)
+        error: null
+      });
+      this._startPlayer(this.state.url);
     }
   };
+
   getMediaUrl = e => {
     this.setState({
       url: e.target.value
     });
   };
+
   _destroy() {
     this.vod.offAllEvents();
     this.vod.destroy();
@@ -61,6 +63,7 @@ export default class Player extends React.Component {
     });
     v.loadSource(url);
     v.attachMedia(this.media);
+    v.useDebug(document.querySelector('#player'));
     this.vod = v;
     this._bindPlayerEvent(v);
   }
@@ -70,15 +73,18 @@ export default class Player extends React.Component {
   }
 
   componentWillUnmount() {
-    this._destroy()
+    this._destroy();
   }
 
   render() {
-    const { url, error } = this.state
+    const { url, error } = this.state;
     return (
       <div>
         <h1>vod player demo</h1>
-        <p style={{ transform: 'scale(0.8)' }}> document.cookie="debug=player" to enable debug info on console</p>
+        <p style={{ transform: 'scale(0.8)' }}>
+          {' '}
+          document.cookie="debug=player" to enable debug info on console
+        </p>
         <div>
           <input
             className="url_input"
@@ -87,7 +93,7 @@ export default class Player extends React.Component {
           />
           <button onClick={this.load}>load</button>
         </div>
-        <div>
+        <div id="player">
           <video
             autoPlay
             controls
@@ -97,29 +103,32 @@ export default class Player extends React.Component {
           />
           <div>{this._renderResolution()}</div>
         </div>
-        {
-          error ? <div>
+        {error ? (
+          <div>
             <h1>some error occur...</h1>
             <h4>{JSON.stringify(error)}</h4>
-          </div> : null
-        }
+          </div>
+        ) : null}
       </div>
     );
   }
 
   _renderResolution() {
-    let { resolutionList } = this.state
+    let { resolutionList } = this.state;
     if (resolutionList.length) {
-      return <select onChange={this.changeResolution}>
-        {
-          resolutionList
+      return (
+        <select onChange={this.changeResolution}>
+          {resolutionList
             .filter(x => x.resolution || x.streamtype)
             .map(({ levelId, streamtype, resolution }) => {
-              return <option value={levelId} key={levelId}>{resolution || streamtype}</option>
-            })
-        }
-      </select>
+              return (
+                <option value={levelId} key={levelId}>
+                  {resolution || streamtype}
+                </option>
+              );
+            })}
+        </select>
+      );
     }
   }
-
 }

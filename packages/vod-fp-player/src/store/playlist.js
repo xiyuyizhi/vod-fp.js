@@ -66,33 +66,33 @@ export default {
       currentSegmentId: -1,
       currentLevelId: 1,
       derive: {
-        currentLevelId(state, payload) {
-          if (!payload) {
+        currentLevelId(state, levelId) {
+          if (!levelId) {
             return map(prop('currentLevelId'))(state);
           }
           return state.map(x => {
-            x.currentLevelId = payload;
+            x.currentLevelId = levelId;
             return x;
           });
         },
         currentLevel(state) {
           return _getCurrentLevel(state);
         },
-        findLevel(state, payload) {
+        findLevel(state, levelId) {
           return map(
             compose(
               head,
-              filter(x => x.levelId === payload),
+              filter(x => x.levelId === levelId),
               prop('levels'),
               prop('pl')
             )
           )(state);
         },
-        findMedia(state, payload) {
+        findMedia(state, levelId) {
           return compose(
             map(_findMedia(state, 'AUDIO')),
             map(prop('audio'))
-          )(_getLevelById(state, payload));
+          )(_getLevelById(state, levelId));
         },
         findMediaSegment(state, payload) {
           let { levelId, id } = payload;
@@ -168,15 +168,13 @@ export default {
             )
             .ap(state.map(prop('currentSegmentId')));
         },
-        duration(state, payload) {
-          if (!payload) {
-            return map(
-              compose(
-                prop('duration'),
-                prop('detail')
-              )
-            )(_getCurrentLevel(state));
-          }
+        duration(state) {
+          return map(
+            compose(
+              prop('duration'),
+              prop('detail')
+            )
+          )(_getCurrentLevel(state));
         },
         segmentsLen(state) {
           return map(
@@ -187,8 +185,7 @@ export default {
             )
           )(_getCurrentLevel(state));
         },
-        updateSegmentsBound(state, payload) {
-          let { segBound, media } = payload;
+        updateSegmentsBound(state, segBound, { getState, ACTION }) {
           Maybe.of(
             curry((segments, currentId) => {
               let { start, end } = segBound;
@@ -197,7 +194,11 @@ export default {
               segments[currentId].duration = parseFloat(
                 (end + start).toFixed(6)
               );
-              logger.log('new buffer:', [start, end], bufferDump(media));
+              logger.log(
+                'new buffer:',
+                [start, end],
+                bufferDump(getState(ACTION.MEDIA.MEDIA_ELE))
+              );
               let len = segments.length - 1;
               for (let i = currentId + 1; i <= len; i++) {
                 segments[i].start = segments[i - 1].end;

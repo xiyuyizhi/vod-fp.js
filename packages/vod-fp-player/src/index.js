@@ -2,6 +2,7 @@ import { EventBus } from 'vod-fp-utility';
 import Events from './events';
 import { createStore, getState, ACTION } from './store';
 import { manage, changeLevel, destroy } from './manage';
+import debuger from './plugin/debuger';
 
 export default class Vod extends EventBus {
   constructor(options) {
@@ -47,10 +48,13 @@ export default class Vod extends EventBus {
     }
   }
 
+  useDebug(container) {
+    this.store.connect(debuger)(container);
+  }
+
   destroy() {
     this.store.connect(destroy);
     this.store.destroy();
     this.store = null;
   }
-
 }

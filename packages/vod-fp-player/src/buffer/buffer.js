@@ -97,10 +97,7 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
     end: parseFloat((segBound.endPTS / 90000).toFixed(6))
   };
   connect(checkManualSeek)(segBound.start);
-  dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, {
-    segBound,
-    media: getState(ACTION.MEDIA.MEDIA_ELE)
-  });
+  dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
   //清除无用元素
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);

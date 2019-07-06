@@ -185,6 +185,4 @@ function getState() {
     flyBuffer
   );
 }
-console.log('ppp');
-logger.log(ACTION);
 export { createStore, getState, ACTION, PROCESS, LOADPROCESS };
