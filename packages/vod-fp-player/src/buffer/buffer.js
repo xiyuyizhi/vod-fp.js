@@ -12,6 +12,7 @@ import {
 import { ACTION, PROCESS } from '../store';
 import { checkManualSeek } from '../media/media';
 import { MEDIA_ERROR } from '../error';
+import { removeSegmentFromStore } from "../playlist/segment"
 
 const { map, compose, curry, join, chain, prop, trace } = F;
 
@@ -28,7 +29,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function(_) {
+  sb.addEventListener('updateend', function (_) {
     if (type === 'video') {
       getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).map(x => {
         if (x.combine) {
@@ -103,6 +104,7 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
   //清除无用元素
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
+  connect(removeSegmentFromStore)
   dispatch(ACTION.PROCESS, PROCESS.IDLE);
 }
 
@@ -132,7 +134,7 @@ function _createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
   });
 }
 
-function startBuffer({ id, getState, subscribe, dispatch, connect }) {
+function startBuffer({ getState, subscribe, dispatch, connect }) {
   let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
 
   // (Maybe,Maybe) -> Either
@@ -151,6 +153,7 @@ function startBuffer({ id, getState, subscribe, dispatch, connect }) {
         )
         .error(e => {
           if (e) {
+            connect(removeSegmentFromStore)
             dispatch(
               ACTION.ERROR,
               e.merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))

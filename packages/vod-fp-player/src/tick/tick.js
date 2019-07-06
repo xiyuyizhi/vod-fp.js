@@ -1,7 +1,7 @@
 import { F, Tick, Maybe, Success, Empty, Logger } from 'vod-fp-utility';
-import { ACTION, PROCESS } from '../store';
-import { getBufferInfo } from '../buffer/buffer-helper';
-import { findSegment, loadSegment } from '../playlist/segment';
+import { ACTION, PROCESS, LOADPROCESS } from '../store';
+import { getBufferInfo, getFlyBufferInfo } from '../buffer/buffer-helper';
+import { findSegment, loadSegment, drainSegmentFromStore } from '../playlist/segment';
 import { createMux } from '../mux/mux';
 import { startBuffer } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
@@ -10,42 +10,79 @@ const { prop, compose, map, curry } = F;
 
 let logger = new Logger('player');
 
-function _loadCheck({ dispatch, getConfig }, bufferInfo, process, media) {
-  let MAX_BUFFER_LENGTH = getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH);
-  if (
-    bufferInfo.bufferLength > MAX_BUFFER_LENGTH ||
-    (process !== PROCESS.IDLE && process !== PROCESS.PLAYLIST_LOADED) ||
-    media.ended
-  ) {
-    if (
-      bufferInfo.bufferLength > MAX_BUFFER_LENGTH &&
-      (media.paused || media.ended)
-    ) {
-      dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-    }
-    return;
+
+function main({ getState, getConfig, connect, dispatch, subOnce }, level, mediaSource) {
+  logger.log(level);
+  if (!level) return;
+  connect(updateMediaDuration);
+  connect(createMux);
+  connect(startBuffer);
+  let media = getState(ACTION.MEDIA.MEDIA_ELE);
+  let startLoadProcess = connect(_startLoadProcess);
+
+  function _checkBuffer() {
+    let restBuffer = media.map(m => connect(getBufferInfo)(m.currentTime, m.seeking));
+    // real buffer
+    Maybe.of(curry((bufferInfo, media, pro, segments) => {
+      if (bufferInfo.bufferLength < getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) && pro === PROCESS.IDLE) {
+        return connect(findSegment)(segments, bufferInfo.bufferEnd)
+      } else if (media.paused || media.end) {
+        dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop')
+      }
+    }))
+      .ap(restBuffer)
+      .ap(media)
+      .ap(getState(ACTION.PROCESS))
+      .ap(getState(ACTION.PLAYLIST.SEGMENTS))
+      .map(connect(drainSegmentFromStore))
+      .getOrElse(e => {
+        logger.log('continue check buffer');
+      });
   }
-  return bufferInfo;
+
+  function _checkDownload(nextTick) {
+    let restBuffer = media.map(m => connect(getBufferInfo)(m.currentTime, m.seeking));
+    let flyRestBuffer = Maybe.of(curry((rest, m) => {
+      return connect(getFlyBufferInfo)(rest.bufferEnd, true)
+    }))
+      .ap(restBuffer)
+      .ap(media);
+
+    // fly buffer 
+    Maybe.of(curry((flyBuffer, media, loadProcess) => {
+      let MAX_FLY_BUFFER_LENGTH = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
+      if (flyBuffer.bufferLength > MAX_FLY_BUFFER_LENGTH || loadProcess === LOADPROCESS.SEGMENT_LOADING) return;
+      return flyBuffer;
+    }))
+      .ap(flyRestBuffer)
+      .ap(media)
+      .ap(getState(ACTION.LOADPROCESS))
+      .map(flyBuffer => {
+        subOnce(ACTION.LOADPROCESS, () => {
+          nextTick()
+        })
+        return flyBuffer
+      })
+      .map(startLoadProcess)
+      .getOrElse(e => {
+        logger.log(e || 'continue check load');
+        nextTick(300)
+      });
+  }
+
+
+  let t = Tick.of()
+    .addTask(_checkBuffer)
+    .addTask(_checkDownload, true)
+    .interval(getConfig(ACTION.CONFIG.TICK_INTERVAL))
+    .immediateRun();
+  dispatch(ACTION.MAIN_LOOP, t);
 }
 
-function _startProcess({ getState, getConfig, dispatch, connect }, rest) {
-  let segments = getState(ACTION.PLAYLIST.SEGMENTS);
-  let segment = segments.map(x => connect(findSegment)(x, rest.bufferEnd));
-  return Maybe.of(
-    curry((segment, segments, currentId) => {
-      if (currentId === segment.id) {
-        segment = segments[currentId + 1];
-        getState(ACTION.MEDIA.MEDIA_ELE).map(
-          media => (media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK))
-        );
-        logger.warn(`segment ${currentId} 已下载,下载下一分片`);
-      }
-      return segment;
-    })
-  )
-    .ap(segment)
-    .ap(segments)
-    .ap(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID))
+
+function _startLoadProcess({ getState, getConfig, dispatch, connect }, bufferInfo) {
+  return getState(ACTION.PLAYLIST.SEGMENTS)
+    .map(x => connect(findSegment)(x, bufferInfo.bufferEnd))
     .map(segment => {
       logger.groupEnd();
       logger.group(
@@ -54,50 +91,13 @@ function _startProcess({ getState, getConfig, dispatch, connect }, rest) {
         ' of level ',
         segment.levelId || 1
       );
-      logger.log('restBuffer: ', rest);
-      dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
       connect(loadSegment)(segment);
       return true;
     })
     .getOrElse(Empty.of('no found segement'));
 }
 
-function tick({ getState, getConfig, connect, dispatch }, level, mediaSource) {
-  logger.log(level);
-  if (!level) return;
-  connect(updateMediaDuration);
-  connect(createMux);
-  connect(startBuffer);
-  let timer = null;
-  let media = getState(ACTION.MEDIA.MEDIA_ELE);
-  let startProcess = connect(_startProcess);
-  let check = connect(_loadCheck);
-
-  function _startTimer() {
-    let rest = map(
-      compose(
-        connect(getBufferInfo),
-        prop('seeking')
-      )
-    )(media);
-    Maybe.of(check)
-      .ap(rest)
-      .ap(getState(ACTION.PROCESS))
-      .ap(media)
-      .map(startProcess)
-      .getOrElse(e => {
-        logger.log(e || 'continue check');
-      });
-  }
-
-  let t = Tick.of(_startTimer)
-    .interval(getConfig(ACTION.CONFIG.TICK_INTERVAL))
-    .immediate();
-  dispatch(ACTION.MAIN_LOOP, t);
-}
-
-_loadCheck = curry(_loadCheck);
-_startProcess = curry(_startProcess);
-const startTick = F.curry(tick);
+_startLoadProcess = curry(_startLoadProcess);
+const startTick = F.curry(main);
 
 export { startTick };

@@ -49,43 +49,35 @@ const _getCurrentPositionBuffer = F.curry(
   (maxFragLookUpTolerance, currentTime, buffered) => {
     return buffered.filter(
       ([start, end]) =>
-        start <= currentTime + maxFragLookUpTolerance && end >= currentTime
+        start <= currentTime + maxFragLookUpTolerance && end + maxFragLookUpTolerance >= currentTime
     )[0];
   }
 );
 
-// boolean -> Maybe
-function getBufferInfo({ getState, getConfig }, seeking) {
-  let media = getState(ACTION.MEDIA.MEDIA_ELE);
+function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition, isSeeking) {
   let maxFragLookUpTolerance = getConfig(
     ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE
   );
   let maxBufferHole = getConfig(ACTION.CONFIG.MAX_BUFFER_GAP_TOLERANCE);
-  let currentTime = compose(
-    join,
-    map(prop('currentTime'))
-  )(media);
   let restInfo = compose(
     map(x => {
       return {
-        bufferLength: x[1] - currentTime,
+        bufferLength: Math.max(0, parseFloat((x[1] - currentPosition).toFixed(6))),
         bufferEnd: x[1]
       };
     }),
     map(
       compose(
-        _getCurrentPositionBuffer(maxFragLookUpTolerance, currentTime),
+        _getCurrentPositionBuffer(maxFragLookUpTolerance, currentPosition),
         reduce(_bufferMerge(maxBufferHole), [])
       )
     ),
-    _bufferSerialize
-  )(media);
-
+  )(bufferRanges);
   return restInfo.getOrElse(() => {
-    if (seeking) {
+    if (isSeeking) {
       return {
         bufferLength: 0,
-        bufferEnd: currentTime
+        bufferEnd: currentPosition
       };
     }
     return {
@@ -94,7 +86,31 @@ function getBufferInfo({ getState, getConfig }, seeking) {
     };
   });
 }
+
+// boolean -> Maybe
+function getBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
+  let media = getState(ACTION.MEDIA.MEDIA_ELE);
+  return _bufferInfoCacl(
+    getState,
+    getConfig,
+    _bufferSerialize(media),
+    currentPosition,
+    isSeeking
+  )
+}
+
+function getFlyBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
+
+  return _bufferInfoCacl(
+    getState,
+    getConfig,
+    getState(ACTION.FLYBUFFER.FLY_BUFFER_RANGES),
+    currentPosition,
+    isSeeking
+  )
+}
+
 _bufferMerge = F.curry(_bufferMerge);
 getBufferInfo = F.curry(getBufferInfo);
-
-export { getBufferInfo, bufferDump };
+getFlyBufferInfo = F.curry(getFlyBufferInfo)
+export { getBufferInfo, bufferDump, getFlyBufferInfo };

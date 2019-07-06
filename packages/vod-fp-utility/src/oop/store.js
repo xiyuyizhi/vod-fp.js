@@ -72,7 +72,7 @@ function createStore(initState, actions = {}) {
       return fn(_store);
     },
     dispatch: (path, payload) => {
-      if (!state) return;
+      if (!state || !path) return;
       let props = path.split('.');
       let prop = props[0];
       let currentState = null;
@@ -103,6 +103,8 @@ function createStore(initState, actions = {}) {
             currentState[prop] = payload;
           } else if (state[prop] !== undefined) {
             state[prop] = payload;
+          } else if (state[parentProp] !== undefined) {
+            state[parentProp] = prop
           }
         } else if (currentDerive[prop]) {
           // create the copy of currentState //shadow cpoy
@@ -164,6 +166,11 @@ function createStore(initState, actions = {}) {
         : (events[path] = [_listener]);
       return _destroy;
     },
+    offSub(f) {
+      if (f && typeof f === 'function') {
+        f();
+      }
+    },
     getState: (path, payload) => {
       if (!state) return Maybe.of();
       if (!path) return Maybe.of(state);
@@ -173,7 +180,11 @@ function createStore(initState, actions = {}) {
       let props = path.split('.');
       let prop = props[0];
       if (props.length === 1) {
-        return Maybe.of(state[prop]);
+        if (state[prop]) return Maybe.of(state[prop]);
+        if (state.derive[prop]) {
+          return state.derive[prop](Maybe.of(state), payload)
+        }
+        return Maybe.of()
       }
       let currentState = state[prop];
       let currentDerive = state.derive[prop];

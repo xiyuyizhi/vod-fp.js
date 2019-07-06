@@ -4,7 +4,7 @@ import { createMediaSource, destroyMediaSource } from './media/media';
 import { loadPlaylist, changePlaylistLevel } from './playlist/playlist';
 import { startTick } from './tick/tick';
 import {
-  abortCurrentSegment,
+  abortLoadingSegment,
   findSegmentOfCurrentPosition
 } from './playlist/segment';
 import { flushBuffer, abortBuffer } from './buffer/buffer';
@@ -26,13 +26,10 @@ function changeLevel() {
   let unSubChangedError;
   let unSubProcess;
   return F.curry(
-    ({ connect, getState, dispatch, subscribe, subOnce }, levelId) => {
-      if (unSubChanged && unSubChangedError) {
-        unSubChanged();
-        unSubChangedError();
-        unSubChanged = undefined;
-        unSubChangedError = undefined;
-      }
+    ({ connect, getState, dispatch, subscribe, subOnce, offSub }, levelId) => {
+      offSub(unSubChanged)
+      offSub(unSubChangedError)
+      offSub(unSubProcess)
       unSubChanged = subOnce(ACTION.EVENTS.LEVEL_CHANGED, levelId => {
         logger.log('level changed to ', levelId);
         let flushStart = connect(findSegmentOfCurrentPosition)
@@ -49,20 +46,17 @@ function changeLevel() {
         dispatch(ACTION.PROCESS, PROCESS.IDLE);
       });
 
-      connect(abortCurrentSegment);
+      connect(abortLoadingSegment);
       getState(ACTION.PROCESS).map(pro => {
         if (pro === PROCESS.IDLE) {
           dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGING);
           connect(changePlaylistLevel)(levelId);
           return;
         }
-        unSubProcess = subscribe(ACTION.PROCESS, pro => {
-          if (pro.value() === PROCESS.IDLE) {
-            unSubProcess();
-            dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGING);
-            connect(changePlaylistLevel)(levelId);
-            return;
-          }
+        unSubProcess = subOnce(PROCESS.IDLE, pro => {
+          unSubProcess();
+          dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGING);
+          connect(changePlaylistLevel)(levelId);
         });
       });
     }
@@ -71,7 +65,7 @@ function changeLevel() {
 
 function destroy({ connect, dispatch }) {
   logger.log('destroy...');
-  connect(abortCurrentSegment);
+  connect(abortLoadingSegment);
   connect(abortBuffer);
   connect(destroyMediaSource);
   dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');

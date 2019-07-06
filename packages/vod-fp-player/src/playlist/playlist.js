@@ -205,7 +205,7 @@ function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
     connect(_loadResource)('MANIFEST', url)
       .map(connect(_checkLevelOrMaster))
       .map(x => {
-        dispatch(ACTION.PROCESS, PROCESS.PLAYLIST_LOADED);
+        dispatch(ACTION.PROCESS, PROCESS.IDLE);
         dispatch(
           ACTION.EVENTS.MANIFEST_LOADED,
           getState(ACTION.PLAYLIST.PL).join()

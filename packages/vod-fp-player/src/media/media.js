@@ -9,7 +9,7 @@ import {
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { isSupportMS } from '../utils/probe';
-import { abortCurrentSegment } from '../playlist/segment';
+import { abortLoadingSegment } from '../playlist/segment';
 import { getBufferInfo } from '../buffer/buffer-helper';
 import { SUPPORT_ERROR } from '../error';
 
@@ -27,7 +27,7 @@ function _bindMediaEvent(
   });
   media.addEventListener('seeking', () => {
     logger.log('start seek...', media.currentTime);
-    let rest = connect(getBufferInfo)(false);
+    let rest = connect(getBufferInfo)(media.currentTime, true);
     if (media.duration - rest.bufferEnd >= endStreamTolerance) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
     } else if (ms.join().readyState === 'open') {
@@ -35,7 +35,7 @@ function _bindMediaEvent(
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
     if (rest.bufferLength === 0) {
-      connect(abortCurrentSegment);
+      connect(abortLoadingSegment);
     }
   });
   media.addEventListener('seeked', () => {
@@ -57,29 +57,26 @@ function _bindMediaEvent(
     });
   });
 
-  subscribe(ACTION.PROCESS, process => {
-    let rest = connect(getBufferInfo)(false);
-    Success.of(
-      curry((proce, mediaSource, currentId) => {
+  subscribe(PROCESS.IDLE, () => {
+    let rest = connect(getBufferInfo)(media.currentTime, false);
+    maybeToEither(ms)
+      .map(x => {
         if (
-          proce === PROCESS.IDLE &&
           media.duration - rest.bufferEnd <= endStreamTolerance &&
-          mediaSource.readyState === 'open'
+          x.readyState === 'open'
         ) {
           logger.warn('end of stream');
-          mediaSource.endOfStream();
+          x.endOfStream();
           dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, -1);
           dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         }
       })
-    )
-      .ap(maybeToEither(process))
-      .ap(maybeToEither(ms))
-      .ap(maybeToEither(getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID)))
       .error(e => {
         logger.log(e);
       });
-  });
+
+  })
+
 }
 
 function createMediaSource({ connect, dispatch, subscribe }, media) {
@@ -124,7 +121,7 @@ function checkManualSeek({ getConfig, getState }, start) {
       media.seeking &&
       start > media.currentTime &&
       start - media.currentTime <=
-        getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
+      getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);

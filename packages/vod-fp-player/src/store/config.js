@@ -1,6 +1,6 @@
 const ACTION = {
   MAX_BUFFER_LENGTH: 'maxBufferLength',
-  MAX_FLYBUFFER_LENGTH: 'maxFlyBufferLength',
+  MAX_FLY_BUFFER_LENGTH: 'maxFlyBufferLength',
   START_POSITION: 'startPosition',
   TICK_INTERVAL: 'tickInterval',
   MAX_FRAG_LOOKUP_TOLERANCE: 'maxFragLookUpTolerance',

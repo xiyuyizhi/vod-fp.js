@@ -21,11 +21,12 @@ if (location.search) {
 
 function initPlayer(url) {
   vod = new Vod({
-    maxBufferLength: 100
+    maxBufferLength: 30,
+    maxFlyBufferLength: 60
   });
   vod.attachMedia(document.querySelector('video'));
   vod.loadSource(
-    'http://localhost:8880/12/index.m3u8'
+    'http://localhost:8880/15v/index.m3u8'
     // 'http://localhost:8880/8/fmp4.m3u8'
     // url
   );

@@ -10,22 +10,28 @@ import config from './config';
 import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
+import flyBuffer from './flyBuffer';
 
 const { map, prop, compose, trace } = F;
 let logger = new Logger('player');
+
 let PROCESS = {
   IDLE: 'idle',
   PLAYLIST_LOADING: 'playlistLoading',
   PLAYLIST_LOADED: 'playlistLoaded',
-  SEGMENT_LOADING: 'segmentLoading',
-  SEGMENT_LOADED: 'segmentLoaded',
   MUXING: 'muxing',
   MUXED: 'muxed',
   BUFFER_APPENDING: 'bufferAppending',
   BUFFER_APPENDED: 'bufferAppended',
-  ABORT: 'abort',
-  ERROR: 'error',
   LEVEL_CHANGING: 'levelChanging'
+};
+
+let LOADPROCESS = {
+  IDLE: 'idle',
+  SEGMENT_LOADING: 'segmentLoading',
+  SEGMENT_LOADED: 'segmentLoaded',
+  SEGMENT_LOAD_ABORT: 'segmentLoadAbort',
+  SEGMENT_LOAD_ERROR: 'segmentLoadError'
 };
 
 let ACTION = {
@@ -34,6 +40,7 @@ let ACTION = {
   M3U8_URL: 'm3u8Url',
   MUX: 'mux',
   PROCESS: 'process',
+  LOADPROCESS: 'loadProcess',
   ABORTABLE: 'abortAble',
   REMOVE_ABORTABLE: 'removeAbortAble',
   MAIN_LOOP: 'mainLoop',
@@ -50,14 +57,16 @@ let ACTION = {
  */
 function getGlobalState() {
   return {
-    error: null,
+    innerError: null,
     errorCount: 0,
     m3u8Url: '',
     mux: null,
     mainLoop: null,
-    abortAble: [],
-    timeStamp: performance.now(),
     process: PROCESS.IDLE,
+    loadProcess: LOADPROCESS.IDLE,
+    abortAble: [],
+    processTs: performance.now(),
+    loadProcessTs: performance.now(),
     // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
     derive: {
       innerError(state, payload, dispatch) {
@@ -90,11 +99,10 @@ function getGlobalState() {
       },
       process(state, payload, dispatch) {
         if (payload) {
-          // dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-          const { timeStamp, process } = state.value();
-          let ts = (performance.now() - timeStamp).toFixed(2);
-          logger.log(`PROCESS: ${state.value().process}(${ts} ms) -> ${payload}`);
-          return compose(
+          const { processTs, process } = state.value();
+          let ts = (performance.now() - processTs).toFixed(2);
+          logger.log(`PROCESS: ${process}(${ts} ms) -> ${payload}`);
+          let s = compose(
             map(s => {
               if (s.process === PROCESS.BUFFER_APPENDED) {
                 s.errorCount = 0;
@@ -102,18 +110,30 @@ function getGlobalState() {
               return s;
             }),
             map(x => {
-              x.timeStamp = performance.now();
+              x.processTs = performance.now();
               x.process = payload;
               return x;
             })
           )(state);
+          dispatch(payload);
+          return s;
         }
         return map(prop('process'))(state);
       },
-      abortAble(state, payload) {
-        if (!payload) {
-          return map(prop('abortAble'))(state);
+      loadProcess(state, payload) {
+        if (payload) {
+          const { loadProcessTs, loadProcess } = state.value();
+          let ts = (performance.now() - loadProcessTs).toFixed(2);
+          logger.log(`LOAD_PROCESS: ${loadProcess}(${ts} ms) -> ${payload}`);
+          return state.map(x => {
+            x.loadProcessTs = performance.now();
+            x.loadProcess = payload;
+            return x;
+          });
         }
+        return map(prop('loadProcess'))(state);
+      },
+      abortAble(state, payload) {
         return map(x => {
           x.abortAble = x.abortAble.concat([payload]);
           return x;
@@ -123,6 +143,14 @@ function getGlobalState() {
         if (payload !== undefined) {
           return map(x => {
             x.abortAble = x.abortAble.filter(x => x.id !== payload);
+            return x;
+          })(state);
+        } else {
+          return map(x => {
+            x.abortAble.forEach(abortAble => {
+              abortAble.xhr.abort();
+            });
+            x.abortAble = [];
             return x;
           })(state);
         }
@@ -137,7 +165,7 @@ function getGlobalState() {
         }
         if (payload === 'resume') {
           compose(
-            map(tick => tick.immediate()),
+            map(tick => tick.resume()),
             map(prop('mainLoop'))
           )(state);
         }
@@ -146,11 +174,18 @@ function getGlobalState() {
   };
 }
 
-
-ACTION = combineActions(ACTION, config, playlist, media, buffer);
+ACTION = combineActions(ACTION, config, playlist, media, buffer, flyBuffer);
 
 function getState() {
-  return combineStates({ getState: getGlobalState }, config, playlist, media, buffer);
+  return combineStates(
+    { getState: getGlobalState },
+    config,
+    playlist,
+    media,
+    buffer,
+    flyBuffer
+  );
 }
-
-export { createStore, getState, ACTION, PROCESS };
+console.log('ppp');
+logger.log(ACTION);
+export { createStore, getState, ACTION, PROCESS, LOADPROCESS };

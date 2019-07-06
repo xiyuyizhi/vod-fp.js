@@ -2,8 +2,9 @@ import { TsToMp4 } from 'vod-fp-mux';
 import { F, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { SEGMENT_ERROR } from '../error';
+import { removeSegmentFromStore } from "../playlist/segment"
 
-function createMux({ dispatch }) {
+function createMux({ dispatch, connect }) {
   let mux = new TsToMp4();
   mux
     .on('data', data => {
@@ -16,6 +17,7 @@ function createMux({ dispatch }) {
       }
     })
     .on('error', e => {
+      connect(removeSegmentFromStore)
       dispatch(
         ACTION.ERROR,
         CusError.of(e).merge(CusError.of(SEGMENT_ERROR['SGEMENT_PARSE_ERROR']))
