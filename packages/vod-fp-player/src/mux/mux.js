@@ -38,7 +38,7 @@ function setTimeOffset({ getState }, offset) {
   });
 }
 
-function toMuxTs() {
+function _toMuxTs() {
   let lastSegment = null;
 
   return ({ getState, dispatch }, segment, buffer, sequeueNum, keyInfo) => {
@@ -63,9 +63,34 @@ function toMuxTs() {
   };
 }
 
+function _toMuxFmp4({ dispatch }, buffer) {
+  let { audioBuffer, videoBuffer } = buffer;
+  dispatch(ACTION.PROCESS, PROCESS.MUXED);
+  dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, {
+    buffer: videoBuffer,
+    combine: true
+  });
+  dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, {
+    buffer: audioBuffer,
+    combine: true
+  });
+}
+
+function toMux({ getState, connect }, segment, buffer, sequeueNum, keyInfo) {
+  let format = getState(ACTION.PLAYLIST.FORMAT);
+  if (format === 'ts') {
+    connect(_toMuxTs)(segment, buffer.videoBuffer, sequeueNum, keyInfo);
+  }
+  if (format === 'fmp4') {
+    connect(_toMuxFmp4)(buffer);
+  }
+}
+
 resetInitSegment = F.curry(resetInitSegment);
 setTimeOffset = F.curry(setTimeOffset);
 createMux = F.curry(createMux);
-toMuxTs = F.curry(toMuxTs());
+_toMuxTs = F.curry(_toMuxTs());
+_toMuxFmp4 = F.curry(_toMuxFmp4);
+toMux = F.curry(toMux);
 
-export { createMux, resetInitSegment, setTimeOffset, toMuxTs };
+export { createMux, resetInitSegment, setTimeOffset, toMux };

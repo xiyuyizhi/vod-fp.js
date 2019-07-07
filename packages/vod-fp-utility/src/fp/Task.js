@@ -158,6 +158,10 @@ class Task {
     });
   }
 
+  getOrElse() {
+    return this;
+  }
+
   error(f) {
     this._errorCall.push(f);
     return this;

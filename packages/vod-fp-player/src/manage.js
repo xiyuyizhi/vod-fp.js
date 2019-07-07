@@ -2,6 +2,7 @@ import { Task, F, Logger } from 'vod-fp-utility';
 import { ACTION, PROCESS } from './store';
 import { createMediaSource, destroyMediaSource } from './media/media';
 import { loadPlaylist, changePlaylistLevel } from './playlist/playlist';
+import { loadInitMP4 } from './playlist/segment';
 import { startTick } from './tick/tick';
 import {
   abortLoadingSegment,
@@ -31,22 +32,37 @@ function changeLevel() {
       offSub(unSubChangedError);
       offSub(unSubProcess);
       unSubChanged = subOnce(ACTION.EVENTS.LEVEL_CHANGED, levelId => {
+        dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGED);
         logger.log('level changed to ', levelId);
         let flushStart = connect(findSegmentOfCurrentPosition)
           .map(x => x.start || 0)
           .join();
-        connect(flushBuffer)(flushStart, Infinity).map(() => {
-          dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE);
-          getState(ACTION.MEDIA.MEDIA_ELE).map(x => {
+        let media = getState(ACTION.MEDIA.MEDIA_ELE);
+        let resume = () => {
+          media.map(x => {
             x.currentTime += 0.005;
             dispatch(ACTION.PROCESS, PROCESS.IDLE);
+            dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
+            x.play();
           });
+        };
+        connect(flushBuffer)(flushStart, Infinity).map(() => {
+          media.map(m => m.pause());
+          dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+          dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE);
+          if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
+            connect(loadInitMP4);
+            subOnce(PROCESS.INIT_MP4_LOADED, () => {
+              resume();
+            });
+            return;
+          }
+          resume();
         });
       });
       unSubChangedError = subOnce(ACTION.EVENTS.LEVEL_CHANGED_ERROR, e => {
         dispatch(ACTION.PROCESS, PROCESS.IDLE);
       });
-
       connect(abortLoadingSegment);
       getState(ACTION.PROCESS).map(pro => {
         if (pro === PROCESS.IDLE) {
@@ -55,7 +71,6 @@ function changeLevel() {
           return;
         }
         unSubProcess = subOnce(PROCESS.IDLE, pro => {
-          unSubProcess();
           dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGING);
           connect(changePlaylistLevel)(levelId);
         });

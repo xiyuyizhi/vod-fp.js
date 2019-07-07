@@ -70,34 +70,37 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
 
   let segBound;
-  if (!combine) {
-    segBound = getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).getOrElse(() => {
-      return getState(ACTION.BUFFER.AUDIO_BUFFER_INFO).value();
-    });
-  } else {
-    Maybe.of(
-      curry((videoBufferInfo, audioBufferInfo) => {
-        let startPTS = Math.min(
-          videoBufferInfo.startPTS,
-          audioBufferInfo.startPTS
-        );
-        let endPTS = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
-        segBound = {
-          startPTS,
-          endPTS
-        };
-      })
-    )
-      .ap(getState(ACTION.BUFFER.VIDEO_BUFFER_INFO))
-      .ap(getState(ACTION.BUFFER.AUDIO_BUFFER_INFO));
+  if (getState(ACTION.PLAYLIST.FORMAT) === 'ts') {
+    if (!combine) {
+      segBound = getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).getOrElse(() => {
+        return getState(ACTION.BUFFER.AUDIO_BUFFER_INFO).value();
+      });
+    } else {
+      Maybe.of(
+        curry((videoBufferInfo, audioBufferInfo) => {
+          let startPTS = Math.min(
+            videoBufferInfo.startPTS,
+            audioBufferInfo.startPTS
+          );
+          let endPTS = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
+          segBound = {
+            startPTS,
+            endPTS
+          };
+        })
+      )
+        .ap(getState(ACTION.BUFFER.VIDEO_BUFFER_INFO))
+        .ap(getState(ACTION.BUFFER.AUDIO_BUFFER_INFO));
+    }
+
+    segBound = {
+      start: parseFloat((segBound.startPTS / 90000).toFixed(6)),
+      end: parseFloat((segBound.endPTS / 90000).toFixed(6))
+    };
+    connect(checkManualSeek)(segBound.start);
+    dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
   }
 
-  segBound = {
-    start: parseFloat((segBound.startPTS / 90000).toFixed(6)),
-    end: parseFloat((segBound.endPTS / 90000).toFixed(6))
-  };
-  connect(checkManualSeek)(segBound.start);
-  dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
   //清除无用元素
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
@@ -144,8 +147,8 @@ function startBuffer({ getState, subscribe, dispatch, connect }) {
       )
         .ap(
           compose(
-            maybeToEither,
-            map(prop('buffer'))
+            map(prop('buffer')),
+            maybeToEither
           )(bufferInfo)
         )
         .error(e => {

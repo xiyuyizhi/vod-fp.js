@@ -15,9 +15,28 @@ const CLASSNMAE = {
 const defaultStyle = {
   position: 'absolute',
   padding: '15px',
+  'font-size': '12px',
   background: '#000',
   opacity: '0.8',
   color: 'white'
+};
+
+const closeIconStyle = {
+  'text-align': 'right',
+  cursor: 'pointer'
+};
+
+const debugInfoUlStyle = {
+  'list-style': 'none',
+  padding: 0,
+  'text-align': 'left'
+};
+
+const debugInfoItemStyle = {
+  display: 'inline-block',
+  width: '100px',
+  'text-align': 'right',
+  'margin-right': '20px'
 };
 
 function _initDebugWindow(container, connect) {
@@ -32,13 +51,13 @@ function _initDebugWindow(container, connect) {
   _window = document.createElement('div');
   _window.className = CLASSNMAE.VOD_DEBUG_INFO;
   _window.style.width = '220px';
-  _window.style.left = `10px`;
-  _window.style.top = `10px`;
+  _window.style.left = `20px`;
+  _window.style.top = `20px`;
   Object.assign(_window.style, defaultStyle);
   _window.innerHTML = `
-    <div style="text-align:right;cursor:pointer" class="${
-      CLASSNMAE.VOD_DEBUG_INFO_CLOSE
-    }">X</div>
+    <div style="${_parseStyleStr(closeIconStyle)}" class="${
+    CLASSNMAE.VOD_DEBUG_INFO_CLOSE
+  }">X</div>
     <div class="${CLASSNMAE.VOD_DEBUG_INFO_AREA}"></div>
   `;
   _window.addEventListener('click', e => {
@@ -67,10 +86,12 @@ function _collectDebugInfo({ getState, getConfig }) {
   return Maybe.of(
     curry((bufferInfo, flyBufferInfo) => {
       return {
-        bufferLength: bufferInfo.bufferLength,
-        flyBufferLength: flyBufferInfo.bufferLength,
+        bufferLength: bufferInfo.bufferLength.toFixed(2),
+        flyBufferLength: flyBufferInfo.bufferLength.toFixed(2),
         maxBufferLength: getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
-        maxFlyBufferLength: getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH)
+        maxFlyBufferLength: getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH),
+        format: getState(ACTION.PLAYLIST.FORMAT),
+        mode: getState(ACTION.PLAYLIST.MODE)
       };
     })
   )
@@ -79,15 +100,35 @@ function _collectDebugInfo({ getState, getConfig }) {
     .join();
 }
 
+function _parseStyleStr(styles) {
+  return Object.keys(styles)
+    .map(key => `${key}:${styles[key]}`)
+    .join(';');
+}
+
 function _renderDebugInfo(info, ele) {
+  let {
+    format,
+    mode,
+    bufferLength,
+    flyBufferLength,
+    maxBufferLength,
+    maxFlyBufferLength
+  } = info;
   ele.innerHTML = `<div>
-  <ul style="list-style:none;padding:0">
-    <li><span style="display: inline-block; width: 120px;">buffer信息:</span>${info.bufferLength.toFixed(
-      2
-    )} / ${info.maxBufferLength}s</li>
-    <li><span style="display: inline-block; width: 120px;">虚拟buffer信息:</span>${info.flyBufferLength.toFixed(
-      2
-    )} / ${info.maxFlyBufferLength}s</li>
+  <ul style="${_parseStyleStr(debugInfoUlStyle)}">
+    <li><span style="${_parseStyleStr(
+      debugInfoItemStyle
+    )}">format:</span>${format}</li>
+    <li><span style="${_parseStyleStr(
+      debugInfoItemStyle
+    )}">模式:</span>${mode}</li>
+    <li><span style="${_parseStyleStr(
+      debugInfoItemStyle
+    )}">buffer信息:</span>${bufferLength} / ${maxBufferLength}s</li>
+    <li><span style="${_parseStyleStr(
+      debugInfoItemStyle
+    )}">虚拟buffer信息:</span>${flyBufferLength} / ${maxFlyBufferLength}s</li>
   </ul>
   </div>`;
 }
@@ -96,6 +137,8 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   let menu;
   menu = container.querySelector(`.${CLASSNMAE.VOD_MENU_CLASSNAME}`);
   if (menu) {
+    menu.style.left = `${pointX}px`;
+    menu.style.top = `${pointY}px`;
     menu.style.display = 'block';
     return;
   }
@@ -106,9 +149,9 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   menu.style.top = `${pointY}px`;
   Object.assign(menu.style, defaultStyle);
   menu.innerHTML = `
-    <div style="text-align:right;cursor:pointer" class="${
-      CLASSNMAE.VOD_MENU_CLOSE
-    }">X</div>
+    <div style="${_parseStyleStr(closeIconStyle)}" class="${
+    CLASSNMAE.VOD_MENU_CLOSE
+  }">X</div>
     <div style="cursor:pointer" class="${
       CLASSNMAE.VOD_DEBUG_BTN
     }">调试信息</div>

@@ -93,14 +93,16 @@ export default class Player extends React.Component {
           />
           <button onClick={this.load}>load</button>
         </div>
-        <div id="player">
-          <video
-            autoPlay
-            controls
-            width="600"
-            height="400"
-            ref={media => (this.media = media)}
-          />
+        <div>
+          <div id="player">
+            <video
+              autoPlay
+              controls
+              width="600"
+              height="400"
+              ref={media => (this.media = media)}
+            />
+          </div>
           <div>{this._renderResolution()}</div>
         </div>
         {error ? (

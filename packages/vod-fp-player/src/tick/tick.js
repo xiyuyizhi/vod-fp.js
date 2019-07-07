@@ -3,6 +3,7 @@ import { ACTION, PROCESS, LOADPROCESS } from '../store';
 import {
   findSegment,
   loadSegment,
+  loadInitMP4,
   drainSegmentFromStore
 } from '../playlist/segment';
 import { createMux } from '../mux/mux';
@@ -21,7 +22,13 @@ function main(
   logger.log(level);
   if (!level) return;
   connect(updateMediaDuration);
-  connect(createMux);
+  let format = getState(ACTION.PLAYLIST.FORMAT);
+  if (format === 'ts') {
+    connect(createMux);
+  }
+  if (format === 'fmp4') {
+    connect(loadInitMP4);
+  }
   connect(startBuffer);
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
   let startLoadProcess = connect(_startLoadProcess);
@@ -36,7 +43,7 @@ function main(
           pro === PROCESS.IDLE
         ) {
           return connect(findSegment)(segments, bufferInfo.bufferEnd);
-        } else if (media.paused || media.end) {
+        } else if (media.currentTime && (media.paused || media.end)) {
           dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         }
       })

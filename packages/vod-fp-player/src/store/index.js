@@ -19,11 +19,14 @@ let PROCESS = {
   IDLE: 'idle',
   PLAYLIST_LOADING: 'playlistLoading',
   PLAYLIST_LOADED: 'playlistLoaded',
+  INIT_MP4_LOADING: 'initMp4Loading',
+  INIT_MP4_LOADED: 'initMp4Loaded',
   MUXING: 'muxing',
   MUXED: 'muxed',
   BUFFER_APPENDING: 'bufferAppending',
   BUFFER_APPENDED: 'bufferAppended',
-  LEVEL_CHANGING: 'levelChanging'
+  LEVEL_CHANGING: 'levelChanging',
+  LEVEL_CHANGED: 'levelChanged'
 };
 
 let LOADPROCESS = {

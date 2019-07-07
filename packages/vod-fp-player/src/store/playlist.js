@@ -6,12 +6,15 @@ const { prop, curry, compose, map, head, join, filter, trace } = F;
 let logger = new Logger('player');
 const ACTION = {
   PL: 'pl',
+  FORMAT: 'format',
+  MODE: 'mode',
   CURRENT_LEVEL_ID: 'currentLevelId',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
   FIND_LEVEL: 'findLevel',
   FIND_MEDIA: 'findMedia',
   FIND_KEY_INFO: 'findKeyInfo',
+  FIND_INIT_MP4: 'findInitMp4',
   UPDATE_MEDIA: 'updateMedia',
   UPDATE_KEY: 'updateKey',
   SEGMENTS: 'segments',
@@ -65,7 +68,27 @@ export default {
       },
       currentSegmentId: -1,
       currentLevelId: 1,
+      format: 'ts', //ts | fmp4 | flv
       derive: {
+        format(state) {
+          return compose(
+            map(uri => {
+              if (/(mp4|m4s)/.test(uri)) return 'fmp4';
+            }),
+            map(prop('uri')),
+            map(prop('map')),
+            map(prop('detail')),
+            map(head),
+            map(prop('levels')),
+            map(prop('pl'))
+          )(state).getOrElse('ts');
+        },
+        mode(state) {
+          return compose(
+            map(prop('type')),
+            map(prop('pl'))
+          )(state).getOrElse('level');
+        },
         currentLevelId(state, levelId) {
           if (!levelId) {
             return map(prop('currentLevelId'))(state);
@@ -107,6 +130,26 @@ export default {
             map(prop('key')),
             map(prop('detail'))
           )(_getCurrentLevel(state));
+        },
+        findInitMp4(state) {
+          let _getInitUrl = level => {
+            return level
+              .map(prop('detail'))
+              .map(prop('map'))
+              .map(prop('uri'));
+          };
+          let level = _getCurrentLevel(state);
+          let media = this.findMedia(state, level.map(prop('levelId')).join());
+          return Maybe.of(
+            curry((levelInitMp4, mediaInitMp4) => {
+              return {
+                levelInitMp4,
+                mediaInitMp4
+              };
+            })
+          )
+            .ap(_getInitUrl(level))
+            .ap(_getInitUrl(media));
         },
         updateLevel(state, payload) {
           let { levelId, detail } = payload;
@@ -186,6 +229,7 @@ export default {
           )(_getCurrentLevel(state));
         },
         updateSegmentsBound(state, segBound, { getState, ACTION }) {
+          console.log(segBound);
           Maybe.of(
             curry((segments, currentId) => {
               let { start, end } = segBound;
@@ -197,7 +241,7 @@ export default {
               logger.log(
                 'new buffer:',
                 [start, end],
-                bufferDump(getState(ACTION.MEDIA.MEDIA_ELE))
+                bufferDump(getState(ACTION.MEDIA.MEDIA_ELE).join())
               );
               let len = segments.length - 1;
               for (let i = currentId + 1; i <= len; i++) {
@@ -209,7 +253,12 @@ export default {
             })
           )
             .ap(this.segments(state))
-            .ap(state.map(prop('currentSegmentId')));
+            .ap(
+              state.map(prop('currentSegmentId')).map(id => {
+                if (id == -1) return;
+                return id;
+              })
+            );
         }
       }
     };

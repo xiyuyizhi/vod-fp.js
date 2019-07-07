@@ -13,10 +13,7 @@ function _bufferSerialize(media) {
     }
     return arr;
   };
-  return compose(
-    map(ifElse(prop('length'), _serialize, () => [])),
-    map(prop('buffered'))
-  )(media);
+  return Maybe.of(_serialize(media.buffered));
 }
 
 function bufferDump(media) {
@@ -99,7 +96,9 @@ function _bufferInfoCacl(
 
 // boolean -> Maybe
 function getBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
-  let media = getState(ACTION.MEDIA.MEDIA_ELE);
+  let media = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).getOrElse(() =>
+    getState(ACTION.MEDIA.MEDIA_ELE).join()
+  );
   return _bufferInfoCacl(
     getState,
     getConfig,

@@ -1,19 +1,10 @@
-import {
-  F,
-  Task,
-  Success,
-  Empty,
-  Maybe,
-  CusError,
-  Logger
-} from 'vod-fp-utility';
+import { F, Task, Success, Empty, Maybe, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS, LOADPROCESS } from '../store';
-import { toMuxTs } from '../mux/mux';
+import { toMux } from '../mux/mux';
 import loader from '../loader/loader';
 import { SEGMENT_ERROR, XHR_ERROR } from '../error';
 
-const { compose, head, map, filter } = F;
-let logger = new Logger('player');
+const { compose, head, map, filter, curry, trace } = F;
 
 function _binarySearch(tolerance, list, start, end, bufferEnd) {
   if (start > end) {
@@ -63,26 +54,43 @@ function abortLoadingSegment({ dispatch }) {
   dispatch(ACTION.REMOVE_ABORTABLE);
 }
 
+function _loadSource({ connect, getConfig }, url) {
+  return connect(loader)({
+    url: url,
+    options: {
+      responseType: 'arraybuffer',
+      timeout: getConfig(ACTION.CONFIG.MAX_TIMEOUT)
+    }
+  });
+}
+_loadSource = curry(_loadSource);
+
 // segment -> Task
 function loadSegment() {
   let lastSegment = null;
   return ({ getConfig, getState, connect, dispatch }, segment) => {
     dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADING);
-    logger.log(
-      'matched audio segment,',
-      getState(ACTION.PLAYLIST.FIND_MEDIA_SEGEMENT, {
-        levelId: segment.levelId,
-        id: segment.id
-      })
-    );
 
-    return connect(loader)({
-      url: segment.url,
-      options: {
-        responseType: 'arraybuffer',
-        timeout: getConfig(ACTION.CONFIG.MAX_TIMEOUT)
-      }
+    let _loadTask = getState(ACTION.PLAYLIST.FIND_MEDIA_SEGEMENT, {
+      levelId: segment.levelId,
+      id: segment.id
     })
+      .map(trace('log: matched audio segment'))
+      .chain(audioSegment => {
+        return Task.of((resolve, reject) => {
+          Task.resolve(
+            curry((videoBuffer, audioBuffer) => {
+              resolve({ videoBuffer, audioBuffer });
+            })
+          )
+            .ap(connect(_loadSource)(segment.url))
+            .ap(connect(_loadSource)(audioSegment.url))
+            .error(reject);
+        });
+      })
+      .getOrElse(() => connect(_loadSource)(segment.url));
+
+    return _loadTask
       .filterRetry(e => !e.is(XHR_ERROR.ABORT))
       .retry(
         getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
@@ -91,16 +99,13 @@ function loadSegment() {
       .map(buffer => {
         dispatch(ACTION.FLYBUFFER.STORE_NEW_SEGMENT, {
           segment,
-          buffer
+          buffer:
+            buffer instanceof ArrayBuffer ? { videoBuffer: buffer } : buffer
         });
         dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
       })
       .error(e => {
         if (e.is(XHR_ERROR.ABORT)) {
-          // getState(ACTION.PROCESS)
-          //   .map(x => (x !== PROCESS.LEVEL_CHANGING ? true : undefined))
-          //   .map(() => {
-          //   });
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
         } else {
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
@@ -121,7 +126,7 @@ function drainSegmentFromStore(
     segInfo => {
       let { segment, buffer } = segInfo;
       dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
-      connect(toMuxTs)(
+      connect(toMux)(
         segment,
         buffer,
         segment.id,
@@ -138,17 +143,52 @@ function removeSegmentFromStore({ getState, dispatch }) {
   });
 }
 
+function loadInitMP4({ getState, dispatch, getConfig, connect }) {
+  dispatch(ACTION.PROCESS, PROCESS.INIT_MP4_LOADING);
+  getState(ACTION.PLAYLIST.FIND_INIT_MP4)
+    .map(trace('log: find init mp4'))
+    .chain(initUrls => {
+      return Task.of((resolve, reject) => {
+        Task.resolve(
+          curry((videoBuffer, audioBuffer) => {
+            resolve({ videoBuffer, audioBuffer });
+          })
+        )
+          .ap(connect(_loadSource)(initUrls.levelInitMp4))
+          .ap(connect(_loadSource)(initUrls.mediaInitMp4))
+          .error(reject);
+      });
+    })
+    .filterRetry(e => !e.is(XHR_ERROR.ABORT))
+    .retry(
+      getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
+      getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
+    )
+    .map(buffer => {
+      dispatch(ACTION.PROCESS, PROCESS.INIT_MP4_LOADED);
+      connect(toMux)(null, buffer, -1, null);
+    })
+    .error(e => {
+      if (!e.is(XHR_ERROR.ABORT)) {
+        dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
+        dispatch(ACTION.ERROR, e.merge(CusError.of(SEGMENT_ERROR[e.detail()])));
+      }
+    });
+}
+
 abortLoadingSegment = F.curry(abortLoadingSegment);
 findSegment = F.curry(findSegment);
 loadSegment = F.curry(loadSegment());
 findSegmentOfCurrentPosition = F.curry(findSegmentOfCurrentPosition);
 drainSegmentFromStore = F.curry(drainSegmentFromStore);
 removeSegmentFromStore = F.curry(removeSegmentFromStore);
+loadInitMP4 = F.curry(loadInitMP4);
 export {
   findSegment,
   loadSegment,
   abortLoadingSegment,
   findSegmentOfCurrentPosition,
   drainSegmentFromStore,
-  removeSegmentFromStore
+  removeSegmentFromStore,
+  loadInitMP4
 };
