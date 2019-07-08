@@ -150,7 +150,7 @@ function getGlobalState() {
         } else {
           return map(x => {
             x.abortAble.forEach(abortAble => {
-              abortAble.xhr.abort();
+              abortAble.task.abort();
             });
             x.abortAble = [];
             return x;

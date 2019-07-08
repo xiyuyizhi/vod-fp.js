@@ -33,8 +33,8 @@ function _bindMediaEvent(
       ms.endOfStream();
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
-    rest.map(rest => {
-      if (rest.bufferLength === 0) {
+    rest.map(buffer => {
+      if (buffer.bufferLength === 0 || buffer.bufferEnd === 0) {
         connect(abortLoadingSegment);
       }
     });
@@ -44,6 +44,9 @@ function _bindMediaEvent(
   });
   media.addEventListener('waiting', () => {
     logger.log('waiting....,is seeking?', media.seeking);
+    if (media.seeking) {
+      return;
+    }
     media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
   });
   media.addEventListener('ended', () => {
@@ -119,7 +122,7 @@ function checkManualSeek({ getConfig, getState }, start) {
       media.seeking &&
       start > media.currentTime &&
       start - media.currentTime <=
-        getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
+      getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);

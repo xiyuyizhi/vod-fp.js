@@ -137,7 +137,7 @@ function _checkloadDecryptKey({ getState, connect }, level) {
 function _loadResource({ connect, getConfig }, type, url) {
   let maxRetryCount = getConfig(ACTION.CONFIG.MAX_LEVEL_RETRY_COUNT);
   let toLoad = (retryCount, resolve, reject) => {
-    let options = type === 'KEY' ? { responseType: 'arraybuffer' } : {};
+    let options = type === 'KEY' ? { responseType: 'arraybuffer' } : null;
     connect(loader)({ url, options })
       .filterRetry(x => !x.is(XHR_ERROR.ABORT))
       .retry(

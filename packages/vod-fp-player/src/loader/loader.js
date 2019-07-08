@@ -1,13 +1,13 @@
 import { F, Task } from 'vod-fp-utility';
 import { ACTION } from '../store';
-import xhrTask from './xhr';
+import fetchTask from './fetch';
 
 function loader({ dispatch }, options) {
   return Task.of((resolve, reject) => {
-    xhrTask(options, xhr => {
+    fetchTask(options, task => {
       dispatch(ACTION.ABORTABLE, {
         id: options.url,
-        xhr
+        task
       });
     })
       .map(x => {
