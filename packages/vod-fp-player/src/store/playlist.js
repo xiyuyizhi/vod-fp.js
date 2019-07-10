@@ -229,7 +229,6 @@ export default {
           )(_getCurrentLevel(state));
         },
         updateSegmentsBound(state, segBound, { getState, ACTION }) {
-          console.log(segBound);
           Maybe.of(
             curry((segments, currentId) => {
               let { start, end } = segBound;

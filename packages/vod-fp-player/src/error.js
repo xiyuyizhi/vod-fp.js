@@ -6,19 +6,19 @@ export const SUPPORT_ERROR = {
   }
 };
 
-export const XHR_ERROR = {
-  type: 'XHR_ERROR',
+export const LOADER_ERROR = {
+  type: 'LOADER_ERROR',
   ABORT: {
-    type: 'XHR_ERROR',
+    type: 'LOADER_ERROR',
     detail: 'ABORT',
     message: 'abort'
   },
   LOAD_ERROR: {
-    type: 'XHR_ERROR',
+    type: 'LOADER_ERROR',
     detail: 'LOAD_ERROR'
   },
   LOAD_TIMEOUT: {
-    type: 'XHR_ERROR',
+    type: 'LOADER_ERROR',
     detail: 'LOAD_TIMEOUT',
     message: 'timeout'
   }

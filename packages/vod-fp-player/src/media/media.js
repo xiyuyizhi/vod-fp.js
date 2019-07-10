@@ -44,9 +44,7 @@ function _bindMediaEvent(
   });
   media.addEventListener('waiting', () => {
     logger.log('waiting....,is seeking?', media.seeking);
-    if (media.seeking) {
-      return;
-    }
+    if (media.seeking) return;
     media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
   });
   media.addEventListener('ended', () => {

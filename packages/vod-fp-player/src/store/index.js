@@ -178,7 +178,7 @@ function getGlobalState() {
 
 ACTION = combineActions(ACTION, config, playlist, media, buffer, flyBuffer);
 
-function getState() {
+function getInitState() {
   return combineStates(
     { getState: getGlobalState },
     config,
@@ -188,4 +188,4 @@ function getState() {
     flyBuffer
   );
 }
-export { createStore, getState, ACTION, PROCESS, LOADPROCESS };
+export { createStore, getInitState, ACTION, PROCESS, LOADPROCESS };

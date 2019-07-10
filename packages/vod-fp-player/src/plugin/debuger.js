@@ -14,7 +14,7 @@ const CLASSNMAE = {
 
 const defaultStyle = {
   position: 'absolute',
-  padding: '15px',
+  padding: '10px',
   'font-size': '12px',
   background: '#000',
   opacity: '0.8',
@@ -84,19 +84,31 @@ function _startFlush(container, connect) {
 
 function _collectDebugInfo({ getState, getConfig }) {
   return Maybe.of(
-    curry((bufferInfo, flyBufferInfo) => {
+    curry((bufferInfo, flyBufferInfo, videoInfo, audioInfo) => {
       return {
-        bufferLength: bufferInfo.bufferLength.toFixed(2),
-        flyBufferLength: flyBufferInfo.bufferLength.toFixed(2),
-        maxBufferLength: getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
-        maxFlyBufferLength: getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH),
+        bufferInfo:
+          bufferInfo.bufferLength.toFixed(2) +
+          ' / ' +
+          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
+        flyBufferInfo:
+          flyBufferInfo.bufferLength.toFixed(2) +
+          ' / ' +
+          getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH),
         format: getState(ACTION.PLAYLIST.FORMAT),
-        mode: getState(ACTION.PLAYLIST.MODE)
+        mode: getState(ACTION.PLAYLIST.MODE),
+        videoWidth: videoInfo.width,
+        videoHeight: videoInfo.height,
+        videoCodec: videoInfo.codec,
+        fps: videoInfo.fps,
+        audioCodec: audioInfo.codec,
+        samplerate: audioInfo.samplerate
       };
     })
   )
     .ap(getState(ACTION.BUFFER.GET_BUFFER_INFO))
     .ap(getState(ACTION.BUFFER.GET_FLY_BUFFER_INFO))
+    .ap(getState(ACTION.BUFFER.VIDEO_INFO))
+    .ap(getState(ACTION.BUFFER.AUDIO_INFO))
     .join();
 }
 
@@ -107,30 +119,28 @@ function _parseStyleStr(styles) {
 }
 
 function _renderDebugInfo(info, ele) {
-  let {
-    format,
-    mode,
-    bufferLength,
-    flyBufferLength,
-    maxBufferLength,
-    maxFlyBufferLength
-  } = info;
-  ele.innerHTML = `<div>
-  <ul style="${_parseStyleStr(debugInfoUlStyle)}">
-    <li><span style="${_parseStyleStr(
-      debugInfoItemStyle
-    )}">format:</span>${format}</li>
-    <li><span style="${_parseStyleStr(
-      debugInfoItemStyle
-    )}">模式:</span>${mode}</li>
-    <li><span style="${_parseStyleStr(
-      debugInfoItemStyle
-    )}">buffer信息:</span>${bufferLength} / ${maxBufferLength}s</li>
-    <li><span style="${_parseStyleStr(
-      debugInfoItemStyle
-    )}">虚拟buffer信息:</span>${flyBufferLength} / ${maxFlyBufferLength}s</li>
-  </ul>
-  </div>`;
+  let _lis = [
+    'format',
+    'mode',
+    'videoCodec',
+    'audioCodec',
+    'videoWidth',
+    'videoHeight',
+    'samplerate',
+    'fps',
+    'bufferInfo',
+    'flyBufferInfo'
+  ]
+    .map(x => {
+      return `<li><span style="${_parseStyleStr(
+        debugInfoItemStyle
+      )}">${x}:</span>${info[x]}</li>`;
+    })
+    .join('\n');
+
+  ele.innerHTML = `<div><ul style="${_parseStyleStr(
+    debugInfoUlStyle
+  )}">${_lis}</ul></div>`;
 }
 
 function _renderContextMenu(pointX, pointY, container, connect) {

@@ -200,7 +200,13 @@ export default class VideoFragmentStream extends PipeLine {
       startPTS: firstPTS,
       startDTS: firstDTS,
       endPTS: lastPTS + this.mp4SampleDuration,
-      endDTS: this.nextAvcDts
+      endDTS: this.nextAvcDts,
+      videoInfo: {
+        codec: avcTrack.codec,
+        width: avcTrack.width,
+        height: avcTrack.height,
+        fps: parseInt(90000 / this.mp4SampleDuration)
+      }
     });
     bf = null;
   }

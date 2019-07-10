@@ -14,7 +14,7 @@ import {
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
-import { XHR_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
+import { LOADER_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
 
 const {
   curry,
@@ -137,9 +137,9 @@ function _checkloadDecryptKey({ getState, connect }, level) {
 function _loadResource({ connect, getConfig }, type, url) {
   let maxRetryCount = getConfig(ACTION.CONFIG.MAX_LEVEL_RETRY_COUNT);
   let toLoad = (retryCount, resolve, reject) => {
-    let options = type === 'KEY' ? { responseType: 'arraybuffer' } : null;
-    connect(loader)({ url, options })
-      .filterRetry(x => !x.is(XHR_ERROR.ABORT))
+    let params = type === 'KEY' ? { responseType: 'arraybuffer' } : null;
+    connect(loader)({ url, params })
+      .filterRetry(x => !x.is(LOADER_ERROR.ABORT))
       .retry(
         getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
         getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
@@ -148,7 +148,7 @@ function _loadResource({ connect, getConfig }, type, url) {
       .map(resolve)
       .error(e => {
         let err = e;
-        if (e.isType(XHR_ERROR) && !e.is(XHR_ERROR.ABORT)) {
+        if (e.isType(LOADER_ERROR) && !e.is(LOADER_ERROR.ABORT)) {
           err = e.merge(CusError.of(PLAYLIST_ERROR[type][e.detail()]));
           //对于level和media,在重试几次
           if (retryCount && type !== 'MANIFEST') {

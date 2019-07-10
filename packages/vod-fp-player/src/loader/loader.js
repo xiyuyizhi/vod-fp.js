@@ -1,21 +1,56 @@
 import { F, Task } from 'vod-fp-utility';
 import { ACTION } from '../store';
-import fetchTask from './fetch';
+import xhrLoader from './xhr-loader';
+import fetchLoader from './fetch-loader';
 
-function loader({ dispatch }, options) {
+const DEFAULT_CONFIG = {
+  method: 'get',
+  url: '',
+  body: null,
+  headers: {},
+  options: {},
+  params: {
+    responseType: 'text',
+    timeout: 0
+  }
+};
+
+const STREAM_DEFAULT_COFNIG = {
+  method: 'GET',
+  url: '',
+  header: {},
+  options: {
+    mode: 'cors'
+  }
+};
+
+function loader({ dispatch }, config) {
   return Task.of((resolve, reject) => {
-    fetchTask(options, task => {
+    Task.of((_resolve, _reject) => {
+      config.params = config.params || DEFAULT_CONFIG.params;
+      config = Object.assign({}, DEFAULT_CONFIG, config);
+      let abortable;
+
+      if (window.fetch && window.AbortController) {
+        let controller = new AbortController();
+        let signal = controller.signal;
+        fetchLoader(config, controller, _resolve, _reject);
+        abortable = controller;
+      } else {
+        abortable = xhrLoader(config, _resolve, _reject);
+      }
+
       dispatch(ACTION.ABORTABLE, {
-        id: options.url,
-        task
+        id: config.url,
+        task: abortable
       });
     })
       .map(x => {
-        dispatch(ACTION.REMOVE_ABORTABLE, options.url);
+        dispatch(ACTION.REMOVE_ABORTABLE, config.url);
         resolve(x);
       })
       .error(e => {
-        dispatch(ACTION.REMOVE_ABORTABLE, options.url);
+        dispatch(ACTION.REMOVE_ABORTABLE, config.url);
         reject(e);
       });
   });

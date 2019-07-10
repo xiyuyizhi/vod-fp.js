@@ -2,7 +2,7 @@ import { F, Task, Success, Empty, Maybe, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS, LOADPROCESS } from '../store';
 import { toMux } from '../mux/mux';
 import loader from '../loader/loader';
-import { SEGMENT_ERROR, XHR_ERROR } from '../error';
+import { SEGMENT_ERROR, LOADER_ERROR } from '../error';
 
 const { compose, head, map, filter, curry, trace } = F;
 
@@ -57,7 +57,8 @@ function abortLoadingSegment({ dispatch }) {
 function _loadSource({ connect, getConfig }, url) {
   return connect(loader)({
     url: url,
-    options: {
+    useStream: true,
+    params: {
       responseType: 'arraybuffer',
       timeout: getConfig(ACTION.CONFIG.MAX_TIMEOUT)
     }
@@ -91,7 +92,7 @@ function loadSegment() {
       .getOrElse(() => connect(_loadSource)(segment.url));
 
     return _loadTask
-      .filterRetry(e => !e.is(XHR_ERROR.ABORT))
+      .filterRetry(e => !e.is(LOADER_ERROR.ABORT))
       .retry(
         getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
         getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
@@ -105,7 +106,7 @@ function loadSegment() {
         dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
       })
       .error(e => {
-        if (e.is(XHR_ERROR.ABORT)) {
+        if (e.is(LOADER_ERROR.ABORT)) {
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
         } else {
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
@@ -159,7 +160,7 @@ function loadInitMP4({ getState, dispatch, getConfig, connect }) {
           .error(reject);
       });
     })
-    .filterRetry(e => !e.is(XHR_ERROR.ABORT))
+    .filterRetry(e => !e.is(LOADER_ERROR.ABORT))
     .retry(
       getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
       getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
@@ -169,7 +170,7 @@ function loadInitMP4({ getState, dispatch, getConfig, connect }) {
       connect(toMux)(null, buffer, -1, null);
     })
     .error(e => {
-      if (!e.is(XHR_ERROR.ABORT)) {
+      if (!e.is(LOADER_ERROR.ABORT)) {
         dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
         dispatch(ACTION.ERROR, e.merge(CusError.of(SEGMENT_ERROR[e.detail()])));
       }

@@ -1,6 +1,6 @@
 import { F } from 'vod-fp-utility';
 import { getBufferInfo, getFlyBufferInfo } from '../buffer/buffer-helper';
-const { prop, compose } = F;
+const { prop, compose, map } = F;
 
 export default {
   module: 'BUFFER',
@@ -13,6 +13,8 @@ export default {
     VIDEO_APPENDED: 'videoAppended',
     VIDEO_BUFFER_REMOVE: 'videoBufferRemove',
     AUDIO_BUFFER_REMOVE: 'audioBufferRemove',
+    VIDEO_INFO: 'videoInfo',
+    AUDIO_INFO: 'audioInfo',
     GET_BUFFER_INFO: 'getBufferInfo',
     GET_FLY_BUFFER_INFO: 'getFlyBufferInfo'
   },
@@ -24,14 +26,36 @@ export default {
       videoBufferInfo: null,
       audioAppended: false,
       videoAppended: false,
+      videoInfo: null,
+      audioInfo: null,
       derive: {
-        videoBufferRemove: state => {
+        videoBufferInfo(state, payload) {
+          if (payload) {
+            return state.map(x => {
+              x.videoBufferInfo = payload;
+              x.videoInfo = payload.videoInfo;
+              return x;
+            });
+          }
+          return state.map(prop('videoBufferInfo'));
+        },
+        audioBufferInfo(state, payload) {
+          if (payload) {
+            return state.map(x => {
+              x.audioBufferInfo = payload;
+              x.audioInfo = payload.audioInfo;
+              return x;
+            });
+          }
+          return state.map(prop('audioBufferInfo'));
+        },
+        videoBufferRemove(state) {
           return state.map(x => {
             x.videoBufferInfo = null;
             return x;
           });
         },
-        audioBufferRemove: state => {
+        audioBufferRemove(state) {
           return state.map(x => {
             x.audioBufferInfo = null;
             return x;

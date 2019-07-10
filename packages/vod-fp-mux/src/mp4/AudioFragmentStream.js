@@ -243,7 +243,11 @@ export default class AudioFragmentStream extends PipeLine {
         startPTS: firstPTS,
         startDTS: firstPTS,
         endPTS: this.nextAacDts,
-        endDTS: this.nextAacDts
+        endDTS: this.nextAacDts,
+        audioInfo: {
+          codec: aacTrack.codec,
+          samplerate: aacTrack.samplerate
+        }
       });
       bf = null;
     }
