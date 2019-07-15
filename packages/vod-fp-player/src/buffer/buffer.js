@@ -29,7 +29,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function(_) {
+  sb.addEventListener('updateend', function (_) {
     if (type === 'video') {
       getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).map(x => {
         if (x.combine) {
@@ -78,6 +78,7 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
     } else {
       Maybe.of(
         curry((videoBufferInfo, audioBufferInfo) => {
+          logger.log(`buffer:  video=[${videoBufferInfo.startPTS / 90000},${videoBufferInfo.endPTS / 90000}]`, `audio=[${audioBufferInfo.startPTS / 90000},${audioBufferInfo.endPTS / 90000}]`)
           let startPTS = Math.min(
             videoBufferInfo.startPTS,
             audioBufferInfo.startPTS

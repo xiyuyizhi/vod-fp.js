@@ -232,9 +232,10 @@ export default {
           Maybe.of(
             curry((segments, currentId) => {
               let { start, end } = segBound;
-              segments[currentId].start = start;
-              segments[currentId].end = end;
-              segments[currentId].duration = parseFloat(
+              let seg = segments.find(x => x.id === currentId);
+              seg.start = start;
+              seg.end = end;
+              seg.duration = parseFloat(
                 (end + start).toFixed(6)
               );
               logger.log(
@@ -243,12 +244,12 @@ export default {
                 bufferDump(getState(ACTION.MEDIA.MEDIA_ELE).join())
               );
               let len = segments.length - 1;
-              for (let i = currentId + 1; i <= len; i++) {
-                segments[i].start = segments[i - 1].end;
-                segments[i].end = parseFloat(
-                  (segments[i].start + segments[i].duration).toFixed(6)
-                );
-              }
+              segments.forEach((x, index) => {
+                if (x.id > currentId) {
+                  x.start = segments[index - 1].end;
+                  x.end = parseFloat((x.start + x.duration).toFixed(6));
+                }
+              })
             })
           )
             .ap(this.segments(state))

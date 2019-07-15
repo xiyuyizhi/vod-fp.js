@@ -11,7 +11,7 @@ export default class VideoFragmentStream extends PipeLine {
     this.avcTrack = null;
     this.initSegmentGenerate = false;
     this.initSegment = new Uint8Array();
-    this.nextAvcDts = 0;
+    this.nextAvcDts = undefined;
     this.initDTS = 0;
     this.mp4SampleDuration = 0;
     this.on('resetInitSegment', () => (this.initSegmentGenerate = false));
@@ -48,9 +48,18 @@ export default class VideoFragmentStream extends PipeLine {
     let samples = avcTrack.samples;
     let nbSamples = samples.length;
     let nextAvcDts = this.nextAvcDts;
-
+    if (!nextAvcDts) {
+      nextAvcDts = 0;
+    }
     if (!this.initDTS) {
       this.initDTS = avcTrack.samples[0].dts;
+    }
+
+    if (!contiguous) {
+      nextAvcDts = timeOffset * avcTrack.inputTimeScale;
+      logger.warn(
+        `no contiguous,timeOffset = ${timeOffset} ,nextAvcDts =${nextAvcDts} `
+      );
     }
 
     samples.forEach(sample => {
@@ -58,47 +67,16 @@ export default class VideoFragmentStream extends PipeLine {
       sample.originDts = sample.dts;
       sample.pts = ptsNormalize(
         sample.pts - this.initDTS,
-        timeOffset * avcTrack.inputTimeScale
+        nextAvcDts
       );
       sample.dts = ptsNormalize(
         sample.dts - this.initDTS,
-        timeOffset * avcTrack.inputTimeScale
+        nextAvcDts
       );
     });
 
-    if (!nextAvcDts) {
-      nextAvcDts = avcTrack.samples[0].dts;
-    }
-    if (!contiguous) {
-      nextAvcDts = timeOffset * avcTrack.inputTimeScale;
-      logger.warn(
-        `no contiguous,timeOffset = ${timeOffset} ,nextAvcDts =${nextAvcDts} `
-      );
-    }
-    // ----------------------           | delta | // 需往前偏移 nextAvcDts samples[0]
-    let delta = samples[0].dts - nextAvcDts;
-
-    logger.log(
-      `originPts:${samples[0].originPts} ,originDts:${
-        samples[0].originDts
-      } , dts:${
-        samples[0].dts
-      } , nextAvcDts:${nextAvcDts} , delta:${delta} , mp4SampleDuration:${
-        this.mp4SampleDuration
-      }`
-    );
-    if (nextAvcDts && samples[0].dts - nextAvcDts >= this.mp4SampleDuration) {
-      logger.warn(
-        `两个分片之间差了 ${(samples[0].dts - nextAvcDts) /
-          this.mp4SampleDuration} 帧！`
-      );
-    }
-    samples.forEach(sample => {
-      sample.dts -= delta;
-      sample.pts -= delta;
-    });
     // 按dts排序
-    samples.sort(function(a, b) {
+    samples.sort(function (a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
@@ -106,13 +84,34 @@ export default class VideoFragmentStream extends PipeLine {
 
     logger.warn(
       `video remux:【initDTS:${
-        this.initDTS
+      this.initDTS
       } , nextAvcDts:${nextAvcDts}, samples[0]:${samples[0].dts}】`
     );
 
     let sample = samples[0];
     let firstDTS = Math.max(sample.dts, 0);
     let firstPTS = Math.max(sample.pts, 0);
+
+    // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
+    let delta = Math.round((firstDTS - nextAvcDts) / 90);
+    // if fragment are contiguous, detect hole/overlapping between fragments
+    if (contiguous) {
+      if (delta) {
+        if (delta > 1) {
+          logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
+        } else if (delta < -1) {
+          logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
+        }
+
+        // remove hole/gap : set DTS to next expected DTS
+        firstDTS = nextAvcDts;
+        samples[0].dts = firstDTS;
+        // offset PTS as well, ensure that PTS is smaller or equal than new DTS
+        firstPTS = Math.max(firstPTS - delta, nextAvcDts);
+        samples[0].pts = firstPTS;
+        logger.log(`Video/PTS/DTS adjusted: ${Math.round(firstPTS / 90)}/${Math.round(firstDTS / 90)},delta:${delta} ms`);
+      }
+    }
 
     sample = samples[samples.length - 1];
     let lastDTS = Math.max(sample.dts, 0);

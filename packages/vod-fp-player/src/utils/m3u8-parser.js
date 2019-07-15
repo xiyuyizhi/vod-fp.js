@@ -202,9 +202,12 @@ const compositionLevel = curry(list => {
   const level = {
     type: 'level',
     segments: [],
-    duration: 0
+    duration: 0,
+    startSN: 0,
+    endSN: 0,
   };
   let lastCC = 0;
+  let mediaSequence = 0;
   const fullfillLevel = fullfillM3u8(level);
   const fullfillSegment = fullfillLevel((level, item) => {
     if (item.extinf) {
@@ -228,10 +231,13 @@ const compositionLevel = curry(list => {
       if (name) {
         seg.name = name;
       }
+      let sn = mediaSequence + level.segments.length;
       level.segments.push({
-        id: level.segments.length,
+        id: sn,
         ...seg
       });
+      level.startSN = level.startSN || sn;
+      level.endSN = sn;
       level.duration += duration;
     }
     return item;
@@ -264,10 +270,15 @@ const compositionLevel = curry(list => {
     compose(
       fullfillUniqueProp,
       fullfillSegUrl,
-      fullfillSegment
+      fullfillSegment,
+      item => {
+        if (item.mediaSequence) {
+          mediaSequence = item.mediaSequence;
+        }
+        return item;
+      }
     )
   )(list);
-
   return level;
 });
 

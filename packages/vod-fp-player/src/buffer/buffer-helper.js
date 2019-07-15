@@ -4,6 +4,13 @@ import { buffer } from './buffer';
 
 const { compose, map, reduce, curry, prop, join, ifElse, trace } = F;
 
+if (window.TimeRanges) {
+  TimeRanges.prototype.dump = function () {
+    let len = this.length;
+    return new Array(len).fill(0).map((x, i) => [this.start(i), this.end(i)].join('-')).join(' ~~~ ')
+  }
+}
+
 // void -> Maybe
 function _bufferSerialize(media) {
   let _serialize = buffered => {
