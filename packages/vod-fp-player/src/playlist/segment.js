@@ -97,11 +97,11 @@ function loadSegment() {
         getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
         getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
       )
-      .map(buffer => {
+      .map(data => {
         dispatch(ACTION.FLYBUFFER.STORE_NEW_SEGMENT, {
           segment,
           buffer:
-            buffer instanceof ArrayBuffer ? { videoBuffer: buffer } : buffer
+            data.buffer instanceof ArrayBuffer ? { videoBuffer: data } : data
         });
         dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
       })

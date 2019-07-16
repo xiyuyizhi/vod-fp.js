@@ -166,6 +166,7 @@ function getGlobalState() {
           )(state);
         }
         if (payload === 'resume') {
+          logger.log('timer resume');
           compose(
             map(tick => tick.resume()),
             map(prop('mainLoop'))

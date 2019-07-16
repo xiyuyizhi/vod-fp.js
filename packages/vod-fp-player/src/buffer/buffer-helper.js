@@ -5,10 +5,13 @@ import { buffer } from './buffer';
 const { compose, map, reduce, curry, prop, join, ifElse, trace } = F;
 
 if (window.TimeRanges) {
-  TimeRanges.prototype.dump = function () {
+  TimeRanges.prototype.dump = function() {
     let len = this.length;
-    return new Array(len).fill(0).map((x, i) => [this.start(i), this.end(i)].join('-')).join(' ~~~ ')
-  }
+    return new Array(len)
+      .fill(0)
+      .map((x, i) => [this.start(i), this.end(i)].join('-'))
+      .join(' ~~~ ');
+  };
 }
 
 // void -> Maybe
@@ -59,13 +62,7 @@ const _getCurrentPositionBuffer = F.curry(
   }
 );
 
-function _bufferInfoCacl(
-  getState,
-  getConfig,
-  bufferRanges,
-  currentPosition,
-  isSeeking
-) {
+function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition) {
   let maxFragLookUpTolerance = getConfig(
     ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE
   );
@@ -88,21 +85,15 @@ function _bufferInfoCacl(
     )
   )(bufferRanges);
   return restInfo.getOrElse(() => {
-    if (isSeeking) {
-      return {
-        bufferLength: 0,
-        bufferEnd: currentPosition
-      };
-    }
     return {
       bufferLength: 0,
-      bufferEnd: 0
+      bufferEnd: currentPosition
     };
   });
 }
 
 // boolean -> Maybe
-function getBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
+function getBufferInfo({ getState, getConfig }, currentPosition) {
   let media = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).getOrElse(() =>
     getState(ACTION.MEDIA.MEDIA_ELE).join()
   );
@@ -110,18 +101,16 @@ function getBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
     getState,
     getConfig,
     _bufferSerialize(media),
-    currentPosition,
-    isSeeking
+    currentPosition
   );
 }
 
-function getFlyBufferInfo({ getState, getConfig }, currentPosition, isSeeking) {
+function getFlyBufferInfo({ getState, getConfig }, currentPosition) {
   return _bufferInfoCacl(
     getState,
     getConfig,
     getState(ACTION.FLYBUFFER.FLY_BUFFER_RANGES),
-    currentPosition,
-    isSeeking
+    currentPosition
   );
 }
 

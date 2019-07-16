@@ -31,25 +31,25 @@ function changeLevel() {
       offSub(unSubChanged);
       offSub(unSubChangedError);
       offSub(unSubProcess);
+
+      let media = getState(ACTION.MEDIA.MEDIA_ELE);
+
       unSubChanged = subOnce(ACTION.EVENTS.LEVEL_CHANGED, levelId => {
         dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGED);
         logger.log('level changed to ', levelId);
         let flushStart = connect(findSegmentOfCurrentPosition)
           .map(x => x.start || 0)
           .join();
-        let media = getState(ACTION.MEDIA.MEDIA_ELE);
         let resume = () => {
           media.map(x => {
-            x.currentTime += 0.005;
             dispatch(ACTION.PROCESS, PROCESS.IDLE);
             dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
             x.play();
           });
         };
         connect(flushBuffer)(flushStart, Infinity).map(() => {
-          media.map(m => m.pause());
-          dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
           dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE);
+          media.map(m => m.pause());
           if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
             connect(loadInitMP4);
             subOnce(PROCESS.INIT_MP4_LOADED, () => {
@@ -60,10 +60,13 @@ function changeLevel() {
           resume();
         });
       });
+
       unSubChangedError = subOnce(ACTION.EVENTS.LEVEL_CHANGED_ERROR, e => {
         dispatch(ACTION.PROCESS, PROCESS.IDLE);
       });
+
       connect(abortLoadingSegment);
+      dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
       getState(ACTION.PROCESS).map(pro => {
         if (pro === PROCESS.IDLE) {
           dispatch(ACTION.PROCESS, PROCESS.LEVEL_CHANGING);

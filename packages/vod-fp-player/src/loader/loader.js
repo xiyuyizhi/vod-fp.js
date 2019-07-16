@@ -7,6 +7,7 @@ const DEFAULT_CONFIG = {
   method: 'get',
   url: '',
   body: null,
+  useStream: false,
   headers: {},
   options: {},
   params: {
@@ -24,7 +25,7 @@ const STREAM_DEFAULT_COFNIG = {
   }
 };
 
-function loader({ dispatch }, config) {
+function loader({ dispatch, connect }, config) {
   return Task.of((resolve, reject) => {
     Task.of((_resolve, _reject) => {
       config.params = config.params || DEFAULT_CONFIG.params;
@@ -34,7 +35,7 @@ function loader({ dispatch }, config) {
       if (window.fetch && window.AbortController) {
         let controller = new AbortController();
         let signal = controller.signal;
-        fetchLoader(config, controller, _resolve, _reject);
+        connect(fetchLoader)(config, controller, _resolve, _reject);
         abortable = controller;
       } else {
         abortable = xhrLoader(config, _resolve, _reject);

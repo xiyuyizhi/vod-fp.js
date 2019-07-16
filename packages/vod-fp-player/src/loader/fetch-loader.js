@@ -1,4 +1,5 @@
 import { Task, Fail, CusError, F } from 'vod-fp-utility';
+import { ACTION } from '../store';
 import { LOADER_ERROR } from '../error';
 
 const { curry } = F;
@@ -10,16 +11,60 @@ const FETCH_BODY = {
   blob: 'blob'
 };
 
-export default function fetchLoader(config, controller, resolve, reject) {
+function _readerStream({ dispatch }, ts, reader) {
+  let store = [];
+  let tsStart = ts;
+  let dump = () => {
+    return reader.read().then(({ done, value }) => {
+      if (done) {
+        let totalLength = store.reduce((all, c) => {
+          all += c.byteLength;
+          return all;
+        }, 0);
+        let uint8Array = new Uint8Array(totalLength);
+        let offset = 0;
+        store.forEach(bf => {
+          uint8Array.set(bf, offset);
+          offset += bf.byteLength;
+        });
+        store = [];
+        return {
+          buffer: uint8Array.buffer,
+          info: {
+            tsLoad: performance.now() - tsStart,
+            size: totalLength
+          }
+        };
+      }
+      store.push(value);
+      let tsTick = performance.now() - ts;
+      //单次时间 > 1ms 有效
+      if (tsTick > 1) {
+        dispatch(
+          ACTION.PLAYLIST.COLLECT_DOWNLOAD_TIME,
+          value.byteLength / (performance.now() - ts) / 1000
+        );
+      }
+      ts = performance.now();
+      return dump();
+    });
+  };
+  return dump();
+}
+_readerStream = curry(_readerStream);
+
+function fetchLoader({ connect }, config, controller, resolve, reject) {
   let { url, body, method, headers, options, params } = config;
-  let timer;
+  let cancelTimer;
   if (params.timeout) {
-    timer = setTimeout(() => {
+    cancelTimer = setTimeout(() => {
       console.warn('TIMEOUT');
       reject(CusError.of(LOADER_ERROR.LOAD_TIMEOUT));
       controller.abort();
     }, params.timeout);
   }
+  let ts = performance.now();
+  let reader = connect(_readerStream)(ts);
 
   fetch(url, {
     method,
@@ -40,13 +85,18 @@ export default function fetchLoader(config, controller, resolve, reject) {
         })
       );
     })
-    .then(res => res[FETCH_BODY[params.responseType]]())
     .then(res => {
-      clearTimeout(timer);
+      if (config.useStream) {
+        return reader(res.body.getReader());
+      }
+      return res[FETCH_BODY[params.responseType]]();
+    })
+    .then(res => {
+      clearTimeout(cancelTimer);
       resolve(res);
     })
     .catch(e => {
-      clearTimeout(timer);
+      clearTimeout(cancelTimer);
       if (e instanceof DOMException) {
         console.warn('ABORT');
         reject(CusError.of(LOADER_ERROR.ABORT));
@@ -55,3 +105,5 @@ export default function fetchLoader(config, controller, resolve, reject) {
       reject(CusError.of(LOADER_ERROR.LOAD_ERROR));
     });
 }
+
+export default curry(fetchLoader);

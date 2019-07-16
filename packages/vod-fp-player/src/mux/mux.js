@@ -67,11 +67,21 @@ function _toMuxFmp4({ dispatch }, buffer) {
   let { audioBuffer, videoBuffer } = buffer;
   dispatch(ACTION.PROCESS, PROCESS.MUXED);
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, {
-    buffer: videoBuffer,
+    buffer: videoBuffer.buffer,
+    videoInfo: {
+      codec: 'avc1.42c015'
+      // fps: 25,
+      // height: 206,
+      // width: 480
+    },
     combine: true
   });
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, {
-    buffer: audioBuffer,
+    buffer: audioBuffer.buffer,
+    audioInfo: {
+      codec: 'mp4a.40.2',
+      samplerate: 44100
+    },
     combine: true
   });
 }
@@ -79,7 +89,7 @@ function _toMuxFmp4({ dispatch }, buffer) {
 function toMux({ getState, connect }, segment, buffer, sequeueNum, keyInfo) {
   let format = getState(ACTION.PLAYLIST.FORMAT);
   if (format === 'ts') {
-    connect(_toMuxTs)(segment, buffer.videoBuffer, sequeueNum, keyInfo);
+    connect(_toMuxTs)(segment, buffer.videoBuffer.buffer, sequeueNum, keyInfo);
   }
   if (format === 'fmp4') {
     connect(_toMuxFmp4)(buffer);

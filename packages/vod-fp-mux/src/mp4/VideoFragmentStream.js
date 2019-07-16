@@ -65,18 +65,12 @@ export default class VideoFragmentStream extends PipeLine {
     samples.forEach(sample => {
       sample.originPts = sample.pts;
       sample.originDts = sample.dts;
-      sample.pts = ptsNormalize(
-        sample.pts - this.initDTS,
-        nextAvcDts
-      );
-      sample.dts = ptsNormalize(
-        sample.dts - this.initDTS,
-        nextAvcDts
-      );
+      sample.pts = ptsNormalize(sample.pts - this.initDTS, nextAvcDts);
+      sample.dts = ptsNormalize(sample.dts - this.initDTS, nextAvcDts);
     });
 
     // 按dts排序
-    samples.sort(function (a, b) {
+    samples.sort(function(a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
@@ -84,23 +78,32 @@ export default class VideoFragmentStream extends PipeLine {
 
     logger.warn(
       `video remux:【initDTS:${
-      this.initDTS
+        this.initDTS
       } , nextAvcDts:${nextAvcDts}, samples[0]:${samples[0].dts}】`
     );
 
     let sample = samples[0];
+    let delta = Math.round(sample.dts - nextAvcDts);
+
+    samples.forEach(sample => {
+      sample.dts -= delta;
+      sample.pts -= delta;
+    });
+
     let firstDTS = Math.max(sample.dts, 0);
     let firstPTS = Math.max(sample.pts, 0);
 
     // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
-    let delta = Math.round((firstDTS - nextAvcDts) / 90);
+    delta = Math.round((firstDTS - nextAvcDts) / 90);
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
       if (delta) {
         if (delta > 1) {
-          logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
+          logger.log(
+            `AVC:${delta} ms hole between fragments detected,filling it`
+          );
         } else if (delta < -1) {
-          logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
+          logger.log(`AVC:${-delta} ms overlapping between fragments detected`);
         }
 
         // remove hole/gap : set DTS to next expected DTS
@@ -109,7 +112,11 @@ export default class VideoFragmentStream extends PipeLine {
         // offset PTS as well, ensure that PTS is smaller or equal than new DTS
         firstPTS = Math.max(firstPTS - delta, nextAvcDts);
         samples[0].pts = firstPTS;
-        logger.log(`Video/PTS/DTS adjusted: ${Math.round(firstPTS / 90)}/${Math.round(firstDTS / 90)},delta:${delta} ms`);
+        logger.log(
+          `Video/PTS/DTS adjusted: ${Math.round(firstPTS / 90)}/${Math.round(
+            firstDTS / 90
+          )},delta:${delta} ms`
+        );
       }
     }
 

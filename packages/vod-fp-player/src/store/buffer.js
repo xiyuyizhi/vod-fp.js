@@ -63,12 +63,12 @@ export default {
         },
         getBufferInfo(state, payload, { ACTION, getState, connect }) {
           return getState(ACTION.MEDIA.MEDIA_ELE).map(m =>
-            connect(getBufferInfo)(m.currentTime, m.seeking)
+            connect(getBufferInfo)(m.currentTime)
           );
         },
         getFlyBufferInfo(state, payload, _store) {
           return this.getBufferInfo(null, null, _store).map(relBuffer => {
-            return _store.connect(getFlyBufferInfo)(relBuffer.bufferEnd, true);
+            return _store.connect(getFlyBufferInfo)(relBuffer.bufferEnd);
           });
         }
       }

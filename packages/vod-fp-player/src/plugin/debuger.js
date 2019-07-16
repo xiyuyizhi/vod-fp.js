@@ -84,7 +84,7 @@ function _startFlush(container, connect) {
 
 function _collectDebugInfo({ getState, getConfig }) {
   return Maybe.of(
-    curry((bufferInfo, flyBufferInfo, videoInfo, audioInfo) => {
+    curry((bufferInfo, flyBufferInfo, videoInfo, audioInfo, speed) => {
       return {
         bufferInfo:
           bufferInfo.bufferLength.toFixed(2) +
@@ -101,7 +101,8 @@ function _collectDebugInfo({ getState, getConfig }) {
         videoCodec: videoInfo.codec,
         fps: videoInfo.fps,
         audioCodec: audioInfo.codec,
-        samplerate: audioInfo.samplerate
+        samplerate: audioInfo.samplerate,
+        speed
       };
     })
   )
@@ -109,6 +110,7 @@ function _collectDebugInfo({ getState, getConfig }) {
     .ap(getState(ACTION.BUFFER.GET_FLY_BUFFER_INFO))
     .ap(getState(ACTION.BUFFER.VIDEO_INFO))
     .ap(getState(ACTION.BUFFER.AUDIO_INFO))
+    .ap(getState(ACTION.PLAYLIST.GET_DOWNLOAD_SPEED))
     .join();
 }
 
@@ -129,7 +131,8 @@ function _renderDebugInfo(info, ele) {
     'samplerate',
     'fps',
     'bufferInfo',
-    'flyBufferInfo'
+    'flyBufferInfo',
+    'speed'
   ]
     .map(x => {
       return `<li><span style="${_parseStyleStr(

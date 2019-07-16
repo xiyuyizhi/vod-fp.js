@@ -23,7 +23,9 @@ const ACTION = {
   SEGMENTS_LEN: 'segmentsLen',
   UPDATE_LEVEL: 'updateLevel',
   UPDATE_SEGMENTS_BOUND: 'updateSegmentsBound',
-  FIND_MEDIA_SEGEMENT: 'findMediaSegment'
+  FIND_MEDIA_SEGEMENT: 'findMediaSegment',
+  COLLECT_DOWNLOAD_TIME: 'collectDownloadTime',
+  GET_DOWNLOAD_SPEED: 'getDownloadSpeed'
 };
 
 function _getCurrentLevel(state) {
@@ -66,6 +68,7 @@ export default {
           }
         ]
       },
+      speedList: [],
       currentSegmentId: -1,
       currentLevelId: 1,
       format: 'ts', //ts | fmp4 | flv
@@ -235,9 +238,7 @@ export default {
               let seg = segments.find(x => x.id === currentId);
               seg.start = start;
               seg.end = end;
-              seg.duration = parseFloat(
-                (end + start).toFixed(6)
-              );
+              seg.duration = parseFloat((end + start).toFixed(6));
               logger.log(
                 'new buffer:',
                 [start, end],
@@ -249,7 +250,7 @@ export default {
                   x.start = segments[index - 1].end;
                   x.end = parseFloat((x.start + x.duration).toFixed(6));
                 }
-              })
+              });
             })
           )
             .ap(this.segments(state))
@@ -259,6 +260,33 @@ export default {
                 return id;
               })
             );
+        },
+        collectDownloadTime(state, speed) {
+          return state.map(x => {
+            if (x.speedList.length > 50) {
+              x.speedList = x.speedList.slice(25);
+            }
+            x.speedList.push(speed);
+            return x;
+          });
+        },
+        getDownloadSpeed(state) {
+          return state.map(x => {
+            let len = x.speedList.length;
+            let avgSpeed =
+              x.speedList.reduce((all, c) => {
+                all += c;
+                return all;
+              }, 0) / len;
+            if (this.lastSpeed && this.lastSpeed === avgSpeed) {
+              return '0KB/s';
+            }
+            this.lastSpeed = avgSpeed;
+            if (avgSpeed > 1) {
+              return avgSpeed.toFixed(2) + 'MB/s';
+            }
+            return (avgSpeed * 1000).toFixed(2) + 'KB/s';
+          });
         }
       }
     };
