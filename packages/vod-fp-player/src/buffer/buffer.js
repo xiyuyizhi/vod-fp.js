@@ -140,7 +140,7 @@ function _createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
   });
 }
 
-function startBuffer({ getState, subscribe, dispatch, connect }) {
+function startBuffer({ getState, subscribe, dispatch, connect, subOnce }) {
   let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
 
   // (Maybe,Maybe) -> Either
@@ -171,7 +171,8 @@ function startBuffer({ getState, subscribe, dispatch, connect }) {
           `video/mp4; codecs="${info.videoInfo.codec}"`
         ).value();
       });
-      doAppend(Maybe.of(sb), info);
+      //保证音视频分别提取后,video audio sb 创建成功后、开始append
+      subOnce(PROCESS.MUXED, () => doAppend(Maybe.of(sb), info));
     });
   });
 
@@ -185,7 +186,7 @@ function startBuffer({ getState, subscribe, dispatch, connect }) {
           `video/mp4; codecs="${info.audioInfo.codec}"`
         ).value();
       });
-      doAppend(Maybe.of(sb), info);
+      subOnce(PROCESS.MUXED, () => doAppend(Maybe.of(sb), info));
     });
   });
 }

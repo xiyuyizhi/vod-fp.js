@@ -81,6 +81,11 @@ function _bindMediaEvent(
 function createMediaSource({ connect, dispatch, subscribe }, media) {
   if (isSupportMS()) {
     const mediaSource = new MediaSource();
+    if (media.src) {
+      window.URL.revokeObjectURL(media.src);
+      media.removeAttribute('src');
+      media.load();
+    }
     media.src = URL.createObjectURL(mediaSource);
     dispatch(ACTION.MEDIA.MEDIA_SOURCE, mediaSource);
     connect(_bindMediaEvent)(media);

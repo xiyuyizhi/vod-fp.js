@@ -39,10 +39,10 @@ function _readerStream({ dispatch }, ts, reader) {
       store.push(value);
       let tsTick = performance.now() - ts;
       //单次时间 > 1ms 有效
-      if (tsTick > 1) {
+      if (tsTick > 1.5) {
         dispatch(
           ACTION.PLAYLIST.COLLECT_DOWNLOAD_TIME,
-          value.byteLength / (performance.now() - ts) / 1000
+          value.byteLength / tsTick / 1000
         );
       }
       ts = performance.now();

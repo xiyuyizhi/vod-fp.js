@@ -21,13 +21,13 @@ function createMux({ dispatch, connect }) {
     if (type === 'data') {
       if (data.type === 'video') {
         dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, data);
+        dispatch(ACTION.PROCESS, PROCESS.MUXED);
       }
       if (data.type === 'audio') {
-        dispatch(ACTION.PROCESS, PROCESS.MUXED);
         dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
       }
     }
-    if (e.type === 'error') {
+    if (type === 'error') {
       _doError(error);
     }
   });
@@ -86,7 +86,6 @@ function _toMuxTs() {
 
 function _toMuxFmp4({ dispatch }, buffer) {
   let { audioBuffer, videoBuffer } = buffer;
-  dispatch(ACTION.PROCESS, PROCESS.MUXED);
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, {
     buffer: videoBuffer.buffer,
     videoInfo: {
@@ -105,6 +104,7 @@ function _toMuxFmp4({ dispatch }, buffer) {
     },
     combine: true
   });
+  dispatch(ACTION.PROCESS, PROCESS.MUXED);
 }
 
 function toMux({ getState, connect }, segment, buffer, sequeueNum, keyInfo) {

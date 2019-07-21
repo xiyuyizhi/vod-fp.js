@@ -263,8 +263,8 @@ export default {
         },
         collectDownloadTime(state, speed) {
           return state.map(x => {
-            if (x.speedList.length > 40) {
-              x.speedList = x.speedList.slice(25);
+            if (x.speedList.length > 30) {
+              x.speedList = x.speedList.slice(15);
             }
             x.speedList.push(speed);
             return x;
@@ -278,10 +278,6 @@ export default {
                 all += c;
                 return all;
               }, 0) / len;
-            if (this.lastSpeed && this.lastSpeed === avgSpeed) {
-              return '0KB/s';
-            }
-            this.lastSpeed = avgSpeed;
             if (avgSpeed > 1) {
               return avgSpeed.toFixed(2) + 'MB/s';
             }

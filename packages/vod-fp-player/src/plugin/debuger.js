@@ -39,13 +39,31 @@ const debugInfoItemStyle = {
   'margin-right': '20px'
 };
 
+function _tempStore() {
+  let value;
+  return v => {
+    if (!value) {
+      value = v;
+    }
+    return value;
+  };
+}
+
+let _tempTick = _tempStore();
+
 function _initDebugWindow(container, connect) {
   let _window;
   let _task;
   _window = container.querySelector(`.${CLASSNMAE.VOD_DEBUG_INFO}`);
   if (_window) {
     _window.style.display = 'block';
-    _task = _startFlush(_window, connect);
+    _task = _tempTick(_task);
+    if (!_task) {
+      _task = _startFlush(_window, connect);
+      _tempTick(_task);
+    } else {
+      _task.resume();
+    }
     return;
   }
   _window = document.createElement('div');
@@ -85,15 +103,14 @@ function _startFlush(container, connect) {
 function _collectDebugInfo({ getState, getConfig }) {
   return Maybe.of(
     curry((bufferInfo, flyBufferInfo, videoInfo, audioInfo, speed) => {
+      let flyBuffer = flyBufferInfo.bufferLength.toFixed(2);
+      let maxFlyBuffer = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
       return {
         bufferInfo:
           bufferInfo.bufferLength.toFixed(2) +
           ' / ' +
           getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
-        flyBufferInfo:
-          flyBufferInfo.bufferLength.toFixed(2) +
-          ' / ' +
-          getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH),
+        flyBufferInfo: flyBuffer + ' / ' + maxFlyBuffer,
         format: getState(ACTION.PLAYLIST.FORMAT),
         mode: getState(ACTION.PLAYLIST.MODE),
         videoWidth: videoInfo.width,
@@ -102,7 +119,7 @@ function _collectDebugInfo({ getState, getConfig }) {
         fps: videoInfo.fps,
         audioCodec: audioInfo.codec,
         samplerate: audioInfo.samplerate,
-        speed
+        speed: flyBuffer > maxFlyBuffer ? '0KB/s' : speed
       };
     })
   )
@@ -183,15 +200,11 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   container.appendChild(menu);
 }
 
-function _bindEvent(container, connect) {
+function debuger({ connect }, container) {
   container.addEventListener('contextmenu', e => {
     e.preventDefault();
     _renderContextMenu(e.offsetX, e.offsetY, container, connect);
   });
-}
-
-function debuger({ connect }, container) {
-  _bindEvent(container, connect);
 }
 
 export default curry(debuger);
