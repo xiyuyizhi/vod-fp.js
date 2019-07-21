@@ -17,14 +17,7 @@ import {
 } from './fp';
 import Logger from './logger';
 
-const {
-  EventBus,
-  PipeLine,
-  StateMachine,
-  combineActions,
-  combineStates,
-  createStore
-} = oop;
+const { EventBus, PipeLine, combineActions, combineStates, createStore } = oop;
 
 export {
   F,
@@ -41,7 +34,6 @@ export {
   Task,
   EventBus,
   PipeLine,
-  StateMachine,
   Tick,
   CusError,
   combineActions,

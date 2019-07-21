@@ -1,12 +1,11 @@
 import Base from './Base';
 
-Error.prototype.is = () => { };
-Error.prototype.getOrElse = () => { };
+Error.prototype.is = () => {};
+Error.prototype.getOrElse = () => {};
 
 export default class CusError {
   constructor(value) {
     if (value instanceof Error) {
-      console.log(value);
       this._value = {
         fatal: true,
         type: value.constructor.name,

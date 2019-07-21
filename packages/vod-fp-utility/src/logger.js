@@ -2,11 +2,19 @@ class Logger {
   constructor(module) {
     this._module = module;
     this.setUp();
-    let debug = document.cookie.split(';').map(x => x.replace(/\s+/, '')).filter(x => x.indexOf('debug') !== -1)[0]
+    let debug;
+    try {
+      debug = document.cookie
+        .split(';')
+        .map(x => x.replace(/\s+/, ''))
+        .filter(x => x.indexOf('debug') !== -1)[0];
+    } catch (e) {
+      debug = false;
+    }
     if (debug) {
       try {
-        Logger.usedModules = debug.split('=')[1].split(',')
-      } catch{ }
+        Logger.usedModules = debug.split('=')[1].split(',');
+      } catch {}
     }
   }
 

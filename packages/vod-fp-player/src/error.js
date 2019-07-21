@@ -93,7 +93,7 @@ export const PLAYLIST_ERROR = {
     LOAD_TIMEOUT: {
       type: 'PLAYLIST_ERROR',
       detail: 'KEY_LOAD_TIMEOUT'
-    },
+    }
   }
 };
 
@@ -108,8 +108,7 @@ export const SEGMENT_ERROR = {
   },
   SGEMENT_PARSE_ERROR: {
     type: 'SEGMENT_ERROR',
-    detail: 'SEGMENT_PARSE_ERROR',
-    fatal: true
+    detail: 'SEGMENT_PARSE_ERROR'
   }
 };
 

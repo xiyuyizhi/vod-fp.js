@@ -1,3 +1,4 @@
+import work from 'webworkify-webpack';
 import { TsToMp4 } from 'vod-fp-mux';
 import { F, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
@@ -5,9 +6,19 @@ import { SEGMENT_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
 
 function createMux({ dispatch, connect }) {
-  let mux = new TsToMp4();
-  mux
-    .on('data', data => {
+  let worker = work(require.resolve('./worker.js'));
+  let _doError = error => {
+    connect(removeSegmentFromStore);
+    dispatch(
+      ACTION.ERROR,
+      CusError.of(error).merge(
+        CusError.of(SEGMENT_ERROR['SGEMENT_PARSE_ERROR'])
+      )
+    );
+  };
+  worker.addEventListener('message', e => {
+    let { type, data } = e.data;
+    if (type === 'data') {
       if (data.type === 'video') {
         dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, data);
       }
@@ -15,26 +26,27 @@ function createMux({ dispatch, connect }) {
         dispatch(ACTION.PROCESS, PROCESS.MUXED);
         dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
       }
-    })
-    .on('error', e => {
-      connect(removeSegmentFromStore);
-      dispatch(
-        ACTION.ERROR,
-        CusError.of(e).merge(CusError.of(SEGMENT_ERROR['SGEMENT_PARSE_ERROR']))
-      );
-    });
-  dispatch(ACTION.MUX, mux);
+    }
+    if (e.type === 'error') {
+      _doError(error);
+    }
+  });
+  worker.addEventListener('error', e => {
+    _doError(new Error(e.message));
+    global.URL.revokeObjectURL(worker.objectURL);
+  });
+  dispatch(ACTION.MUX, worker);
 }
 
 function resetInitSegment({ getState }) {
-  getState(ACTION.MUX).map(mux => {
-    mux.resetInitSegment();
+  getState(ACTION.MUX).map(worker => {
+    worker.postMessage({ type: 'resetInitSegment' });
   });
 }
 
 function setTimeOffset({ getState }, offset) {
-  getState(ACTION.MUX).map(mux => {
-    mux.setTimeOffset(offset);
+  getState(ACTION.MUX).map(worker => {
+    worker.postMessage({ type: 'setTimeOffset', data: offset });
   });
 }
 
@@ -42,23 +54,32 @@ function _toMuxTs() {
   let lastSegment = null;
 
   return ({ getState, dispatch }, segment, buffer, sequeueNum, keyInfo) => {
-    let mux = getState(ACTION.MUX).join();
+    let worker = getState(ACTION.MUX).join();
     if (
       (lastSegment && lastSegment.cc !== segment.cc) ||
       (lastSegment && lastSegment.levelId !== segment.levelId)
     ) {
-      mux.resetInitSegment();
+      worker.postMessage({ type: 'resetInitSegment' });
     }
     if (
       (lastSegment && lastSegment.cc !== segment.cc) ||
       (lastSegment && lastSegment.levelId !== segment.levelId) ||
       (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1)
     ) {
-      mux.setTimeOffset(segment.start);
+      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
     }
     dispatch(ACTION.PROCESS, PROCESS.MUXING);
-    mux.push(buffer, sequeueNum, keyInfo);
-    mux.flush();
+    worker.postMessage(
+      {
+        type: 'push',
+        data: {
+          buffer,
+          sequeueNum,
+          keyInfo
+        }
+      },
+      [buffer]
+    );
     lastSegment = segment;
   };
 }

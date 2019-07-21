@@ -9,7 +9,9 @@ const DEFAULT_CONFIG = {
   body: null,
   useStream: false,
   headers: {},
-  options: {},
+  options: {
+    mode: 'cors'
+  },
   params: {
     responseType: 'text',
     timeout: 0
@@ -20,9 +22,7 @@ const STREAM_DEFAULT_COFNIG = {
   method: 'GET',
   url: '',
   header: {},
-  options: {
-    mode: 'cors'
-  }
+  options: {}
 };
 
 function loader({ dispatch, connect }, config) {

@@ -263,7 +263,7 @@ export default {
         },
         collectDownloadTime(state, speed) {
           return state.map(x => {
-            if (x.speedList.length > 50) {
+            if (x.speedList.length > 40) {
               x.speedList = x.speedList.slice(25);
             }
             x.speedList.push(speed);

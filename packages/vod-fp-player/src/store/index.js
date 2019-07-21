@@ -82,6 +82,9 @@ function getGlobalState() {
               s.error.fatal(true);
               dispatch(ACTION.EVENTS.ERROR, s.error.value());
               dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+              if (s.mux) {
+                global.URL.revokeObjectURL(s.mux.objectURL);
+              }
             } else {
               // 可恢复、继续运行
               dispatch(ACTION.PROCESS, PROCESS.IDLE);
