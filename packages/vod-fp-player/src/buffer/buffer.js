@@ -13,7 +13,7 @@ import { ACTION, PROCESS } from '../store';
 import { checkManualSeek } from '../media/media';
 import { MEDIA_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
-
+import { getBufferInfo } from './buffer-helper';
 const { map, compose, curry, join, chain, prop, trace } = F;
 
 let logger = new Logger('player');
@@ -196,17 +196,14 @@ function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
 
 function _checkFlushBuffer({ getState, getConfig, connect }) {
   let media = getState(ACTION.MEDIA.MEDIA_ELE).join();
-  return getState(ACTION.BUFFER.GET_BUFFER_INFO).map(x => {
-    let flushEnd = Math.max(
-      0,
-      media.currentTime - getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
-      x.bufferStart - getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH)
-    );
-    if (flushEnd) {
-      logger.log(`flush buffer , [0,${flushEnd}]`);
-      return connect(flushBuffer)(0, flushEnd);
-    }
-  });
+  let flushEnd = Math.max(
+    0,
+    media.currentTime - getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH)
+  );
+  if (connect(getBufferInfo)(flushEnd).bufferLength && flushEnd) {
+    logger.log(`flush buffer , [0,${flushEnd}]`);
+    connect(flushBuffer)(0, flushEnd);
+  }
 }
 
 function flushBuffer({ getState, dispatch }, start, end) {
