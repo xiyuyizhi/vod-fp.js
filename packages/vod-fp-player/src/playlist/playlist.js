@@ -14,6 +14,7 @@ import {
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
+import { getNextABRLoadLevel } from "../abr/abr"
 import { LOADER_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
 
 const {
@@ -241,6 +242,29 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   );
 }
 
+function inSureNextLoadLevelReady({ connect, getState, subOnce }) {
+
+  return Task.of((resolve) => {
+
+    Maybe.of(curry((currenLevel, nextAutoLevel) => {
+      logger.warn(`level ${currenLevel} switch to ${nextAutoLevel}`)
+      if (currenLevel == nextAutoLevel) {
+        resolve();
+        return;
+      }
+      subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
+        resolve();
+      })
+      connect(changePlaylistLevel)(nextAutoLevel)
+    }))
+      .ap(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID))
+      .ap(connect(getNextABRLoadLevel))
+
+  })
+
+
+}
+
 _checkloadDecryptKey = curry(_checkloadDecryptKey);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
 _loadResource = curry(_loadResource);
@@ -249,6 +273,7 @@ _updateLevel = curry(_updateLevel);
 _updateMedia = curry(_updateMedia);
 _updateKey = curry(_updateKey);
 _checkHasMatchedMedia = curry(_checkHasMatchedMedia);
-loadPlaylist = F.curry(loadPlaylist);
-changePlaylistLevel = F.curry(changePlaylistLevel);
-export { loadPlaylist, changePlaylistLevel };
+loadPlaylist = curry(loadPlaylist);
+changePlaylistLevel = curry(changePlaylistLevel);
+inSureNextLoadLevelReady = curry(inSureNextLoadLevelReady)
+export { loadPlaylist, changePlaylistLevel, inSureNextLoadLevelReady };

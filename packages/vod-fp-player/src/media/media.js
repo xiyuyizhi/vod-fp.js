@@ -59,6 +59,7 @@ function _bindMediaEvent(
     });
   });
 
+  // check EOS
   subscribe(PROCESS.IDLE, () => {
     let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO).join();
     maybeToEither(ms)
@@ -125,7 +126,7 @@ function checkManualSeek({ getConfig, getState }, start) {
       media.seeking &&
       start > media.currentTime &&
       start - media.currentTime <=
-        getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
+      getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);

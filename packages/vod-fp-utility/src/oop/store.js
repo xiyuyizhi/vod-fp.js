@@ -61,6 +61,7 @@ function createStore(initState, actions = {}) {
   const _store = {
     ACTION: actions,
     id: storeId++,
+    events,
     _findAction(path) {
       path = path.split('.');
       if (path.length === 1) {
@@ -107,17 +108,19 @@ function createStore(initState, actions = {}) {
             state[parentProp] = prop;
           }
         } else if (currentDerive[prop]) {
-          // create the copy of currentState //shadow cpoy
+          // create the copy of currentState //shadow copy
           const newState = currentDerive[prop](
             Maybe.of({ ...currentState }),
             payload,
             _store
           );
           if (newState) {
-            state[parentProp] = {
-              ...currentState,
-              ...newState.join()
-            };
+            newState.map(x => {
+              state[parentProp] = {
+                ...currentState,
+                ...x
+              };
+            })
           }
         }
       }

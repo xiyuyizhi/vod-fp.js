@@ -29,7 +29,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function(_) {
+  sb.addEventListener('updateend', function (_) {
     if (type === 'video') {
       getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).map(x => {
         if (x.combine) {
@@ -80,9 +80,9 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
         curry((videoBufferInfo, audioBufferInfo) => {
           logger.log(
             `buffer:  video=[${videoBufferInfo.startPTS /
-              90000},${videoBufferInfo.endPTS / 90000}]`,
+            90000},${videoBufferInfo.endPTS / 90000}]`,
             `audio=[${audioBufferInfo.startPTS /
-              90000},${audioBufferInfo.endPTS / 90000}]`
+            90000},${audioBufferInfo.endPTS / 90000}]`
           );
           let startPTS = Math.min(
             videoBufferInfo.startPTS,
@@ -140,7 +140,7 @@ function _createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
   });
 }
 
-function startBuffer({ getState, subscribe, dispatch, connect, subOnce }) {
+function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
   let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
 
   // (Maybe,Maybe) -> Either
@@ -191,6 +191,10 @@ function startBuffer({ getState, subscribe, dispatch, connect, subOnce }) {
   });
 }
 
+function _checkFlushBuffer({ getState }) {
+
+}
+
 function flushBuffer({ getState, dispatch }, start, end) {
   let videoSb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER);
   let audioSb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER);
@@ -226,8 +230,8 @@ function abortBuffer({ getState, dispatch }) {
 _afterAppended = curry(_afterAppended);
 _bindSourceBufferEvent = curry(_bindSourceBufferEvent);
 _createSourceBuffer = curry(_createSourceBuffer);
-
-startBuffer = curry(startBuffer);
+_checkFlushBuffer = curry(_checkFlushBuffer);
+bufferBootstrap = curry(bufferBootstrap);
 flushBuffer = curry(flushBuffer);
 abortBuffer = curry(abortBuffer);
-export { startBuffer, flushBuffer, abortBuffer };
+export { bufferBootstrap, flushBuffer, abortBuffer };

@@ -6,15 +6,19 @@ import {
   loadInitMP4,
   drainSegmentFromStore
 } from '../playlist/segment';
-import { createMux } from '../mux/mux';
-import { startBuffer } from '../buffer/buffer';
+import {
+  abrBootstrap,
+  abrProcess,
+} from "../abr/abr";
+import { muxBootstrap } from '../mux/mux';
+import { bufferBootstrap } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
 
 const { prop, compose, map, curry } = F;
 
 let logger = new Logger('player');
 
-function main(
+function bootStrap(
   { getState, getConfig, connect, dispatch, subOnce },
   level,
   mediaSource
@@ -24,12 +28,16 @@ function main(
   connect(updateMediaDuration);
   let format = getState(ACTION.PLAYLIST.FORMAT);
   if (format === 'ts') {
-    connect(createMux);
+    connect(muxBootstrap);
   }
   if (format === 'fmp4') {
     connect(loadInitMP4);
   }
-  connect(startBuffer);
+  getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
+    connect(abrBootstrap);
+  })
+  connect(bufferBootstrap);
+
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
   let startLoadProcess = connect(_startLoadProcess);
 
@@ -39,7 +47,7 @@ function main(
       curry((bufferInfo, media, pro, segments) => {
         if (
           bufferInfo.bufferLength <
-            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
+          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
           pro === PROCESS.IDLE
         ) {
           return connect(findSegment)(segments, bufferInfo.bufferEnd);
@@ -108,8 +116,12 @@ function _startLoadProcess(
         'current segment ',
         segment.id,
         ' of level ',
-        segment.levelId || 1
+        segment.levelId || 1,
+        `: [${segment.start} , ${segment.end}]`
       );
+      getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
+        connect(abrProcess)(segment);
+      })
       connect(loadSegment)(segment);
       return true;
     })
@@ -117,6 +129,6 @@ function _startLoadProcess(
 }
 
 _startLoadProcess = curry(_startLoadProcess);
-const startTick = F.curry(main);
+const startTick = F.curry(bootStrap);
 
 export { startTick };

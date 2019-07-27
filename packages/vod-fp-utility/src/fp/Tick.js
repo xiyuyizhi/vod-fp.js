@@ -70,6 +70,11 @@ export default class Tick {
     this._clean()
   }
 
+  destroy() {
+    this._clean();
+    this._tasks = [];
+  }
+
   resume() {
     this._clean()
     this.immediateRun();

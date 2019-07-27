@@ -10,7 +10,11 @@ const ACTION = {
   MAX_TIMEOUT: 'maxTimeout',
   MAX_LEVEL_RETRY_COUNT: 'maxLevelRetryCount',
   REQUEST_RETRY_COUNT: 'requestRetryCount',
-  REQUEST_RETRY_DELAY: 'requestRetryDelay'
+  REQUEST_RETRY_DELAY: 'requestRetryDelay',
+  ABR_ENABLE: 'abrEnable',
+  ABR_EWMA_FAST_VOD: 'abrEwmaFastVoD',
+  ABR_EWMA_SLOW_VOD: 'abrEwmaSlowVoD',
+  ABR_EWMA_DEFAULT_ESTIMATE: 'abrEwmaDefaultEstimate'
 };
 
 const state = {
@@ -25,7 +29,12 @@ const state = {
   endStreamTolerance: 0.2,
   maxLevelRetryCount: 2,
   requestRetryCount: 2,
-  requestRetryDelay: 800
+  requestRetryDelay: 800,
+  // abr about 
+  abrEnable: true,
+  abrEwmaFastVoD: 3,
+  abrEwmaSlowVoD: 10,
+  abrEwmaDefaultEstimate: 5e5, // 500 kbps 
 };
 
 export default {

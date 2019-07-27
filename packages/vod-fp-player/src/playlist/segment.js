@@ -3,6 +3,7 @@ import { ACTION, PROCESS, LOADPROCESS } from '../store';
 import { toMux } from '../mux/mux';
 import loader from '../loader/loader';
 import { SEGMENT_ERROR, LOADER_ERROR } from '../error';
+import { inSureNextLoadLevelReady } from "./playlist"
 
 const { compose, head, map, filter, curry, trace } = F;
 
@@ -54,17 +55,16 @@ function abortLoadingSegment({ dispatch }) {
   dispatch(ACTION.REMOVE_ABORTABLE);
 }
 
-function _loadSource({ connect, getConfig }, url) {
+function _loadSource({ connect, getConfig }, url, levelId = 1) {
   return connect(loader)({
     url: url,
     useStream: true,
     params: {
       responseType: 'arraybuffer',
-      timeout: getConfig(ACTION.CONFIG.MAX_TIMEOUT)
+      timeout: levelId === 1 ? getConfig(ACTION.CONFIG.MAX_TIMEOUT) : 0 // only the lowest level set the timeout
     }
   });
 }
-_loadSource = curry(_loadSource);
 
 // segment -> Task
 function loadSegment() {
@@ -84,12 +84,12 @@ function loadSegment() {
               resolve({ videoBuffer, audioBuffer });
             })
           )
-            .ap(connect(_loadSource)(segment.url))
-            .ap(connect(_loadSource)(audioSegment.url))
+            .ap(connect(_loadSource)(segment.url, segment.levelId))
+            .ap(connect(_loadSource)(audioSegment.url, audioSegment.levelId))
             .error(reject);
         });
       })
-      .getOrElse(() => connect(_loadSource)(segment.url));
+      .getOrElse(() => connect(_loadSource)(segment.url, segment.levelId));
 
     return _loadTask
       .filterRetry(e => !e.is(LOADER_ERROR.ABORT))
@@ -103,11 +103,26 @@ function loadSegment() {
           buffer:
             data.buffer instanceof ArrayBuffer ? { videoBuffer: data } : data
         });
-        dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
+        // emit segment loaded or when use abr, to check the nextAutoLevel ready
+        getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
+          connect(inSureNextLoadLevelReady).map(() => {
+            dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
+          })
+          return true;
+        }).getOrElse(() => {
+          dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
+        })
       })
       .error(e => {
         if (e.is(LOADER_ERROR.ABORT)) {
-          dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
+          getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
+            connect(inSureNextLoadLevelReady).map(() => {
+              dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
+            })
+            return true;
+          }).getOrElse(() => {
+            dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
+          })
         } else {
           dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
           dispatch(
@@ -155,8 +170,8 @@ function loadInitMP4({ getState, dispatch, getConfig, connect }) {
             resolve({ videoBuffer, audioBuffer });
           })
         )
-          .ap(connect(_loadSource)(initUrls.levelInitMp4))
-          .ap(connect(_loadSource)(initUrls.mediaInitMp4))
+          .ap(connect(_loadSource)(initUrls.levelInitMp4, undefined))
+          .ap(connect(_loadSource)(initUrls.mediaInitMp4, undefined))
           .error(reject);
       });
     })
@@ -177,6 +192,7 @@ function loadInitMP4({ getState, dispatch, getConfig, connect }) {
     });
 }
 
+_loadSource = curry(_loadSource);
 abortLoadingSegment = F.curry(abortLoadingSegment);
 findSegment = F.curry(findSegment);
 loadSegment = F.curry(loadSegment());

@@ -11,7 +11,7 @@ export default {
   getState() {
     return {
       mediaEle: null,
-      mediaSource: null
+      mediaSource: null,
     }
   }
 };

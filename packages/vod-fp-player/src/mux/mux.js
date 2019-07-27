@@ -5,7 +5,7 @@ import { ACTION, PROCESS } from '../store';
 import { SEGMENT_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
 
-function createMux({ dispatch, connect }) {
+function muxBootstrap({ dispatch, connect }) {
   let worker = work(require.resolve('./worker.js'));
   let _doError = error => {
     connect(removeSegmentFromStore);
@@ -119,9 +119,9 @@ function toMux({ getState, connect }, segment, buffer, sequeueNum, keyInfo) {
 
 resetInitSegment = F.curry(resetInitSegment);
 setTimeOffset = F.curry(setTimeOffset);
-createMux = F.curry(createMux);
+muxBootstrap = F.curry(muxBootstrap);
 _toMuxTs = F.curry(_toMuxTs());
 _toMuxFmp4 = F.curry(_toMuxFmp4);
 toMux = F.curry(toMux);
 
-export { createMux, resetInitSegment, setTimeOffset, toMux };
+export { muxBootstrap, resetInitSegment, setTimeOffset, toMux };

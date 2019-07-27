@@ -11,16 +11,17 @@ const FETCH_BODY = {
   blob: 'blob'
 };
 
-function _readerStream({ dispatch }, ts, reader) {
+function _readerStream({ dispatch }, ts, reader, headers) {
   let store = [];
   let tsStart = ts;
+  let caclSize = arr => arr.reduce((all, c) => {
+    all += c.byteLength;
+    return all;
+  }, 0);
   let dump = () => {
     return reader.read().then(({ done, value }) => {
       if (done) {
-        let totalLength = store.reduce((all, c) => {
-          all += c.byteLength;
-          return all;
-        }, 0);
+        let totalLength = caclSize(store);
         let uint8Array = new Uint8Array(totalLength);
         let offset = 0;
         store.forEach(bf => {
@@ -41,10 +42,16 @@ function _readerStream({ dispatch }, ts, reader) {
       //单次时间 > 1ms 有效
       if (tsTick > 1.5) {
         dispatch(
-          ACTION.PLAYLIST.COLLECT_DOWNLOAD_TIME,
+          ACTION.LOADINFO.COLLECT_DOWNLOAD_TIME,
           value.byteLength / tsTick / 1000
         );
+        dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, {
+          loaded: caclSize(store),
+          total: +headers.get('Content-Length'),
+          tsRequest: performance.now() - tsStart
+        })
       }
+
       ts = performance.now();
       return dump();
     });
@@ -53,7 +60,7 @@ function _readerStream({ dispatch }, ts, reader) {
 }
 _readerStream = curry(_readerStream);
 
-function fetchLoader({ connect }, config, controller, resolve, reject) {
+function fetchLoader({ connect, dispatch }, config, controller, resolve, reject) {
   let { url, body, method, headers, options, params } = config;
   let cancelTimer;
   if (params.timeout) {
@@ -87,7 +94,7 @@ function fetchLoader({ connect }, config, controller, resolve, reject) {
     })
     .then(res => {
       if (config.useStream) {
-        return reader(res.body.getReader());
+        return reader(res.body.getReader(), res.headers);
       }
       return res[FETCH_BODY[params.responseType]]();
     })
@@ -97,6 +104,7 @@ function fetchLoader({ connect }, config, controller, resolve, reject) {
     })
     .catch(e => {
       clearTimeout(cancelTimer);
+      dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, null)
       if (e instanceof DOMException) {
         console.warn('ABORT');
         reject(CusError.of(LOADER_ERROR.ABORT));

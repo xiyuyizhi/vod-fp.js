@@ -11,6 +11,7 @@ const ACTION = {
   CURRENT_LEVEL_ID: 'currentLevelId',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
+  LEVELS: 'levels',
   FIND_LEVEL: 'findLevel',
   FIND_MEDIA: 'findMedia',
   FIND_KEY_INFO: 'findKeyInfo',
@@ -20,12 +21,12 @@ const ACTION = {
   SEGMENTS: 'segments',
   CURRENT_SEGMENT: 'currentSegment',
   DURATION: 'duration',
+  AVG_SEG_DURATION: 'avgSegDuration',
   SEGMENTS_LEN: 'segmentsLen',
   UPDATE_LEVEL: 'updateLevel',
   UPDATE_SEGMENTS_BOUND: 'updateSegmentsBound',
   FIND_MEDIA_SEGEMENT: 'findMediaSegment',
-  COLLECT_DOWNLOAD_TIME: 'collectDownloadTime',
-  GET_DOWNLOAD_SPEED: 'getDownloadSpeed'
+  CAN_ABR: 'canAbr'
 };
 
 function _getCurrentLevel(state) {
@@ -68,7 +69,6 @@ export default {
           }
         ]
       },
-      speedList: [],
       currentSegmentId: -1,
       currentLevelId: 1,
       format: 'ts', //ts | fmp4 | flv
@@ -103,6 +103,14 @@ export default {
         },
         currentLevel(state) {
           return _getCurrentLevel(state);
+        },
+        levels(state) {
+          return map(
+            compose(
+              prop('levels'),
+              prop('pl')
+            )
+          )(state);
         },
         findLevel(state, levelId) {
           return map(
@@ -222,6 +230,14 @@ export default {
             )
           )(_getCurrentLevel(state));
         },
+        avgSegDuration(state) {
+          return map(
+            compose(
+              prop('targetduration'),
+              prop('detail')
+            )
+          )(_getCurrentLevel(state));
+        },
         segmentsLen(state) {
           return map(
             compose(
@@ -238,7 +254,7 @@ export default {
               let seg = segments.find(x => x.id === currentId);
               seg.start = start;
               seg.end = end;
-              seg.duration = parseFloat((end + start).toFixed(6));
+              seg.duration = parseFloat((end - start).toFixed(6));
               logger.log(
                 'new buffer:',
                 [start, end],
@@ -261,28 +277,10 @@ export default {
               })
             );
         },
-        collectDownloadTime(state, speed) {
+        canAbr(state) {
           return state.map(x => {
-            if (x.speedList.length > 30) {
-              x.speedList = x.speedList.slice(15);
-            }
-            x.speedList.push(speed);
-            return x;
-          });
-        },
-        getDownloadSpeed(state) {
-          return state.map(x => {
-            let len = x.speedList.length;
-            let avgSpeed =
-              x.speedList.reduce((all, c) => {
-                all += c;
-                return all;
-              }, 0) / len;
-            if (avgSpeed > 1) {
-              return avgSpeed.toFixed(2) + 'MB/s';
-            }
-            return (avgSpeed * 1000).toFixed(2) + 'KB/s';
-          });
+            return this.mode(state) === 'master' && this.levels(state).map(prop('length')).join() !== 1;
+          })
         }
       }
     };

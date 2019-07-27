@@ -75,7 +75,7 @@ function _initDebugWindow(container, connect) {
   _window.innerHTML = `
     <div style="${_parseStyleStr(closeIconStyle)}" class="${
     CLASSNMAE.VOD_DEBUG_INFO_CLOSE
-  }">X</div>
+    }">X</div>
     <div class="${CLASSNMAE.VOD_DEBUG_INFO_AREA}"></div>
   `;
   _window.addEventListener('click', e => {
@@ -119,7 +119,7 @@ function _collectDebugInfo({ getState, getConfig }) {
         fps: videoInfo.fps,
         audioCodec: audioInfo.codec,
         samplerate: audioInfo.samplerate,
-        speed: flyBuffer > maxFlyBuffer ? '0KB/s' : speed
+        speed: flyBuffer > maxFlyBuffer ? '0KB/s' : speed > 1 ? speed.toFixed(2) + 'MB/s' : (speed * 1000).toFixed(2) + 'KB/s'
       };
     })
   )
@@ -127,7 +127,7 @@ function _collectDebugInfo({ getState, getConfig }) {
     .ap(getState(ACTION.BUFFER.GET_FLY_BUFFER_INFO))
     .ap(getState(ACTION.BUFFER.VIDEO_INFO))
     .ap(getState(ACTION.BUFFER.AUDIO_INFO))
-    .ap(getState(ACTION.PLAYLIST.GET_DOWNLOAD_SPEED))
+    .ap(getState(ACTION.LOADINFO.GET_DOWNLOAD_SPEED))
     .join();
 }
 
@@ -181,9 +181,9 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   menu.innerHTML = `
     <div style="${_parseStyleStr(closeIconStyle)}" class="${
     CLASSNMAE.VOD_MENU_CLOSE
-  }">X</div>
+    }">X</div>
     <div style="cursor:pointer" class="${
-      CLASSNMAE.VOD_DEBUG_BTN
+    CLASSNMAE.VOD_DEBUG_BTN
     }">调试信息</div>
   `;
   menu.addEventListener('click', e => {
