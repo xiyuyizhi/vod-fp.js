@@ -11,6 +11,7 @@ class Logger {
     } catch (e) {
       debug = false;
     }
+
     if (debug) {
       try {
         Logger.usedModules = debug.split('=')[1].split(',');
@@ -19,7 +20,7 @@ class Logger {
   }
 
   static use(modules) {
-    Logger.usedModules = modules;
+    Logger.usedModules = Logger.usedModules.concat(modules);
   }
 
   get disabled() {

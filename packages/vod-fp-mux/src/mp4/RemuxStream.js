@@ -1,5 +1,5 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
-import { NOT_FOUNT_IDR_FRAME } from "../error"
+import { NOT_FOUNT_IDR_FRAME } from '../error';
 let logger = new Logger('mux');
 
 export default class RemuxStream extends PipeLine {
@@ -40,7 +40,7 @@ export default class RemuxStream extends PipeLine {
       if (videoTrack && audioTrack) {
         let firstVideoSampleDts = videoTrack.samples[0].dts;
         let audiovideoDeltaDts =
-          (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
+          (audioTrack.samples[0].pts - videoTrack.samples[0].pts) /
           videoTrack.inputTimeScale;
         if (Math.abs(audiovideoDeltaDts) >= 0.5) {
           logger.warn('音视频first dts差距过大');

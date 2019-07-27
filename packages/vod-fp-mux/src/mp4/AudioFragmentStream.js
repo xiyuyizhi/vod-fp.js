@@ -61,7 +61,7 @@ export default class AudioFragmentStream extends PipeLine {
     let lastPTS;
     let inputSamples = aacTrack.samples;
     let outputSamples = [];
-    let nextAudioPts = this.nextAacDts;
+    let nextAudioDts = this.nextAacDts;
 
     inputSamples.forEach(sample => {
       sample.originPts = sample.pts;
@@ -77,20 +77,22 @@ export default class AudioFragmentStream extends PipeLine {
     if (inputSamples.length === 0) {
       return;
     }
-    if (!nextAudioPts) {
-      nextAudioPts = aacTrack.samples[0].dts;
+    if (!nextAudioDts) {
+      nextAudioDts = aacTrack.samples[0].dts;
     }
     if (
       !contiguous ||
-      Math.abs(inputSamples[0].dts - nextAudioPts) / 90000 > 0.2
+      Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.2
     ) {
       if (!contiguous) {
-        nextAudioPts = timeOffset * TIME_SCALE;
+        nextAudioDts = timeOffset * TIME_SCALE;
       } else {
-        nextAudioPts = Math.max(timeOffset * TIME_SCALE, nextAudioPts);
+        nextAudioDts = Math.max(timeOffset * TIME_SCALE, nextAudioDts);
       }
-      logger.warn('not contiguous', timeOffset, nextAudioPts);
-      let delta = inputSamples[0].dts - nextAudioPts;
+      logger.warn(
+        `not contiguous,timeOffset = ${timeOffset} ,nextAudioDts =${nextAudioDts}`
+      );
+      let delta = inputSamples[0].dts - nextAudioDts;
       inputSamples.forEach(sample => {
         sample.dts -= delta;
         sample.pts -= delta;
@@ -100,14 +102,14 @@ export default class AudioFragmentStream extends PipeLine {
     logger.warn(
       `audio remux:【initDTS:${
         this.initDTS
-      } , nextAacPts:${nextAudioPts}, originPTS:${
+      } , nextAacPts:${nextAudioDts}, originPTS:${
         inputSamples[0].originPts
       } ,  originDTS:${inputSamples[0].originDts} , samples[0]:${
         inputSamples[0].dts
       }】`
     );
 
-    for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
+    for (let i = 0, nextPts = nextAudioDts; i < inputSamples.length; ) {
       let sample = inputSamples[i];
       let delta;
       let pts = sample.pts;
@@ -164,7 +166,7 @@ export default class AudioFragmentStream extends PipeLine {
       if (lastPTS !== undefined) {
         mp4Sample.duration = Math.round((pts - lastPTS) / scaleFactor);
       } else {
-        let delta = Math.round((1000 * (pts - nextAudioPts)) / TIME_SCALE);
+        let delta = Math.round((1000 * (pts - nextAudioDts)) / TIME_SCALE);
         let numMissingFrames = 0;
 
         // remember first PTS of our audioSamples
@@ -186,9 +188,7 @@ export default class AudioFragmentStream extends PipeLine {
       mdat.set(unit, offset);
       let unitLen = unit.byteLength;
       offset += unitLen;
-      // console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS :
-      // ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(aud
-      // i oSample.pts/4294967296).toFixed(3)}');
+
       mp4Sample = {
         size: unitLen,
         cts: 0,

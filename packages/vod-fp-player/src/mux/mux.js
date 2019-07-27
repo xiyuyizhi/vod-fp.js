@@ -4,9 +4,15 @@ import { F, CusError } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { SEGMENT_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
+import WorkerSimulate from './inline';
 
-function muxBootstrap({ dispatch, connect }) {
-  let worker = work(require.resolve('./worker.js'));
+function muxBootstrap({ dispatch, connect, getConfig }) {
+  let worker;
+  if (getConfig(ACTION.CONFIG.WORKER_ENABLE)) {
+    worker = work(require.resolve('./worker.js'));
+  } else {
+    worker = new WorkerSimulate();
+  }
   let _doError = error => {
     connect(removeSegmentFromStore);
     dispatch(
@@ -33,7 +39,9 @@ function muxBootstrap({ dispatch, connect }) {
   });
   worker.addEventListener('error', e => {
     _doError(new Error(e.message));
-    global.URL.revokeObjectURL(worker.objectURL);
+    if (worker.objectURL) {
+      global.URL.revokeObjectURL(worker.objectURL);
+    }
   });
   dispatch(ACTION.MUX, worker);
 }

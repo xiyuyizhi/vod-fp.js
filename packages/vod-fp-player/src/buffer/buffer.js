@@ -23,13 +23,14 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
     map(x => {
       if (x === true) {
         // video audio all append
+        connect(_checkFlushBuffer);
         connect(_afterAppended)(true);
       } else {
         dispatch(me, true);
       }
     })(getState(other));
   };
-  sb.addEventListener('updateend', function (_) {
+  sb.addEventListener('updateend', function(_) {
     if (type === 'video') {
       getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).map(x => {
         if (x.combine) {
@@ -38,6 +39,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
             ACTION.BUFFER.VIDEO_APPENDED
           );
         } else {
+          connect(_checkFlushBuffer);
           connect(_afterAppended)(false);
         }
       });
@@ -50,6 +52,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
             ACTION.BUFFER.AUDIO_APPENDED
           );
         } else {
+          connect(_checkFlushBuffer);
           connect(_afterAppended)(false);
         }
       });
@@ -80,9 +83,9 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
         curry((videoBufferInfo, audioBufferInfo) => {
           logger.log(
             `buffer:  video=[${videoBufferInfo.startPTS /
-            90000},${videoBufferInfo.endPTS / 90000}]`,
+              90000},${videoBufferInfo.endPTS / 90000}]`,
             `audio=[${audioBufferInfo.startPTS /
-            90000},${audioBufferInfo.endPTS / 90000}]`
+              90000},${audioBufferInfo.endPTS / 90000}]`
           );
           let startPTS = Math.min(
             videoBufferInfo.startPTS,
@@ -191,8 +194,19 @@ function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
   });
 }
 
-function _checkFlushBuffer({ getState }) {
-
+function _checkFlushBuffer({ getState, getConfig, connect }) {
+  let media = getState(ACTION.MEDIA.MEDIA_ELE).join();
+  return getState(ACTION.BUFFER.GET_BUFFER_INFO).map(x => {
+    let flushEnd = Math.max(
+      0,
+      media.currentTime - getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
+      x.bufferStart - getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH)
+    );
+    if (flushEnd) {
+      logger.log(`flush buffer , [0,${flushEnd}]`);
+      return connect(flushBuffer)(0, flushEnd);
+    }
+  });
 }
 
 function flushBuffer({ getState, dispatch }, start, end) {

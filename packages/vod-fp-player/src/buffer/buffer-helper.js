@@ -74,6 +74,7 @@ function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition) {
           0,
           parseFloat((x[1] - currentPosition).toFixed(6))
         ),
+        bufferStart: x[0],
         bufferEnd: x[1]
       };
     }),
@@ -87,6 +88,7 @@ function _bufferInfoCacl(getState, getConfig, bufferRanges, currentPosition) {
   return restInfo.getOrElse(() => {
     return {
       bufferLength: 0,
+      bufferStart: currentPosition,
       bufferEnd: currentPosition
     };
   });

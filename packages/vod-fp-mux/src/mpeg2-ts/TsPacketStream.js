@@ -11,7 +11,6 @@ export default class TsPacketStream extends PipeLine {
     }
     const syncOffset = probe(buffer);
     logger.log('监测ts流第一个同步字节的位置: ', syncOffset);
-
     if (syncOffset === -1) {
       this.emit('error', NOT_VALID_TS_FORMAT);
       return;

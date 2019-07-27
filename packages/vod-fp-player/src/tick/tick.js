@@ -6,10 +6,7 @@ import {
   loadInitMP4,
   drainSegmentFromStore
 } from '../playlist/segment';
-import {
-  abrBootstrap,
-  abrProcess,
-} from "../abr/abr";
+import { abrBootstrap, abrProcess } from '../abr/abr';
 import { muxBootstrap } from '../mux/mux';
 import { bufferBootstrap } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
@@ -35,7 +32,7 @@ function bootStrap(
   }
   getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
     connect(abrBootstrap);
-  })
+  });
   connect(bufferBootstrap);
 
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
@@ -47,7 +44,7 @@ function bootStrap(
       curry((bufferInfo, media, pro, segments) => {
         if (
           bufferInfo.bufferLength <
-          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
+            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
           pro === PROCESS.IDLE
         ) {
           return connect(findSegment)(segments, bufferInfo.bufferEnd);
@@ -117,11 +114,13 @@ function _startLoadProcess(
         segment.id,
         ' of level ',
         segment.levelId || 1,
+        ' with cc ',
+        segment.cc,
         `: [${segment.start} , ${segment.end}]`
       );
       getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
         connect(abrProcess)(segment);
-      })
+      });
       connect(loadSegment)(segment);
       return true;
     })
