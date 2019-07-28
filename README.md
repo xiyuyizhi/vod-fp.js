@@ -2,6 +2,22 @@
 
 DOING...
 
+## features
+
+[x] hls with ts format
+
+[x] hls with fmp4 format
+
+[x] hls ts with AES-128 decrypt
+
+[x] abr
+
+[ ] fmp4 drm with widevine
+
+[ ] hls live 、 with abr
+
+[ ] http-flv live
+
 ## base usage
 
 ```
