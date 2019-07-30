@@ -120,7 +120,7 @@ function createStore(initState, actions = {}) {
                 ...currentState,
                 ...x
               };
-            })
+            });
           }
         }
       }

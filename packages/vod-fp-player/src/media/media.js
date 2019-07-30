@@ -30,7 +30,7 @@ function _bindMediaEvent(
     if (media.duration - rest.join().bufferEnd >= endStreamTolerance) {
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
     } else if (ms.join().readyState === 'open') {
-      ms.endOfStream();
+      ms.map(x => x.endOfStream());
       dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
     }
     rest.map(buffer => {
@@ -61,21 +61,23 @@ function _bindMediaEvent(
 
   // check EOS
   subscribe(PROCESS.IDLE, () => {
-    let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO).join();
-    maybeToEither(ms)
-      .map(x => {
-        if (
-          media.duration - rest.bufferEnd <= endStreamTolerance &&
-          x.readyState === 'open'
-        ) {
-          logger.warn('end of stream');
-          x.endOfStream();
-          dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-        }
-      })
-      .error(e => {
-        logger.log(e);
-      });
+    getState(ACTION.PLAYLIST.IS_LIVE).getOrElse(() => {
+      let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO).join();
+      maybeToEither(ms)
+        .map(x => {
+          if (
+            media.duration - rest.bufferEnd <= endStreamTolerance &&
+            x.readyState === 'open'
+          ) {
+            logger.warn('end of stream');
+            x.endOfStream();
+            dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+          }
+        })
+        .error(e => {
+          logger.log(e);
+        });
+    });
   });
 }
 

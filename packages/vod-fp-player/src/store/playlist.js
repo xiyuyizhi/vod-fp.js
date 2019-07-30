@@ -26,7 +26,9 @@ const ACTION = {
   UPDATE_LEVEL: 'updateLevel',
   UPDATE_SEGMENTS_BOUND: 'updateSegmentsBound',
   FIND_MEDIA_SEGEMENT: 'findMediaSegment',
-  CAN_ABR: 'canAbr'
+  CAN_ABR: 'canAbr',
+  IS_LIVE: 'isLive',
+  GET_LEVEL_URL: 'getLevelUrl'
 };
 
 function _getCurrentLevel(state) {
@@ -71,7 +73,7 @@ export default {
       },
       currentSegmentId: -1,
       currentLevelId: 1,
-      format: 'ts', //ts | fmp4 | flv
+      format: '', //ts | fmp4 | flv
       derive: {
         format(state) {
           return compose(
@@ -279,8 +281,28 @@ export default {
         },
         canAbr(state) {
           return state.map(x => {
-            return this.mode(state) === 'master' && this.levels(state).map(prop('length')).join() !== 1;
-          })
+            if (
+              this.format(state) === 'ts' &&
+              this.mode(state) === 'master' &&
+              this.levels(state)
+                .map(prop('length'))
+                .join() !== 1
+            ) {
+              return true;
+            }
+          });
+        },
+        isLive(state) {
+          return compose(
+            map(x => (prop('live')(x) ? true : undefined)),
+            map(prop('detail'))
+          )(this.currentLevel(state));
+        },
+        getLevelUrl(state) {
+          return compose(
+            map(prop('url')),
+            map(prop('detail'))
+          )(this.currentLevel(state));
         }
       }
     };

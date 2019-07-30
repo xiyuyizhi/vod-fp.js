@@ -10,18 +10,19 @@ import { abrBootstrap, abrProcess } from '../abr/abr';
 import { muxBootstrap } from '../mux/mux';
 import { bufferBootstrap } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
+import { bootStrapFlushPlaylist } from '../playlist/playlist';
 
 const { prop, compose, map, curry } = F;
 
 let logger = new Logger('player');
 
-function bootStrap(
+function bootstrap(
   { getState, getConfig, connect, dispatch, subOnce },
   level,
   mediaSource
 ) {
-  logger.log(level);
   if (!level) return;
+
   connect(updateMediaDuration);
   let format = getState(ACTION.PLAYLIST.FORMAT);
   if (format === 'ts') {
@@ -33,6 +34,11 @@ function bootStrap(
   getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
     connect(abrBootstrap);
   });
+
+  getState(ACTION.PLAYLIST.IS_LIVE).map(() => {
+    connect(bootStrapFlushPlaylist);
+  });
+
   connect(bufferBootstrap);
 
   let media = getState(ACTION.MEDIA.MEDIA_ELE);
@@ -95,7 +101,7 @@ function bootStrap(
 
   let t = Tick.of()
     .addTask(_checkBuffer)
-    .addTask(_checkDownload, true)
+    .addTask(_checkDownload)
     .interval(getConfig(ACTION.CONFIG.TICK_INTERVAL))
     .immediateRun();
   dispatch(ACTION.MAIN_LOOP, t);
@@ -128,6 +134,6 @@ function _startLoadProcess(
 }
 
 _startLoadProcess = curry(_startLoadProcess);
-const startTick = F.curry(bootStrap);
+bootstrap = F.curry(bootstrap);
 
-export { startTick };
+export { bootstrap };

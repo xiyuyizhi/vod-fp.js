@@ -3,7 +3,7 @@ import { ACTION, PROCESS, LOADPROCESS } from '../store';
 import { toMux } from '../mux/mux';
 import loader from '../loader/loader';
 import { SEGMENT_ERROR, LOADER_ERROR } from '../error';
-import { inSureNextLoadLevelReady } from "./playlist"
+import { inSureNextLoadLevelReady } from './playlist';
 
 const { compose, head, map, filter, curry, trace } = F;
 
@@ -67,71 +67,69 @@ function _loadSource({ connect, getConfig }, url, levelId = 1) {
 }
 
 // segment -> Task
-function loadSegment() {
-  let lastSegment = null;
-  return ({ getConfig, getState, connect, dispatch }, segment) => {
-    dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADING);
+function loadSegment({ getConfig, getState, connect, dispatch }, segment) {
+  dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADING);
 
-    let _loadTask = getState(ACTION.PLAYLIST.FIND_MEDIA_SEGEMENT, {
-      levelId: segment.levelId,
-      id: segment.id
+  let _loadTask = getState(ACTION.PLAYLIST.FIND_MEDIA_SEGEMENT, {
+    levelId: segment.levelId,
+    id: segment.id
+  })
+    .map(trace('log: matched audio segment'))
+    .chain(audioSegment => {
+      return Task.of((resolve, reject) => {
+        Task.resolve(
+          curry((videoBuffer, audioBuffer) => {
+            resolve({ videoBuffer, audioBuffer });
+          })
+        )
+          .ap(connect(_loadSource)(segment.url, segment.levelId))
+          .ap(connect(_loadSource)(audioSegment.url, audioSegment.levelId))
+          .error(reject);
+      });
     })
-      .map(trace('log: matched audio segment'))
-      .chain(audioSegment => {
-        return Task.of((resolve, reject) => {
-          Task.resolve(
-            curry((videoBuffer, audioBuffer) => {
-              resolve({ videoBuffer, audioBuffer });
-            })
-          )
-            .ap(connect(_loadSource)(segment.url, segment.levelId))
-            .ap(connect(_loadSource)(audioSegment.url, audioSegment.levelId))
-            .error(reject);
-        });
-      })
-      .getOrElse(() => connect(_loadSource)(segment.url, segment.levelId));
+    .getOrElse(() => connect(_loadSource)(segment.url, segment.levelId));
 
-    return _loadTask
-      .filterRetry(e => !e.is(LOADER_ERROR.ABORT))
-      .retry(
-        getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
-        getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
-      )
-      .map(data => {
-        dispatch(ACTION.FLYBUFFER.STORE_NEW_SEGMENT, {
-          segment,
-          buffer:
-            data.buffer instanceof ArrayBuffer ? { videoBuffer: data } : data
-        });
-        // emit segment loaded or when use abr, to check the nextAutoLevel ready
-        getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
+  return _loadTask
+    .filterRetry(e => !e.is(LOADER_ERROR.ABORT))
+    .retry(
+      getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
+      getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
+    )
+    .map(data => {
+      dispatch(ACTION.FLYBUFFER.STORE_NEW_SEGMENT, {
+        segment,
+        buffer:
+          data.buffer instanceof ArrayBuffer ? { videoBuffer: data } : data
+      });
+      // emit segment loaded or when use abr, to check the nextAutoLevel ready
+      getState(ACTION.PLAYLIST.CAN_ABR)
+        .map(() => {
           connect(inSureNextLoadLevelReady).map(() => {
             dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
-          })
+          });
           return true;
-        }).getOrElse(() => {
-          dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
         })
-      })
-      .error(e => {
-        if (e.is(LOADER_ERROR.ABORT)) {
-          getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
+        .getOrElse(() => {
+          dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADED);
+        });
+    })
+    .error(e => {
+      if (e.is(LOADER_ERROR.ABORT)) {
+        getState(ACTION.PLAYLIST.CAN_ABR)
+          .map(() => {
             connect(inSureNextLoadLevelReady).map(() => {
               dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
-            })
+            });
             return true;
-          }).getOrElse(() => {
-            dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
           })
-        } else {
-          dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
-          dispatch(
-            ACTION.ERROR,
-            e.merge(CusError.of(SEGMENT_ERROR[e.detail()]))
-          );
-        }
-      });
-  };
+          .getOrElse(() => {
+            dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ABORT);
+          });
+      } else {
+        dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOAD_ERROR);
+        dispatch(ACTION.ERROR, e.merge(CusError.of(SEGMENT_ERROR[e.detail()])));
+      }
+    });
 }
 
 function drainSegmentFromStore(
@@ -195,7 +193,7 @@ function loadInitMP4({ getState, dispatch, getConfig, connect }) {
 _loadSource = curry(_loadSource);
 abortLoadingSegment = F.curry(abortLoadingSegment);
 findSegment = F.curry(findSegment);
-loadSegment = F.curry(loadSegment());
+loadSegment = F.curry(loadSegment);
 findSegmentOfCurrentPosition = F.curry(findSegmentOfCurrentPosition);
 drainSegmentFromStore = F.curry(drainSegmentFromStore);
 removeSegmentFromStore = F.curry(removeSegmentFromStore);

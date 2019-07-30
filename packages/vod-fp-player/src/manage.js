@@ -3,7 +3,7 @@ import { ACTION, PROCESS } from './store';
 import { createMediaSource, destroyMediaSource } from './media/media';
 import { loadPlaylist, changePlaylistLevel } from './playlist/playlist';
 import { loadInitMP4 } from './playlist/segment';
-import { startTick } from './tick/tick';
+import { bootstrap } from './tick/tick';
 import {
   abortLoadingSegment,
   findSegmentOfCurrentPosition
@@ -13,7 +13,7 @@ import { flushBuffer, abortBuffer } from './buffer/buffer';
 let logger = new Logger('player');
 
 function manage({ dispatch, connect }, media, url) {
-  Task.resolve(connect(startTick))
+  Task.resolve(connect(bootstrap))
     .ap(connect(loadPlaylist)(url))
     .ap(connect(createMediaSource)(media))
     .error(e => {

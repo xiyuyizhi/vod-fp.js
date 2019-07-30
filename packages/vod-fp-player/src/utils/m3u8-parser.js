@@ -31,8 +31,10 @@ const splitByComma = split(SPLIT_COMMA_PATTERN);
 const splitByAcross = split('-');
 const filterEmpty = filter(a => Boolean(a) && a !== ',');
 
-const isTag = line => line.trim().indexOf('#EXT') === 0;
+const DISCONTINUITY_TAG = 'discontinuity';
+const END_TAG = 'endlist';
 
+const isTag = line => line.trim().indexOf('#EXT') === 0;
 const splitLines = m3u8 =>
   m3u8
     .split(/\n/)
@@ -54,8 +56,11 @@ const keyFormat = key => {
 
 const combinePair = curry((baseUrl, args) => {
   let [key, value] = args;
-  if (key === 'discontinuity') {
+  if (key === DISCONTINUITY_TAG) {
     return { discontinuity: true };
+  }
+  if (key === END_TAG) {
+    return { live: false };
   }
   if (key === 'uri' || key === 'url') {
     return { [key]: getUrl(baseUrl, value).url };
@@ -191,10 +196,12 @@ const compositionMaster = list => {
       fullfillLevels
     )
   )(list);
-  result.levels.sort((a, b) => parseFloat(a.bandwidth) > parseFloat(b.bandwidth) ? 1 : -1)
+  result.levels.sort((a, b) =>
+    parseFloat(a.bandwidth) > parseFloat(b.bandwidth) ? 1 : -1
+  );
   result.levels.forEach((x, index) => {
     x.levelId = index + 1;
-  })
+  });
   return result;
 };
 
@@ -205,6 +212,7 @@ const compositionLevel = curry(list => {
     duration: 0,
     startSN: 0,
     endSN: 0,
+    live: true
   };
   let lastCC = 0;
   let mediaSequence = 0;
@@ -222,6 +230,7 @@ const compositionLevel = curry(list => {
       duration = parseFloat(duration);
       let id = level.segments.length;
       let start = level.segments[id - 1] ? level.segments[id - 1].end : 0;
+      // segment structure
       let seg = {
         duration,
         start,
@@ -256,6 +265,10 @@ const compositionLevel = curry(list => {
       lastCC++;
       return;
     }
+    if (item.live !== undefined) {
+      Object.assign(level, item);
+      return;
+    }
     for (let key in item) {
       if (level[key]) {
         level[key] = [level[key]];
@@ -265,7 +278,6 @@ const compositionLevel = curry(list => {
       }
     }
   });
-
   forEach(
     compose(
       fullfillUniqueProp,
@@ -292,9 +304,16 @@ const valid = m3u8 => {
 
 const isMaster = m3u8 => m3u8.indexOf('EXT-X-STREAM-INF') !== -1;
 
+function _getBasePath(url) {
+  url = url.split('?');
+  url = url[0];
+  return url.slice(0, url.lastIndexOf('/') + 1);
+}
+
 // (string,string) -> Either
-export default curry((baseUrl, m3u8) => {
+export default curry((url, m3u8) => {
   // throw new Error(a);
+  let baseUrl = _getBasePath(url);
   const handleMaster = compose(
     compositionMaster,
     structureM3u8(baseUrl)
@@ -318,6 +337,7 @@ export default curry((baseUrl, m3u8) => {
   const handle = compose(
     map(x => {
       x.baseUrl = baseUrl;
+      x.url = url;
       return x;
     }),
     chain(usableCheck),
