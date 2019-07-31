@@ -10,7 +10,7 @@ import { abrBootstrap, abrProcess } from '../abr/abr';
 import { muxBootstrap } from '../mux/mux';
 import { bufferBootstrap } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
-import { bootStrapFlushPlaylist } from '../playlist/playlist';
+import { bootStrapFlushPlaylist, checkSyncLivePosition } from '../playlist/m3u8-live';
 
 const { prop, compose, map, curry } = F;
 
@@ -47,14 +47,16 @@ function bootstrap(
   function _checkBuffer() {
     // real buffer
     Maybe.of(
-      curry((bufferInfo, media, pro, segments) => {
+      curry((bufferInfo, m, pro, segments) => {
         if (
           bufferInfo.bufferLength <
-            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
+          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
           pro === PROCESS.IDLE
         ) {
-          return connect(findSegment)(segments, bufferInfo.bufferEnd);
-        } else if (media.currentTime && (media.paused || media.end)) {
+          let bufferEnd = bufferInfo.bufferEnd;
+          connect(checkSyncLivePosition)(m, bufferEnd)
+          return connect(findSegment)(segments, bufferEnd);
+        } else if (m.currentTime && (m.paused || m.end)) {
           dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
         }
       })

@@ -113,7 +113,7 @@ const extractTag = curry((baseUrl, tag) => {
 const getUrl = curry((baseUrl, url) => {
   if (!/^https?/.test(url)) {
     return {
-      url: baseUrl + url
+      url: Array.from(new Set(baseUrl.split('/').concat(url.split('/')))).join('/')
     };
   }
   return { url };

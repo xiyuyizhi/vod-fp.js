@@ -2,6 +2,10 @@ export const NOT_VALID_TS_FORMAT = {
   type: 'NOT_VALID_TS_FORMAT',
   message: 'not_valid_ts_format'
 };
+export const LACK_VIDEO_OR_AUDIO_DATA = {
+  type: 'LACK_VIDEO_OR_AUDIO_DATA',
+  message: 'lack_video_or_audio_data'
+};
 export const NOT_FOUNT_PMT = {
   type: 'NOT_FOUNT_PMT',
   message: 'not_fount_pmt'

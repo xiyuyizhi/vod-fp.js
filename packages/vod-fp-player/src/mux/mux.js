@@ -34,7 +34,7 @@ function muxBootstrap({ dispatch, connect, getConfig }) {
       }
     }
     if (type === 'error') {
-      _doError(error);
+      _doError(data);
     }
   });
   worker.addEventListener('error', e => {
@@ -63,6 +63,10 @@ function _toMuxTs() {
 
   return ({ getState, dispatch }, segment, buffer, sequeueNum, keyInfo) => {
     let worker = getState(ACTION.MUX).join();
+    if (!lastSegment) {
+      worker.postMessage({ type: 'resetInitSegment' });
+      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
+    }
     if (
       (lastSegment && lastSegment.cc !== segment.cc) ||
       (lastSegment && lastSegment.levelId !== segment.levelId)

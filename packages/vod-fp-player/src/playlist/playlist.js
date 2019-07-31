@@ -17,7 +17,6 @@ import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
 import { getNextABRLoadLevel } from '../abr/abr';
 import { LOADER_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
-import { updateMediaDuration } from '../media/media';
 
 const {
   curry,
@@ -62,9 +61,9 @@ function _checkHasMatchedMedia({ getState }, level) {
   return chain(l => getState(ACTION.PLAYLIST.FIND_MEDIA, l.levelId))(level);
 }
 
-// Maybe --> Maybe
-function _findLevelToLoad(master) {
-  return master.map(
+// Maybe --> Maybe , select the default level to load
+function _findLevelToLoad(pl) {
+  return pl.map(
     compose(
       head,
       prop('levels')
@@ -168,7 +167,7 @@ function _loadResource({ connect, getConfig }, type, url) {
   });
 }
 
-// object --> Task
+// object --> Task 
 function _checkLevelOrMaster({ dispatch, connect }, playlist) {
   if (playlist.type === 'level') {
     playlist = {
@@ -238,7 +237,7 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   );
 }
 
-function inSureNextLoadLevelReady({ connect, getState, subOnce }) {
+function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
   return Task.of(resolve => {
     Maybe.of(
       curry((currenLevel, nextAutoLevel) => {
@@ -248,6 +247,7 @@ function inSureNextLoadLevelReady({ connect, getState, subOnce }) {
           return;
         }
         subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
+          dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel)
           resolve();
         });
         connect(changePlaylistLevel)(nextAutoLevel);
@@ -258,93 +258,7 @@ function inSureNextLoadLevelReady({ connect, getState, subOnce }) {
   });
 }
 
-// live merge playlist
-// condition:
-//  1. current details sn [3,5], new details sn [2,4]
-//     current details sn [3,5], new details sn [3,5]
-//     current details sn [3,5], new details sn [4,6]
-//     current details sn [3,5], new details sn [7,9]
-//  2. current level 2,details sn [10,13]
-//     level will change to 3
-//     level 3 detaisl sn [3,6],flushed new details [9,12]、[10,13]、[11,14]
-function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
-  getState(ACTION.PLAYLIST.FIND_LEVEL, levelId).map(level => {
-    console.log(level, newDetails);
-    let { detail } = level;
-    let oldStartSN = detail.startSN;
-    let oldEndSN = detail.endSN;
-    let oldSegments = detail.segments;
-    let segments = newDetails.segments;
-    let { startSN, endSN } = newDetails;
-    let delta = startSN - oldStartSN;
-    let lastSegment;
-    logger.warn(
-      `merge level details with levelId ${levelId},[${oldStartSN},${oldEndSN}] -> [${startSN},${endSN}]`
-    );
-    for (let i = 0; i <= endSN - startSN; i++) {
-      if (oldSegments[i + delta]) {
-        lastSegment = oldSegments[i + delta];
-      } else {
-        if (lastSegment) {
-          let seg = segments[i];
-          seg.start = lastSegment.end;
-          seg.end = seg.start + seg.duration;
-          oldSegments.push(seg);
-        }
-      }
-    }
-    oldSegments = oldSegments.filter(x => x.id >= startSN);
-    detail.segments = oldSegments;
-    detail.startSN = oldSegments[0].id;
-    detail.endSN = oldSegments[oldSegments.length - 1].id;
-    detail.mediaSequence = detail.startSN;
-    detail.live = detail.live;
-    detail.duration = Math.max(
-      detail.duration,
-      oldSegments[oldSegments.length - 1].end
-    );
-    dispatch(ACTION.PLAYLIST.UPDATE_LEVEL, {
-      levelId,
-      detail
-    });
-    connect(updateMediaDuration);
-  });
-}
 
-function bootStrapFlushPlaylist({ getState, getConfig, connect }) {
-  let interval = getState(ACTION.PLAYLIST.AVG_SEG_DURATION)
-    .map(duration => {
-      return (
-        duration * getConfig(ACTION.CONFIG.LIVE_FLUSH_INTERVAL_FACTOR) * 1000
-      );
-    })
-    .join();
-
-  function _flushPlaylist(nextTick) {
-    Maybe.of(
-      curry((levelUrl, currentLevelId, isLive) => {
-        let tsStart = performance.now();
-        connect(_loadResource)('LEVEL', levelUrl)
-          .map(details => {
-            connect(_mergePlaylist)(currentLevelId, details);
-            if (isLive) {
-              nextTick(interval - performance.now() + tsStart);
-            }
-          })
-          .error(e => {
-            console.log(e);
-          });
-      })
-    )
-      .ap(getState(ACTION.PLAYLIST.GET_LEVEL_URL))
-      .ap(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID))
-      .ap(getState(ACTION.PLAYLIST.IS_LIVE));
-  }
-
-  Tick.of()
-    .addTask(_flushPlaylist)
-    .interval(interval);
-}
 
 _checkloadDecryptKey = curry(_checkloadDecryptKey);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
@@ -354,15 +268,14 @@ _updateLevel = curry(_updateLevel);
 _updateMedia = curry(_updateMedia);
 _updateKey = curry(_updateKey);
 _checkHasMatchedMedia = curry(_checkHasMatchedMedia);
-_mergePlaylist = curry(_mergePlaylist);
 loadPlaylist = curry(loadPlaylist);
 changePlaylistLevel = curry(changePlaylistLevel);
 inSureNextLoadLevelReady = curry(inSureNextLoadLevelReady);
-bootStrapFlushPlaylist = curry(bootStrapFlushPlaylist);
+
 
 export {
+  _loadResource,
   loadPlaylist,
   changePlaylistLevel,
   inSureNextLoadLevelReady,
-  bootStrapFlushPlaylist
 };

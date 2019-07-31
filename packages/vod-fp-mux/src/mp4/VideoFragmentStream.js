@@ -1,5 +1,6 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
+import { checkCombine } from "../utils/index"
 import ptsNormalize from '../utils/ptsNormalize';
 
 let logger = new Logger('mux');
@@ -23,7 +24,7 @@ export default class VideoFragmentStream extends PipeLine {
 
   push(data) {
     if (data.type === 'metadata') {
-      this.combine = Object.values(data.data).filter(x => x !== -1).length == 2;
+      this.combine = checkCombine(data.data);
     }
     if (data.type === 'video') {
       this.avcTrack = data;
@@ -70,7 +71,7 @@ export default class VideoFragmentStream extends PipeLine {
     });
 
     // 按dts排序
-    samples.sort(function(a, b) {
+    samples.sort(function (a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
@@ -78,8 +79,8 @@ export default class VideoFragmentStream extends PipeLine {
 
     logger.warn(
       `video remux:【initDTS:${
-        this.initDTS
-      } , nextAvcDts:${nextAvcDts}, samples[0]:${samples[0].dts}】`
+      this.initDTS
+      } , nextAvcDts:${nextAvcDts}, samples[0]: dts - ${samples[0].dts}  pts - ${samples[0].pts}】`
     );
 
     let sample = samples[0];
@@ -92,7 +93,7 @@ export default class VideoFragmentStream extends PipeLine {
 
     let firstDTS = Math.max(sample.dts, 0);
     let firstPTS = Math.max(sample.pts, 0);
-
+    logger.log(`firstDTS: ${firstDTS} , firstPTS: ${firstPTS}`)
     // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
     delta = Math.round((firstDTS - nextAvcDts) / 90);
     // if fragment are contiguous, detect hole/overlapping between fragments

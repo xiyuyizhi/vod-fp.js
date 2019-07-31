@@ -16,7 +16,8 @@ const ACTION = {
   ABR_EWMA_FAST_VOD: 'abrEwmaFastVoD',
   ABR_EWMA_SLOW_VOD: 'abrEwmaSlowVoD',
   ABR_EWMA_DEFAULT_ESTIMATE: 'abrEwmaDefaultEstimate',
-  LIVE_FLUSH_INTERVAL_FACTOR: 'liveFlushIntervalFactor'
+  LIVE_FLUSH_INTERVAL_FACTOR: 'liveFlushIntervalFactor',
+  LIVE_LATENCY_FACTOR: 'liveLatencyFactor'
 };
 
 const state = {
@@ -39,7 +40,8 @@ const state = {
   abrEwmaSlowVoD: 10,
   abrEwmaDefaultEstimate: 5e5, // 500 kbps
   //live about
-  liveFlushIntervalFactor: 0.8
+  liveFlushIntervalFactor: 0.8,
+  liveLatencyFactor: 0.9,
 };
 
 export default {

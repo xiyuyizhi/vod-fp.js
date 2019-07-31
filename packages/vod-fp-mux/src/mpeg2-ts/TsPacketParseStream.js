@@ -1,5 +1,6 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
-import { NOT_FOUNT_PMT } from '../error';
+import { NOT_FOUNT_PMT, LACK_VIDEO_OR_AUDIO_DATA } from '../error';
+import { checkCombine } from "../utils/index"
 let logger = new Logger('mux');
 
 export default class TsPacketParseStream extends PipeLine {
@@ -7,6 +8,8 @@ export default class TsPacketParseStream extends PipeLine {
     super();
     this.pmtId = -1;
     this.streamInfo = null;
+    this.hasAudioData = false;
+    this.hasVideoData = false;
   }
   push(packet) {
     let adaptionsOffset = 0;
@@ -84,7 +87,7 @@ export default class TsPacketParseStream extends PipeLine {
      *    .共10 bytes
      */
     if (header.pid == 0) {
-      logger.warn('parse PAT');
+      // logger.warn('parse PAT');
       offset += 1 + payload[offset]; // table start position
       this.pmtId = this.parsePAT(payload, offset);
       return;
@@ -105,6 +108,7 @@ export default class TsPacketParseStream extends PipeLine {
     const { videoId, audioId } = this.streamInfo;
     switch (header.pid) {
       case videoId:
+        this.hasVideoData = true;
         this.emit('data', {
           type: 'video',
           starter: header.payloadStartIndicator,
@@ -112,6 +116,7 @@ export default class TsPacketParseStream extends PipeLine {
         });
         break;
       case audioId:
+        this.hasAudioData = true;
         this.emit('data', {
           type: 'audio',
           starter: header.payloadStartIndicator,
@@ -119,14 +124,14 @@ export default class TsPacketParseStream extends PipeLine {
         });
         break;
       default:
-        logger.warn('unknow pid ', header.pid);
+      // logger.warn('unknow pid ', header.pid);
     }
   }
 
   parsePAT(payload, offset) {
     const pNum = (payload[offset + 8] << 8) | payload[offset + 9];
     let pmtId = ((payload[offset + 10] & 0x1f) << 8) | payload[offset + 11];
-    logger.log('program number: ' + pNum, ',pmtId: ' + pmtId);
+    // logger.log('program number: ' + pNum, ',pmtId: ' + pmtId);
     return pmtId;
   }
 
@@ -183,6 +188,9 @@ export default class TsPacketParseStream extends PipeLine {
   flush() {
     if (!this.streamInfo) {
       this.emit('error', NOT_FOUNT_PMT);
+    }
+    if (checkCombine(this.streamInfo) && (!this.hasVideoData || !this.hasAudioData)) {
+      this.emit('error', LACK_VIDEO_OR_AUDIO_DATA);
     }
     this.emit('done');
   }

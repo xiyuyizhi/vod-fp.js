@@ -18,6 +18,7 @@ export default class RemuxStream extends PipeLine {
   push(track) {
     if (!track) return;
     if (track.type === 'metadata') {
+      logger.log('metadata: ', track)
       this.trackLen = Object.values(track.data).filter(x => x !== -1).length;
       this.emit('data', track);
       return;
@@ -40,7 +41,7 @@ export default class RemuxStream extends PipeLine {
       if (videoTrack && audioTrack) {
         let firstVideoSampleDts = videoTrack.samples[0].dts;
         let audiovideoDeltaDts =
-          (audioTrack.samples[0].pts - videoTrack.samples[0].pts) /
+          (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
           videoTrack.inputTimeScale;
         if (Math.abs(audiovideoDeltaDts) >= 0.5) {
           logger.warn('音视频first dts差距过大');

@@ -8,7 +8,7 @@ export default () => {
   });
 
   mux.on('error', e => {
-    self.postMessage({ type: 'error', e });
+    self.postMessage({ type: 'error', data: e });
   });
   self.addEventListener('message', e => {
     let { type, data } = e.data;

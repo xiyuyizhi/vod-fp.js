@@ -65,7 +65,6 @@ export default class TsToMp4 extends PipeLine {
           this.emit('error', INVALID_AES_128_KEY);
           return;
         }
-        console.log(key);
         let aesCbc = new aesjs.ModeOfOperation.cbc(
           new Uint8Array(key),
           this._getIv(iv, sequenceNumber)

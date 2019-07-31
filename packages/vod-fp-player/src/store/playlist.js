@@ -9,10 +9,12 @@ const ACTION = {
   FORMAT: 'format',
   MODE: 'mode',
   CURRENT_LEVEL_ID: 'currentLevelId',
+  LAST_LEVEL_ID: 'lastLevelId',
   CURRENT_SEGMENT_ID: 'currentSegmentId',
   CURRENT_LEVEL: 'currentLevel',
   LEVELS: 'levels',
   FIND_LEVEL: 'findLevel',
+  FIND_LAST_LEVEL: 'findLastLevel',
   FIND_MEDIA: 'findMedia',
   FIND_KEY_INFO: 'findKeyInfo',
   FIND_INIT_MP4: 'findInitMp4',
@@ -28,7 +30,8 @@ const ACTION = {
   FIND_MEDIA_SEGEMENT: 'findMediaSegment',
   CAN_ABR: 'canAbr',
   IS_LIVE: 'isLive',
-  GET_LEVEL_URL: 'getLevelUrl'
+  GET_LEVEL_URL: 'getLevelUrl',
+  SLIDE_POSITION: 'slidePosition', //直播窗口滑动点
 };
 
 function _getCurrentLevel(state) {
@@ -72,6 +75,7 @@ export default {
         ]
       },
       currentSegmentId: -1,
+      lastLevelId: 1,
       currentLevelId: 1,
       format: '', //ts | fmp4 | flv
       derive: {
@@ -123,6 +127,9 @@ export default {
               prop('pl')
             )
           )(state);
+        },
+        findLastLevel(state) {
+          return state.chain(x => this.findLevel(state, x.lastLevelId))
         },
         findMedia(state, levelId) {
           return compose(
@@ -303,7 +310,10 @@ export default {
             map(prop('url')),
             map(prop('detail'))
           )(this.currentLevel(state));
-        }
+        },
+        slidePosition(state) {
+          return this.segments(state).map(head).map(x => x.start)
+        },
       }
     };
   }

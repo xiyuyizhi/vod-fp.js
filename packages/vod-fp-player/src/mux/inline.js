@@ -35,7 +35,7 @@ export default class WorkerSimulate extends EventBus {
 
     mux.on('error', e => {
       this.emit('message', {
-        data: { type: 'error', e }
+        data: { type: 'error', data: e }
       });
     });
   }
