@@ -16,7 +16,7 @@ const {
 } = F;
 let logger = new Logger('player');
 
-function _traverseLevelsFindSNMatched(getState) {
+function _traverseLevelsFindSNMatched(getState, sn) {
     return getState(ACTION.PLAYLIST.LEVELS).map(levels => {
         for (let level of levels) {
             let matched = level.detail && level.detail.segments.find(x => x.id === sn);
@@ -78,7 +78,7 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
             } else {
                 let newSeg = segments[i];
                 if (!lastSegment) {
-                    lastSegment = _traverseLevelsFindSNMatched(startSN + i).value();
+                    lastSegment = _traverseLevelsFindSNMatched(getState, startSN + i).value();
                     if (lastSegment) {
                         newSeg.start = lastSegment.start;
                     } else {

@@ -95,7 +95,7 @@ export default class TsPacketParseStream extends PipeLine {
     if (this._equalPmtId(header.pid, this.pmtId)) {
       offset += 1 + payload[offset]; // table start position
       this.streamInfo = this.parsePMT(payload, offset);
-      logger.warn('parse PMT', this.streamInfo);
+      // logger.warn('parse PMT', this.streamInfo);
       this.emit('data', {
         type: 'metadata',
         data: this.streamInfo

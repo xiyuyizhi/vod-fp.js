@@ -261,6 +261,7 @@ export default {
             curry((segments, currentId) => {
               let { start, end } = segBound;
               let seg = segments.find(x => x.id === currentId);
+              if (!seg) return;
               seg.start = start;
               seg.end = end;
               seg.duration = parseFloat((end - start).toFixed(6));

@@ -18,7 +18,6 @@ export default class RemuxStream extends PipeLine {
   push(track) {
     if (!track) return;
     if (track.type === 'metadata') {
-      logger.log('metadata: ', track)
       this.trackLen = Object.values(track.data).filter(x => x !== -1).length;
       this.emit('data', track);
       return;

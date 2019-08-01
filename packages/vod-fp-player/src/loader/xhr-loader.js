@@ -13,7 +13,6 @@ function createXhr() {
 
 export default function xhrLoader(config, resolve, reject) {
   let xhr = createXhr();
-
   Object.keys(config.headers).forEach(key => {
     xhr.setRequestHeader(key, config.headers[key]);
   });
@@ -22,14 +21,27 @@ export default function xhrLoader(config, resolve, reject) {
     xhr[key] = config.options[key];
   });
 
-  xhr.timeout = config.params.timeout || 0;
+  Object.keys(config.params).forEach(key => {
+    xhr[key] = config.params[key];
+  })
 
   xhr.open(config.method, config.url);
 
   xhr.addEventListener('readystatechange', () => {
     if (xhr.readyState === 4) {
       if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 304) {
-        resolve(xhr.response);
+        if (config.params.responseType === 'arraybuffer') {
+          let byteLength = xhr.response.byteLength;
+          resolve({
+            buffer: xhr.response,
+            info: {
+              tsLoad: byteLength,
+              size: byteLength
+            }
+          })
+        } else {
+          resolve(xhr.response);
+        }
         return;
       }
       if (xhr.status) {

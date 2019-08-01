@@ -20,33 +20,50 @@ function _bindMediaEvent(
   media
 ) {
   let endStreamTolerance = getConfig(ACTION.CONFIG.END_STREAM_TOLERANCE);
-  let ms = getState(ACTION.MEDIA.MEDIA_SOURCE);
+  let mediaSource = getState(ACTION.MEDIA.MEDIA_SOURCE);
+
   media.addEventListener('playing', () => {
     dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
   });
+
   media.addEventListener('seeking', () => {
     logger.log('start seek...', media.currentTime);
+
     let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO);
-    if (media.duration - rest.join().bufferEnd >= endStreamTolerance) {
-      dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
-    } else if (ms.join().readyState === 'open') {
-      ms.map(x => x.endOfStream());
-      dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
-    }
+
+    Maybe.of(
+      curry((bufferInfo, ms) => {
+        if (media.duration - bufferInfo.bufferEnd >= endStreamTolerance) {
+          dispatch(ACTION.MAIN_LOOP_HANDLE, 'resume');
+        } else if (
+          ms.readyState === 'open' &&
+          !getState(ACTION.PLAYLIST.IS_LIVE).value()
+        ) {
+          ms.endOfStream();
+          dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+        }
+      })
+    )
+      .ap(rest)
+      .ap(mediaSource);
+
     rest.map(buffer => {
       if (buffer.bufferLength === 0 || buffer.bufferEnd === 0) {
         connect(abortLoadingSegment);
       }
     });
   });
+
   media.addEventListener('seeked', () => {
     logger.log('seek end , can play', media.currentTime);
   });
+
   media.addEventListener('waiting', () => {
     logger.log('waiting....,is seeking?', media.seeking);
     if (media.seeking) return;
     media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
   });
+
   media.addEventListener('ended', () => {
     logger.log('end....');
   });
@@ -63,7 +80,7 @@ function _bindMediaEvent(
   subscribe(PROCESS.IDLE, () => {
     getState(ACTION.PLAYLIST.IS_LIVE).getOrElse(() => {
       let rest = getState(ACTION.BUFFER.GET_BUFFER_INFO).join();
-      maybeToEither(ms)
+      maybeToEither(mediaSource)
         .map(x => {
           if (
             media.duration - rest.bufferEnd <= endStreamTolerance &&
@@ -109,8 +126,8 @@ function destroyMediaSource({ getState, dispatch }) {
 function updateMediaDuration({ getState }) {
   Maybe.of(
     F.curry((ms, duration) => {
-      let vsb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).getOrElse(null)
-      let asb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).getOrElse(null)
+      let vsb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).getOrElse(null);
+      let asb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).getOrElse(null);
       if (vsb && asb) {
         if (ms.readyState === 'open' && !vsb.updating && !asb.updating) {
           ms.duration = duration;
@@ -123,7 +140,7 @@ function updateMediaDuration({ getState }) {
     })
   )
     .ap(getState(ACTION.MEDIA.MEDIA_SOURCE))
-    .ap(getState(ACTION.PLAYLIST.DURATION))
+    .ap(getState(ACTION.PLAYLIST.DURATION));
 }
 
 /**
@@ -136,7 +153,7 @@ function checkManualSeek({ getConfig, getState }, start) {
       media.seeking &&
       start > media.currentTime &&
       start - media.currentTime <=
-      getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
+        getConfig(ACTION.CONFIG.MAX_FRAG_LOOKUP_TOLERANCE)
     ) {
       logger.warn('当前位于分片最末尾,append的是后一个分片,需要seek一下');
       media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
