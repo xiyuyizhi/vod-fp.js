@@ -33,7 +33,7 @@ export default {
           if (payload) {
             return state.map(x => {
               x.videoBufferInfo = payload;
-              x.videoInfo = payload.videoInfo;
+              x.videoInfo = payload.videoInfo || x.videoInfo;
               return x;
             });
           }
@@ -43,7 +43,7 @@ export default {
           if (payload) {
             return state.map(x => {
               x.audioBufferInfo = payload;
-              x.audioInfo = payload.audioInfo;
+              x.audioInfo = payload.audioInfo || x.audioInfo;
               return x;
             });
           }

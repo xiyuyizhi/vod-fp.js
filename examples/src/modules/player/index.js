@@ -6,10 +6,12 @@ export default class Player extends React.Component {
     this.media = null;
     this.vod = null;
     this.state = {
-      url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+      url:
+        'https://storage.googleapis.com/shaka-demo-assets/bbb-dark-truths-hls/hls.m3u8',
       resolutionList: [],
       error: null
     };
+    document.cookie = 'debug=base,player';
   }
 
   // -------------events------------//
@@ -81,10 +83,6 @@ export default class Player extends React.Component {
     return (
       <div>
         <h1>vod player demo</h1>
-        <p style={{ transform: 'scale(0.8)' }}>
-          {' '}
-          document.cookie="debug=player" to enable debug info on console
-        </p>
         <div>
           <input
             className="url_input"

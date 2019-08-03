@@ -26,8 +26,8 @@ function initPlayer(url) {
   });
   vod.attachMedia(document.querySelector('video'));
   vod.loadSource(
-    // 'http://localhost:8880/cenc/index.m3u8'
-    'http://localhost:8880/8/index.m3u8'
+    'http://localhost:8880/mp4_clear/index.m3u8'
+    // 'http://localhost:8880/8/index.m3u8'
     // url
   );
   vod.useDebug(document.querySelector('#player'));

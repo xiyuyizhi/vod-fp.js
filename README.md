@@ -14,8 +14,6 @@ DOING...
 
 - [x] hls live 、 with abr
 
-- [ ] fmp4 drm with widevine
-
 - [ ] http-flv live
 
 ## base usage

@@ -144,7 +144,8 @@ function drainSegmentFromStore(
         segment,
         buffer,
         segment.id,
-        getState(ACTION.PLAYLIST.FIND_KEY_INFO).value()
+        getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
+        false
       );
       return true;
     }
@@ -180,7 +181,7 @@ function loadInitMP4({ getState, dispatch, getConfig, connect }) {
     )
     .map(buffer => {
       dispatch(ACTION.PROCESS, PROCESS.INIT_MP4_LOADED);
-      connect(toMux)(null, buffer, -1, null);
+      connect(toMux)(null, buffer, -1, null, true);
     })
     .error(e => {
       if (!e.is(LOADER_ERROR.ABORT)) {

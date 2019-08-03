@@ -39,8 +39,6 @@ let logger = new Logger('mux');
 
 const MAX_UINT32_COUNT = Math.pow(2, 32);
 
-function fmp4Probe() {}
-
 /**
  *  ISO base media file format
  *  各种box。第一个必须是 ftyp box
@@ -132,6 +130,9 @@ function extractBoxsList(boxList) {
         box.data = parseAvc1(box.payload);
         extractBoxsList(box.data);
         break;
+      case 'mp4a':
+        box.data = parseMp4a(box.payload);
+        break;
       case 'avcC':
         box.data = parseAvcC(box.payload);
         break;
@@ -142,7 +143,7 @@ function extractBoxsList(boxList) {
         box.data = parsePssh(box.payload);
         break;
       default:
-        logger.warn('unknow box ', box.type);
+        logger.warn('no parse box ', box.type);
         break;
     }
     if (box.data) {
@@ -466,6 +467,17 @@ function parseAvcC(payload) {
   return ret;
 }
 
+function parseMp4a(payload) {
+  /**
+   *
+   */
+  return {
+    channelcount: payload[17],
+    samplerate: (payload[24] << 8) | payload[25],
+    codecConfigLength: payload[28 + 4 + 4 + 25] // ests:length+type+25
+  };
+}
+
 function parseBtrt(payload) {
   let bf = new BytesForward(payload);
   let bufferSizeDB = bf.read32bitsValue();
@@ -500,4 +512,4 @@ function parsePssh(payload) {
   return ret;
 }
 
-export { parseMp4, fmp4Probe };
+export { parseMp4 };
