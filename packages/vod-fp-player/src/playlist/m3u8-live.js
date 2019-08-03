@@ -59,7 +59,6 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
     logger.log(
       `merge level details with levelId ${levelId},[${oldStartSN},${oldEndSN}] -> [${startSN},${endSN}]`
     );
-    logger.log('new details cc ,', segments.map(x => x.cc));
     noNews = oldStartSN === startSN && oldEndSN === endSN;
 
     let newStartSN = startSN;

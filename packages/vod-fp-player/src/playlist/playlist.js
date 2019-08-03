@@ -239,6 +239,8 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   );
 }
 
+// use in abr condition,when level changed
+// we need to load the new level detail first
 function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
   return Task.of(resolve => {
     Maybe.of(
@@ -249,15 +251,17 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
           return;
         }
         subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
-          getState(ACTION.PLAYLIST.IS_LIVE).map(() => {
-            logger.log('sync level detail when level changed in live');
-            connect(_mergePlaylist)(
-              currenLevel,
-              getState(ACTION.PLAYLIST.FIND_LEVEL, nextAutoLevel)
-                .map(prop('detail'))
-                .join()
-            );
-          });
+          Maybe.of(
+            curry((_, levelUrl) => {
+              connect(_loadResource)('LEVEL', levelUrl).map(detail => {
+                logger.log('sync level detail when level changed in live');
+                connect(_mergePlaylist)(currenLevel, detail);
+              });
+            })
+          )
+            .ap(getState(ACTION.PLAYLIST.IS_LIVE))
+            .ap(getState(ACTION.PLAYLIST.GET_LEVEL_URL));
+
           dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel);
           resolve();
         });

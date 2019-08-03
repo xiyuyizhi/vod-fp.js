@@ -26,7 +26,7 @@ const state = {
   startPosition: 0,
   tickInterval: 200,
   maxTimeout: 20 * 1000,
-  manualSeek: 0.16,
+  manualSeek: 0.15,
   maxFragLookUpTolerance: 0.2,
   maxBufferGapTolerance: 0.4,
   endStreamTolerance: 0.2,

@@ -4,19 +4,19 @@ DOING...
 
 ## features
 
-[x] hls with ts format
+- [x] hls with ts format
 
-[x] hls with fmp4 format
+- [x] hls with fmp4 format
 
-[x] hls ts with AES-128 decrypt
+- [x] hls ts with AES-128 decrypt
 
-[x] abr
+- [x] abr
 
-[ ] fmp4 drm with widevine
+- [x] hls live 、 with abr
 
-[ ] hls live 、 with abr
+- [ ] fmp4 drm with widevine
 
-[ ] http-flv live
+- [ ] http-flv live
 
 ## base usage
 
