@@ -38,7 +38,7 @@ function loader({ dispatch, connect }, config) {
         connect(fetchLoader)(config, controller, _resolve, _reject);
         abortable = controller;
       } else {
-        abortable = xhrLoader(config, _resolve, _reject);
+        abortable = connect(xhrLoader)(config, _resolve, _reject);
       }
 
       dispatch(ACTION.ABORTABLE, {
@@ -52,6 +52,9 @@ function loader({ dispatch, connect }, config) {
       })
       .error(e => {
         dispatch(ACTION.REMOVE_ABORTABLE, config.url);
+        // when the current request cancel or error,
+        // to empty the loadinfo which used in abr timer。
+        dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, null);
         reject(e);
       });
   });

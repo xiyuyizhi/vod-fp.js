@@ -75,7 +75,7 @@ function _initDebugWindow(container, connect) {
   _window.innerHTML = `
     <div style="${_parseStyleStr(closeIconStyle)}" class="${
     CLASSNMAE.VOD_DEBUG_INFO_CLOSE
-    }">X</div>
+  }">X</div>
     <div class="${CLASSNMAE.VOD_DEBUG_INFO_AREA}"></div>
   `;
   _window.addEventListener('click', e => {
@@ -102,32 +102,48 @@ function _startFlush(container, connect) {
 
 function _collectDebugInfo({ getState, getConfig }) {
   return Maybe.of(
-    curry((bufferInfo, flyBufferInfo, videoInfo, audioInfo, speed) => {
-      let flyBuffer = flyBufferInfo.bufferLength.toFixed(2);
-      let maxFlyBuffer = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
-      return {
-        bufferInfo:
-          bufferInfo.bufferLength.toFixed(2) +
-          ' / ' +
-          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
-        flyBufferInfo: flyBuffer + ' / ' + maxFlyBuffer,
-        format: getState(ACTION.PLAYLIST.FORMAT),
-        mode: getState(ACTION.PLAYLIST.MODE),
-        videoWidth: videoInfo.width,
-        videoHeight: videoInfo.height,
-        videoCodec: videoInfo.codec,
-        fps: videoInfo.fps,
-        audioCodec: audioInfo.codec,
-        samplerate: audioInfo.samplerate,
-        speed: flyBuffer > maxFlyBuffer ? '0KB/s' : speed > 1 ? speed.toFixed(2) + 'MB/s' : (speed * 1000).toFixed(2) + 'KB/s'
-      };
-    })
+    curry(
+      (
+        bufferInfo,
+        flyBufferInfo,
+        videoInfo,
+        audioInfo,
+        speed,
+        currentLevelId
+      ) => {
+        let flyBuffer = flyBufferInfo.bufferLength.toFixed(2);
+        let maxFlyBuffer = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
+        return {
+          bufferInfo:
+            bufferInfo.bufferLength.toFixed(2) +
+            ' / ' +
+            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
+          flyBufferInfo: flyBuffer + ' / ' + maxFlyBuffer,
+          format: getState(ACTION.PLAYLIST.FORMAT),
+          mode: getState(ACTION.PLAYLIST.MODE),
+          videoWidth: videoInfo.width,
+          videoHeight: videoInfo.height,
+          videoCodec: videoInfo.codec,
+          fps: videoInfo.fps,
+          audioCodec: audioInfo.codec,
+          samplerate: audioInfo.samplerate,
+          speed:
+            flyBuffer > maxFlyBuffer
+              ? '0KB/s'
+              : speed > 1
+              ? speed.toFixed(2) + 'MB/s'
+              : (speed * 1000).toFixed(2) + 'KB/s',
+          currentLevelId
+        };
+      }
+    )
   )
     .ap(getState(ACTION.BUFFER.GET_BUFFER_INFO))
     .ap(getState(ACTION.BUFFER.GET_FLY_BUFFER_INFO))
     .ap(getState(ACTION.BUFFER.VIDEO_INFO))
     .ap(getState(ACTION.BUFFER.AUDIO_INFO))
     .ap(getState(ACTION.LOADINFO.GET_DOWNLOAD_SPEED))
+    .ap(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID))
     .join();
 }
 
@@ -149,12 +165,18 @@ function _renderDebugInfo(info, ele) {
     'fps',
     'bufferInfo',
     'flyBufferInfo',
-    'speed'
+    'speed',
+    { key: 'currentLevelId', label: 'current load level' }
   ]
     .map(x => {
-      return `<li><span style="${_parseStyleStr(
-        debugInfoItemStyle
-      )}">${x}:</span>${info[x]}</li>`;
+      if (typeof x === 'string') {
+        return `<li><span style="${_parseStyleStr(
+          debugInfoItemStyle
+        )}">${x}:</span>${info[x]}</li>`;
+      }
+      return `<li><span style="${_parseStyleStr(debugInfoItemStyle)}">${
+        x.label
+      }:</span>${info[x.key]}</li>`;
     })
     .join('\n');
 
@@ -181,9 +203,9 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   menu.innerHTML = `
     <div style="${_parseStyleStr(closeIconStyle)}" class="${
     CLASSNMAE.VOD_MENU_CLOSE
-    }">X</div>
+  }">X</div>
     <div style="cursor:pointer" class="${
-    CLASSNMAE.VOD_DEBUG_BTN
+      CLASSNMAE.VOD_DEBUG_BTN
     }">调试信息</div>
   `;
   menu.addEventListener('click', e => {

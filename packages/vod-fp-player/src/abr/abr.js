@@ -52,7 +52,9 @@ function _loadCheck(
     if (segLoadToLong && levelId && levelId !== 1) {
       Maybe.of(
         curry((bufferLength, media, loadInfo) => {
+          // there maybe some error or cancel
           if (!loadInfo) return;
+
           let { loaded, total, tsRequest } = loadInfo;
           if (!total) {
             // use bandwidth * duration to cacl total size

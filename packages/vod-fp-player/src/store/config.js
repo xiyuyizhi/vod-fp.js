@@ -26,7 +26,7 @@ const state = {
   startPosition: 0,
   tickInterval: 200,
   maxTimeout: 20 * 1000,
-  manualSeek: 0.08,
+  manualSeek: 0.16,
   maxFragLookUpTolerance: 0.2,
   maxBufferGapTolerance: 0.4,
   endStreamTolerance: 0.2,
@@ -40,8 +40,8 @@ const state = {
   abrEwmaSlowVoD: 10,
   abrEwmaDefaultEstimate: 5e5, // 500 kbps
   //live about
-  liveFlushIntervalFactor: 0.8,
-  liveLatencyFactor: 0.9,
+  liveFlushIntervalFactor: 0.7,
+  liveLatencyFactor: 0.9
 };
 
 export default {

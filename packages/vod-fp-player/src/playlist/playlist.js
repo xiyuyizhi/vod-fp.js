@@ -15,6 +15,7 @@ import {
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
+import { _mergePlaylist } from './m3u8-live';
 import { getNextABRLoadLevel } from '../abr/abr';
 import { LOADER_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
 
@@ -167,7 +168,7 @@ function _loadResource({ connect, getConfig }, type, url) {
   });
 }
 
-// object --> Task 
+// object --> Task
 function _checkLevelOrMaster({ dispatch, connect }, playlist) {
   if (playlist.type === 'level') {
     playlist = {
@@ -213,6 +214,7 @@ function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
   });
 }
 
+// change playlist level from the outside call
 function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   let level = getState(ACTION.PLAYLIST.FIND_LEVEL, Number(levelId));
   maybe(
@@ -247,7 +249,16 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
           return;
         }
         subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
-          dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel)
+          getState(ACTION.PLAYLIST.IS_LIVE).map(() => {
+            logger.log('sync level detail when level changed in live');
+            connect(_mergePlaylist)(
+              currenLevel,
+              getState(ACTION.PLAYLIST.FIND_LEVEL, nextAutoLevel)
+                .map(prop('detail'))
+                .join()
+            );
+          });
+          dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel);
           resolve();
         });
         connect(changePlaylistLevel)(nextAutoLevel);
@@ -257,8 +268,6 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
       .ap(connect(getNextABRLoadLevel));
   });
 }
-
-
 
 _checkloadDecryptKey = curry(_checkloadDecryptKey);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
@@ -272,10 +281,9 @@ loadPlaylist = curry(loadPlaylist);
 changePlaylistLevel = curry(changePlaylistLevel);
 inSureNextLoadLevelReady = curry(inSureNextLoadLevelReady);
 
-
 export {
   _loadResource,
   loadPlaylist,
   changePlaylistLevel,
-  inSureNextLoadLevelReady,
+  inSureNextLoadLevelReady
 };

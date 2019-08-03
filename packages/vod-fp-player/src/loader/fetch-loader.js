@@ -14,10 +14,11 @@ const FETCH_BODY = {
 function _readerStream({ dispatch }, ts, reader, headers) {
   let store = [];
   let tsStart = ts;
-  let caclSize = arr => arr.reduce((all, c) => {
-    all += c.byteLength;
-    return all;
-  }, 0);
+  let caclSize = arr =>
+    arr.reduce((all, c) => {
+      all += c.byteLength;
+      return all;
+    }, 0);
   let dump = () => {
     return reader.read().then(({ done, value }) => {
       if (done) {
@@ -49,7 +50,7 @@ function _readerStream({ dispatch }, ts, reader, headers) {
           loaded: caclSize(store),
           total: +headers.get('Content-Length'),
           tsRequest: performance.now() - tsStart
-        })
+        });
       }
 
       ts = performance.now();
@@ -60,7 +61,13 @@ function _readerStream({ dispatch }, ts, reader, headers) {
 }
 _readerStream = curry(_readerStream);
 
-function fetchLoader({ connect, dispatch }, config, controller, resolve, reject) {
+function fetchLoader(
+  { connect, dispatch },
+  config,
+  controller,
+  resolve,
+  reject
+) {
   let { url, body, method, headers, options, params } = config;
   let cancelTimer;
   if (params.timeout) {
@@ -104,7 +111,6 @@ function fetchLoader({ connect, dispatch }, config, controller, resolve, reject)
     })
     .catch(e => {
       clearTimeout(cancelTimer);
-      dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, null)
       if (e instanceof DOMException) {
         console.warn('ABORT');
         reject(CusError.of(LOADER_ERROR.ABORT));
