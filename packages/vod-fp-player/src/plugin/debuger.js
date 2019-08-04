@@ -109,15 +109,15 @@ function _collectDebugInfo({ getState, getConfig }) {
         videoInfo,
         audioInfo,
         speed,
-        currentLevelId
+        currentLevelId,
+        media
       ) => {
         let flyBuffer = flyBufferInfo.bufferLength.toFixed(2);
+        let buffer = bufferInfo.bufferLength.toFixed(2);
         let maxFlyBuffer = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
+        let maxBuffer = getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH);
         return {
-          bufferInfo:
-            bufferInfo.bufferLength.toFixed(2) +
-            ' / ' +
-            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH),
+          bufferInfo: buffer + ' / ' + maxBuffer,
           flyBufferInfo: flyBuffer + ' / ' + maxFlyBuffer,
           format: getState(ACTION.PLAYLIST.FORMAT),
           mode: getState(ACTION.PLAYLIST.MODE),
@@ -128,7 +128,7 @@ function _collectDebugInfo({ getState, getConfig }) {
           audioCodec: audioInfo.codec,
           samplerate: audioInfo.samplerate,
           speed:
-            flyBuffer > maxFlyBuffer
+            (buffer > maxBuffer && media.paused) || flyBuffer > maxFlyBuffer
               ? '0KB/s'
               : speed > 1
               ? speed.toFixed(2) + 'MB/s'
@@ -144,6 +144,7 @@ function _collectDebugInfo({ getState, getConfig }) {
     .ap(getState(ACTION.BUFFER.AUDIO_INFO))
     .ap(getState(ACTION.LOADINFO.GET_DOWNLOAD_SPEED))
     .ap(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID))
+    .ap(getState(ACTION.MEDIA.MEDIA_ELE))
     .join();
 }
 

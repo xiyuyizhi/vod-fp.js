@@ -211,8 +211,10 @@ function flushBuffer({ getState, dispatch }, start, end) {
   let audioSb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER);
   return Success.of(
     curry((videoSb, audioSb) => {
-      videoSb.remove(start, end);
-      audioSb.remove(start, end);
+      if (!videoSb.updating && !audioSb.updating) {
+        videoSb.remove(start, end);
+        audioSb.remove(start, end);
+      }
     })
   )
     .ap(maybeToEither(videoSb))

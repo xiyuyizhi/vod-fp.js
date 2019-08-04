@@ -133,7 +133,6 @@ function _toMuxFmp4({ dispatch }, buffer, initMp4) {
     if (avcC && avcC.data) {
       videoInfo.codec = geneAvcCodec(avcC.data.sps[0]) || 'avc1.42c015';
       videoInfo.fps = '--';
-      console.log(videoInfo);
     }
     if (mp4a && mp4a.data) {
       audioInfo.codec =

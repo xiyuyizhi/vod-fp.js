@@ -10,7 +10,10 @@ import { abrBootstrap, abrProcess } from '../abr/abr';
 import { muxBootstrap } from '../mux/mux';
 import { bufferBootstrap } from '../buffer/buffer';
 import { updateMediaDuration } from '../media/media';
-import { bootStrapFlushPlaylist, checkSyncLivePosition } from '../playlist/m3u8-live';
+import {
+  bootStrapFlushPlaylist,
+  checkSyncLivePosition
+} from '../playlist/m3u8-live';
 
 const { prop, compose, map, curry } = F;
 
@@ -29,7 +32,7 @@ function bootstrap(
     connect(muxBootstrap);
   }
   if (format === 'fmp4') {
-    connect(loadInitMP4);
+    connect(loadInitMP4)(true);
   }
   getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
     connect(abrBootstrap);
@@ -50,11 +53,11 @@ function bootstrap(
       curry((bufferInfo, m, pro, segments) => {
         if (
           bufferInfo.bufferLength <
-          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
+            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
           pro === PROCESS.IDLE
         ) {
           let bufferEnd = bufferInfo.bufferEnd;
-          connect(checkSyncLivePosition)(m, bufferEnd)
+          connect(checkSyncLivePosition)(m, bufferEnd);
           return connect(findSegment)(segments, bufferEnd);
         } else if (m.currentTime && (m.paused || m.end)) {
           dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');

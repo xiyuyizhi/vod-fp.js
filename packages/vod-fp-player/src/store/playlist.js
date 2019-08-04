@@ -17,7 +17,8 @@ const ACTION = {
   FIND_LAST_LEVEL: 'findLastLevel',
   FIND_MEDIA: 'findMedia',
   FIND_KEY_INFO: 'findKeyInfo',
-  FIND_INIT_MP4: 'findInitMp4',
+  FIND_INIT_MP4_URLS: 'findInitMp4Urls',
+  MP4_METADATA: 'mp4Metadata',
   UPDATE_MEDIA: 'updateMedia',
   UPDATE_KEY: 'updateKey',
   SEGMENTS: 'segments',
@@ -31,7 +32,7 @@ const ACTION = {
   CAN_ABR: 'canAbr',
   IS_LIVE: 'isLive',
   GET_LEVEL_URL: 'getLevelUrl',
-  SLIDE_POSITION: 'slidePosition', //直播窗口滑动点
+  SLIDE_POSITION: 'slidePosition' //直播窗口滑动点
 };
 
 function _getCurrentLevel(state) {
@@ -129,7 +130,7 @@ export default {
           )(state);
         },
         findLastLevel(state) {
-          return state.chain(x => this.findLevel(state, x.lastLevelId))
+          return state.chain(x => this.findLevel(state, x.lastLevelId));
         },
         findMedia(state, levelId) {
           return compose(
@@ -151,7 +152,7 @@ export default {
             map(prop('detail'))
           )(_getCurrentLevel(state));
         },
-        findInitMp4(state) {
+        findInitMp4Urls(state) {
           let _getInitUrl = level => {
             return level
               .map(prop('detail'))
@@ -159,17 +160,42 @@ export default {
               .map(prop('uri'));
           };
           let level = _getCurrentLevel(state);
-          let media = this.findMedia(state, level.map(prop('levelId')).join());
+          let media = this.findMedia(state, this.currentLevelId(state).join());
           return Maybe.of(
-            curry((levelInitMp4, mediaInitMp4) => {
+            curry((levelInitMp4Url, mediaInitMp4Url) => {
               return {
-                levelInitMp4,
-                mediaInitMp4
+                levelInitMp4Url,
+                mediaInitMp4Url
               };
             })
           )
             .ap(_getInitUrl(level))
             .ap(_getInitUrl(media));
+        },
+        mp4Metadata(state, payload) {
+          if (payload) {
+            let { videoBuffer, audioBuffer } = payload;
+            let currentLevel = _getCurrentLevel(state);
+            currentLevel.map(level => (level['metadata'] = videoBuffer));
+            this.findMedia(state, this.currentLevelId(state).join()).map(
+              media => (media['metadata'] = audioBuffer)
+            );
+            return;
+          }
+          return Maybe.of(
+            curry((levelInit, mediaInit) => {
+              return {
+                levelInit,
+                mediaInit
+              };
+            })
+          )
+            .ap(_getCurrentLevel(state).map(prop('metadata')))
+            .ap(
+              this.findMedia(state, this.currentLevelId(state).join()).map(
+                prop('metadata')
+              )
+            );
         },
         updateLevel(state, payload) {
           let { levelId, detail } = payload;
@@ -290,7 +316,7 @@ export default {
         canAbr(state) {
           return state.map(x => {
             if (
-              this.format(state) === 'ts' &&
+              // this.format(state) === 'ts' &&
               this.mode(state) === 'master' &&
               this.levels(state)
                 .map(prop('length'))
@@ -313,8 +339,10 @@ export default {
           )(this.currentLevel(state));
         },
         slidePosition(state) {
-          return this.segments(state).map(head).map(x => x.start)
-        },
+          return this.segments(state)
+            .map(head)
+            .map(x => x.start);
+        }
       }
     };
   }

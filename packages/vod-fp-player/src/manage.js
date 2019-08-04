@@ -17,7 +17,6 @@ function manage({ dispatch, connect }, media, url) {
     .ap(connect(loadPlaylist)(url))
     .ap(connect(createMediaSource)(media))
     .error(e => {
-      // handle 那些非显示 emit 自定义error的运行时异常
       dispatch(ACTION.ERROR, e);
     });
 }
@@ -51,10 +50,15 @@ function changeLevel() {
           dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE);
           media.map(m => m.pause());
           if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
-            connect(loadInitMP4);
-            subOnce(PROCESS.INIT_MP4_LOADED, () => {
-              resume();
-            });
+            setTimeout(() => {
+              // hack,
+              // there may remove buffer in process,and if the init.mp4 is in store,
+              // the init.mp4 mux and append may do quickly before remove buffer finish.
+              subOnce(PROCESS.INIT_MP4_LOADED, () => {
+                resume();
+              });
+              connect(loadInitMP4)(true);
+            }, 100);
             return;
           }
           resume();
@@ -62,6 +66,7 @@ function changeLevel() {
       });
 
       unSubChangedError = subOnce(ACTION.EVENTS.LEVEL_CHANGED_ERROR, e => {
+        unSubChanged();
         dispatch(ACTION.PROCESS, PROCESS.IDLE);
       });
 

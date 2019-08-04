@@ -18,7 +18,7 @@ import loader from '../loader/loader';
 import { _mergePlaylist } from './m3u8-live';
 import { getNextABRLoadLevel } from '../abr/abr';
 import { LOADER_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
-
+import { loadInitMP4 } from './segment';
 const {
   curry,
   compose,
@@ -261,7 +261,16 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
           )
             .ap(getState(ACTION.PLAYLIST.IS_LIVE))
             .ap(getState(ACTION.PLAYLIST.GET_LEVEL_URL));
-
+          if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
+            // load init.mp4 first
+            subOnce(PROCESS.INIT_MP4_LOADED, () => {
+              dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel);
+              dispatch(ACTION.PROCESS, PROCESS.IDLE);
+              resolve();
+            });
+            connect(loadInitMP4)(false);
+            return;
+          }
           dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel);
           resolve();
         });
@@ -269,7 +278,8 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
       })
     )
       .ap(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID))
-      .ap(connect(getNextABRLoadLevel));
+      .ap(connect(getNextABRLoadLevel))
+      .getOrElse(resolve);
   });
 }
 
