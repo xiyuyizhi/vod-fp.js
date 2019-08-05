@@ -32,7 +32,7 @@ function bootstrap(
     connect(muxBootstrap);
   }
   if (format === 'fmp4') {
-    connect(loadInitMP4)(true);
+    connect(loadInitMP4)(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID).join(), true);
   }
   getState(ACTION.PLAYLIST.CAN_ABR).map(() => {
     connect(abrBootstrap);
@@ -53,7 +53,7 @@ function bootstrap(
       curry((bufferInfo, m, pro, segments) => {
         if (
           bufferInfo.bufferLength <
-            getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
+          getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) &&
           pro === PROCESS.IDLE
         ) {
           let bufferEnd = bufferInfo.bufferEnd;

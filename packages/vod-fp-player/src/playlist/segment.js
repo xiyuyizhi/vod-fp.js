@@ -70,8 +70,8 @@ function _loadSource({ connect, getConfig }, url, levelId = 1) {
     useStream: true,
     params: {
       responseType: 'arraybuffer',
-      timeout: levelId === 1 ? getConfig(ACTION.CONFIG.MAX_TIMEOUT) : 0
-      // only the lowest level set the timeout
+      timeout: levelId === 1 ? getConfig(ACTION.CONFIG.SEGMENT_MAX_TIMEOUT) : 0
+      // only the lowest level set the timeout time
     }
   });
 }
@@ -145,32 +145,51 @@ function loadSegment({ getConfig, getState, connect, dispatch }, segment) {
 // when it‘s fmp4,before drain segment,
 // we need check the next segment levelId is equal the current segment,
 // if it‘s not ,we need append the init.mp4 buffer first.
-function drainSegmentFromStore(
-  { getState, connect, dispatch, subOnce },
-  findSeg
-) {
-  // findSeg: the selected segement in check buffer,we need check is it stored in fly buffer store
-  return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findSeg).map(
-    segInfo => {
-      let { segment, buffer } = segInfo;
-      dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
-      if (
-        findSeg.levelId !== segment.levelId &&
-        getState(ACTION.PLAYLIST.FORMAT) === 'fmp4'
-      ) {
-        connect(loadInitMP4)(true);
+function drainSegmentFromStore() {
+  let lastAppend;
+  return (
+    { getState, getConfig, connect, dispatch, subOnce },
+    findSeg
+  ) => {
+    // findSeg: the selected segement in check buffer,we need check is it stored in fly buffer store
+    return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findSeg).map(
+      segInfo => {
+        let { segment, buffer } = segInfo;
+        dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
+        if (
+          getState(ACTION.PLAYLIST.CAN_ABR).value() &&
+          lastAppend &&
+          lastAppend.levelId !== segment.levelId &&
+          getState(ACTION.PLAYLIST.FORMAT) === 'fmp4'
+        ) {
+          logger.log(`the next append segment levelId changed [${lastAppend.levelId} -> ${segment.levelId}],need append init sgemnt first`)
+          lastAppend = segment;
+          connect(loadInitMP4)(segment.levelId, true);
+          setTimeout(() => {
+            connect(toMux)(
+              segment,
+              buffer,
+              segment.id,
+              getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
+              false
+            );
+          }, 50);
+          return true;
+        }
+        lastAppend = segment;
+        connect(toMux)(
+          segment,
+          buffer,
+          segment.id,
+          getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
+          false
+        );
+        return true;
       }
-      connect(toMux)(
-        segment,
-        buffer,
-        segment.id,
-        getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
-        false
-      );
-      return true;
-    }
-  );
+    );
+  }
 }
+
 
 function removeSegmentFromStore({ getState, dispatch }) {
   getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID).map(id => {
@@ -178,9 +197,9 @@ function removeSegmentFromStore({ getState, dispatch }) {
   });
 }
 
-function _loadInit({ getState, dispatch, getConfig, connect }, immediateMux) {
+function _loadInit({ getState, dispatch, getConfig, connect }, levelId, immediateMux) {
   getState(ACTION.PLAYLIST.FIND_INIT_MP4_URLS)
-    .map(trace('log: find init mp4 urls'))
+    .map(trace(`log: find level ${levelId} init mp4 urls`))
     .chain(initUrls => {
       return Task.of((resolve, reject) => {
         Task.resolve(
@@ -200,7 +219,7 @@ function _loadInit({ getState, dispatch, getConfig, connect }, immediateMux) {
     )
     .map(buffer => {
       // store init mp4 buffer
-      dispatch(ACTION.PLAYLIST.MP4_METADATA, buffer);
+      dispatch(ACTION.PLAYLIST.MP4_METADATA, { buffer, levelId });
       dispatch(ACTION.PROCESS, PROCESS.INIT_MP4_LOADED);
       if (immediateMux) {
         logger.log('mux init mp4');
@@ -215,9 +234,19 @@ function _loadInit({ getState, dispatch, getConfig, connect }, immediateMux) {
     });
 }
 
-function loadInitMP4({ connect, getState, dispatch }, immediateMux) {
+/**
+ * 
+ * @param {object} param0 
+ * @param {number} levelId the level need to load metadata
+ * @param {boolean} immediateMux if mux right when loaded
+ * condition:
+ *    1. manual change level
+ *    2. in abr,level changed
+ *    3. in dragSegmentFromStore, segment level changed,need append metadata
+ */
+function loadInitMP4({ connect, getState, dispatch }, levelId, immediateMux) {
   dispatch(ACTION.PROCESS, PROCESS.INIT_MP4_LOADING);
-  getState(ACTION.PLAYLIST.MP4_METADATA)
+  getState(ACTION.PLAYLIST.MP4_METADATA, { levelId })
     .map(trace('log: find stored init mp4 buffers'))
     .map(({ levelInit, mediaInit }) => {
       if (immediateMux) {
@@ -237,7 +266,7 @@ function loadInitMP4({ connect, getState, dispatch }, immediateMux) {
       return true;
     })
     .getOrElse(() => {
-      connect(_loadInit)(immediateMux);
+      connect(_loadInit)(levelId, immediateMux);
     });
 }
 
@@ -247,7 +276,7 @@ abortLoadingSegment = F.curry(abortLoadingSegment);
 findSegment = F.curry(findSegment);
 loadSegment = F.curry(loadSegment);
 findSegmentOfCurrentPosition = F.curry(findSegmentOfCurrentPosition);
-drainSegmentFromStore = F.curry(drainSegmentFromStore);
+drainSegmentFromStore = F.curry(drainSegmentFromStore());
 removeSegmentFromStore = F.curry(removeSegmentFromStore);
 loadInitMP4 = curry(loadInitMP4);
 export {

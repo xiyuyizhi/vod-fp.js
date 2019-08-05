@@ -173,11 +173,12 @@ export default {
             .ap(_getInitUrl(media));
         },
         mp4Metadata(state, payload) {
-          if (payload) {
-            let { videoBuffer, audioBuffer } = payload;
-            let currentLevel = _getCurrentLevel(state);
+          let { levelId, buffer } = payload;
+          if (buffer) {
+            let { videoBuffer, audioBuffer } = buffer;
+            let currentLevel = this.findLevel(state, levelId);
             currentLevel.map(level => (level['metadata'] = videoBuffer));
-            this.findMedia(state, this.currentLevelId(state).join()).map(
+            this.findMedia(state, levelId).map(
               media => (media['metadata'] = audioBuffer)
             );
             return;
@@ -190,12 +191,8 @@ export default {
               };
             })
           )
-            .ap(_getCurrentLevel(state).map(prop('metadata')))
-            .ap(
-              this.findMedia(state, this.currentLevelId(state).join()).map(
-                prop('metadata')
-              )
-            );
+            .ap(this.findLevel(state, levelId).map(prop('metadata')))
+            .ap(this.findMedia(state, levelId).map(prop('metadata')));
         },
         updateLevel(state, payload) {
           let { levelId, detail } = payload;
@@ -294,7 +291,10 @@ export default {
               logger.log(
                 'new buffer:',
                 [start, end],
-                bufferDump(getState(ACTION.MEDIA.MEDIA_ELE).join())
+                '\n video buffer: ',
+                bufferDump(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).join()),
+                '\n audio buffer: ',
+                bufferDump(getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).join())
               );
               let len = segments.length - 1;
               segments.forEach((x, index) => {
@@ -313,10 +313,10 @@ export default {
               })
             );
         },
-        canAbr(state) {
+        canAbr(state, _, { getConfig, ACTION }) {
           return state.map(x => {
             if (
-              // this.format(state) === 'ts' &&
+              getConfig(ACTION.CONFIG.ABR_ENABLE) &&
               this.mode(state) === 'master' &&
               this.levels(state)
                 .map(prop('length'))

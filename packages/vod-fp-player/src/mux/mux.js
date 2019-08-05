@@ -1,11 +1,13 @@
 import work from 'webworkify-webpack';
-import { F, CusError } from 'vod-fp-utility';
+import { F, CusError, Logger } from 'vod-fp-utility';
 import { Mp4Parser } from 'vod-fp-mux';
 import { ACTION, PROCESS } from '../store';
 import { SEGMENT_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
 import { findMp4Box, geneAvcCodec, geneMp4aCodec } from '../utils/index';
 import WorkerSimulate from './inline';
+
+const logger = new Logger('player');
 
 const VIDEO_CODEC_PATH = [
   'moov',
@@ -85,21 +87,17 @@ function _toMuxTs() {
 
   return ({ getState, dispatch }, segment, buffer, sequeueNum, keyInfo) => {
     let worker = getState(ACTION.MUX).join();
-    if (!lastSegment) {
-      worker.postMessage({ type: 'resetInitSegment' });
-      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
-    }
     if (
+      !lastSegment ||
       (lastSegment && lastSegment.cc !== segment.cc) ||
       (lastSegment && lastSegment.levelId !== segment.levelId)
     ) {
       worker.postMessage({ type: 'resetInitSegment' });
+      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
     }
-    if (
-      (lastSegment && lastSegment.cc !== segment.cc) ||
-      (lastSegment && lastSegment.levelId !== segment.levelId) ||
-      (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1)
-    ) {
+
+    if (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1) {
+      logger.log('set time offset ', segment.start);
       worker.postMessage({ type: 'setTimeOffset', data: segment.start });
     }
     dispatch(ACTION.PROCESS, PROCESS.MUXING);

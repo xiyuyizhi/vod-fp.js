@@ -4,7 +4,7 @@ const { prop } = F;
 export default {
   module: 'LOADINFO',
   ACTION: {
-    COLLECT_DOWNLOAD_TIME: 'collectDownloadTime',
+    COLLECT_DOWNLOAD_SPEED: 'collectDownloadSpeed',
     GET_DOWNLOAD_SPEED: 'getDownloadSpeed',
     CURRENT_SEG_DONWLOAD_INFO: 'currentSegmentDownloadInfo'
   },
@@ -13,7 +13,7 @@ export default {
       info: null, // {tsRequest,loaded,total}
       speedList: [],
       derive: {
-        collectDownloadTime(state, speed) {
+        collectDownloadSpeed(state, speed) {
           return state.map(x => {
             if (x.speedList.length > 10) {
               x.speedList = x.speedList.slice(5);

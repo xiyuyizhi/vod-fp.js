@@ -12,7 +12,7 @@ DOING...
 
 - [x] abr
 
-- [x] hls live 、 with abr
+- [x] hls ts live with abr
 
 - [ ] http-flv live
 

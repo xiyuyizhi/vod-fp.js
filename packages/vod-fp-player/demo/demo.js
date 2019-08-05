@@ -25,11 +25,7 @@ function initPlayer(url) {
     maxFlyBufferLength: 60
   });
   vod.attachMedia(document.querySelector('video'));
-  vod.loadSource(
-    // 'http://localhost:8880/mp4_clear/index.m3u8'
-    // 'http://localhost:8880/8/index.m3u8'
-    url
-  );
+  vod.loadSource(url);
   vod.useDebug(document.querySelector('#player'));
   vod.on(Vod.Events.ERROR, e => {
     console.log(e);

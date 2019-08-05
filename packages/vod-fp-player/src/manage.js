@@ -21,6 +21,7 @@ function manage({ dispatch, connect }, media, url) {
     });
 }
 
+// change level from outside
 function changeLevel() {
   let unSubChanged;
   let unSubChangedError;
@@ -52,13 +53,13 @@ function changeLevel() {
           if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
             setTimeout(() => {
               // hack,
-              // there may remove buffer in process,and if the init.mp4 is in store,
-              // the init.mp4 mux and append may do quickly before remove buffer finish.
+              // there may remove buffer in processing,and if the init.mp4 is in store,
+              // the init.mp4 mux and append may start quickly before remove buffer finish.
               subOnce(PROCESS.INIT_MP4_LOADED, () => {
                 resume();
               });
-              connect(loadInitMP4)(true);
-            }, 100);
+              connect(loadInitMP4)(levelId.join(), true);
+            }, 50);
             return;
           }
           resume();
@@ -66,7 +67,6 @@ function changeLevel() {
       });
 
       unSubChangedError = subOnce(ACTION.EVENTS.LEVEL_CHANGED_ERROR, e => {
-        unSubChanged();
         dispatch(ACTION.PROCESS, PROCESS.IDLE);
       });
 

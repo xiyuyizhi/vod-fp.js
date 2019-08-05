@@ -11,15 +11,19 @@ const FETCH_BODY = {
   blob: 'blob'
 };
 
-function _readerStream({ dispatch }, ts, reader, headers) {
+function _readerStream({ dispatch }, reader, headers) {
   let store = [];
-  let tsStart = ts;
+  let tsStart;
+  let lastTs;
   let caclSize = arr =>
     arr.reduce((all, c) => {
       all += c.byteLength;
       return all;
     }, 0);
   let dump = () => {
+    if (!tsStart) {
+      lastTs = tsStart = performance.now();
+    }
     return reader.read().then(({ done, value }) => {
       if (done) {
         let totalLength = caclSize(store);
@@ -39,11 +43,11 @@ function _readerStream({ dispatch }, ts, reader, headers) {
         };
       }
       store.push(value);
-      let tsTick = performance.now() - ts;
+      let tsTick = performance.now() - lastTs;
       //单次时间 > 1ms 有效
-      if (tsTick > 1.5) {
+      if (tsTick >= 1.2) {
         dispatch(
-          ACTION.LOADINFO.COLLECT_DOWNLOAD_TIME,
+          ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
           value.byteLength / tsTick / 1000
         );
         dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, {
@@ -52,8 +56,7 @@ function _readerStream({ dispatch }, ts, reader, headers) {
           tsRequest: performance.now() - tsStart
         });
       }
-
-      ts = performance.now();
+      lastTs = performance.now();
       return dump();
     });
   };
@@ -78,7 +81,6 @@ function fetchLoader(
     }, params.timeout);
   }
   let ts = performance.now();
-  let reader = connect(_readerStream)(ts);
 
   fetch(url, {
     method,
@@ -101,7 +103,7 @@ function fetchLoader(
     })
     .then(res => {
       if (config.useStream) {
-        return reader(res.body.getReader(), res.headers);
+        return connect(_readerStream)(res.body.getReader(), res.headers);
       }
       return res[FETCH_BODY[params.responseType]]();
     })

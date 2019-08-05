@@ -147,7 +147,7 @@ function _loadResource({ connect, getConfig }, type, url) {
         let err = e;
         if (e.isType(LOADER_ERROR) && !e.is(LOADER_ERROR.ABORT)) {
           err = e.merge(CusError.of(PLAYLIST_ERROR[type][e.detail()]));
-          //对于level和media,在重试几次
+          //for level and media,retry
           if (retryCount && type !== 'MANIFEST') {
             retryCount--;
             logger.log('retry load..');
@@ -268,7 +268,7 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
               dispatch(ACTION.PROCESS, PROCESS.IDLE);
               resolve();
             });
-            connect(loadInitMP4)(false);
+            connect(loadInitMP4)(nextAutoLevel, false);
             return;
           }
           dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel);

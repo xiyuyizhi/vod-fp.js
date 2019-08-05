@@ -64,12 +64,14 @@ export default class RemuxStream extends PipeLine {
         this.emit('data', {
           videoTimeOffset,
           audioTimeOffset,
+          timeOffset: this.timeOffset,
           contiguous: this.timeOffset === undefined
         });
       } else if (videoTrack || audioTrack) {
         this.emit('data', {
           audioTimeOffset,
           videoTimeOffset,
+          timeOffset: this.timeOffset,
           contiguous: this.timeOffset === undefined
         });
       } else {
