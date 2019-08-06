@@ -35,7 +35,7 @@ function xhrLoader({ dispatch }, config, resolve, reject) {
     let tsStart = performance.now();
     xhr.addEventListener('progress', e => {
       dispatch(
-        ACTION.LOADINFO.COLLECT_DOWNLOAD_TIME,
+        ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
         e.loaded / (performance.now() - tsStart) / 1000
       );
       dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, {

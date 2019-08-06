@@ -1,7 +1,8 @@
-import { PipeLine, Logger } from 'vod-fp-utility';
+import { PipeLine, Logger } from "vod-fp-utility"
 import MP4 from '../utils/Mp4Box';
-import { checkCombine } from '../utils/index';
+import { checkCombine } from "../utils/index"
 import ptsNormalize from '../utils/ptsNormalize';
+import { SAMPLES_EMPTY } from "../error"
 
 let logger = new Logger('mux');
 
@@ -11,11 +12,13 @@ export default class VideoFragmentStream extends PipeLine {
     this.combine = false;
     this.avcTrack = null;
     this.initSegmentGenerate = false;
+    this.discontinuity = false;
     this.initSegment = new Uint8Array();
     this.nextAvcDts = undefined;
     this.initDTS = 0;
     this.mp4SampleDuration = 0;
     this.on('resetInitSegment', () => (this.initSegmentGenerate = false));
+    this.on('setDisContinuity', () => this.discontinuity = true)
     this.on(
       'sequenceNumber',
       sequenceNumber => (this.sequenceNumber = sequenceNumber)
@@ -29,19 +32,21 @@ export default class VideoFragmentStream extends PipeLine {
     if (data.type === 'video') {
       this.avcTrack = data;
       if (!this.initSegmentGenerate) {
-        logger.log('gene init segment...');
-        this.initSegmentGenerate = true;
-        this.initSegment = MP4.initSegment([data]);
-        this.initDTS = 0;
+        try {
+          logger.log('video gene init segment...');
+          this.initSegment = MP4.initSegment([data]);
+          this.initSegmentGenerate = true;
+        } catch (e) { }
       }
     }
     if (this.avcTrack && data.videoTimeOffset !== undefined) {
-      let timeOffset = data.timeOffset;
       this.avcTrack['sequenceNumber'] = this.sequenceNumber;
       let { samples, inputTimeScale } = this.avcTrack;
-      if (!this.initDTS && samples.length) {
+      let timeOffset = data.timeOffset;
+      if ((!this.initDTS || this.discontinuity) && samples.length) {
         this.initDTS = samples[0].dts - inputTimeScale * (timeOffset || 0);
-        logger.log('initDTS:', this.initDTS);
+        this.discontinuity = false;
+        logger.log('set video initDTS:', this.initDTS);
       }
       this.remuxVideo(this.avcTrack, data.videoTimeOffset, data.contiguous);
     }
@@ -56,9 +61,18 @@ export default class VideoFragmentStream extends PipeLine {
     let samples = avcTrack.samples;
     let nbSamples = samples.length;
     let nextAvcDts = this.nextAvcDts;
+    if (!nbSamples) {
+      let err = {
+        ...SAMPLES_EMPTY
+      }
+      err.message += 'video';
+      this.emit('error', err);
+      return;
+    }
     if (!nextAvcDts) {
       nextAvcDts = 0;
     }
+
     if (!contiguous) {
       nextAvcDts = timeOffset * avcTrack.inputTimeScale;
       logger.warn(
@@ -74,7 +88,7 @@ export default class VideoFragmentStream extends PipeLine {
     });
 
     // 按dts排序
-    samples.sort(function(a, b) {
+    samples.sort(function (a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
@@ -82,21 +96,20 @@ export default class VideoFragmentStream extends PipeLine {
 
     logger.warn(
       `video remux:【initDTS:${
-        this.initDTS
-      } , nextAvcDts:${nextAvcDts}, samples[0]: dts - ${
-        samples[0].dts
-      }  pts - ${samples[0].pts}】`
+      this.initDTS
+      } , nextAvcDts:${nextAvcDts}, samples[0]: dts - ${samples[0].dts}  pts - ${samples[0].pts}】`
     );
 
     let sample = samples[0];
-    let delta;
-    if (!contiguous) {
-      delta = Math.round(sample.dts - nextAvcDts);
-    }
+    let delta = Math.round(sample.dts - nextAvcDts);
+    samples.forEach(sample => {
+      sample.dts -= delta;
+      sample.pts -= delta;
+    });
 
     let firstDTS = Math.max(sample.dts, 0);
     let firstPTS = Math.max(sample.pts, 0);
-    logger.log(`firstDTS: ${firstDTS} , firstPTS: ${firstPTS}`);
+    logger.log(`firstDTS: ${firstDTS} , firstPTS: ${firstPTS}`)
     // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
     delta = Math.round((firstDTS - nextAvcDts) / 90);
     // if fragment are contiguous, detect hole/overlapping between fragments
@@ -203,19 +216,26 @@ export default class VideoFragmentStream extends PipeLine {
     bf.set(this.initSegment, 0);
     bf.set(moof, this.initSegment.byteLength);
     bf.set(mdat, this.initSegment.byteLength + moof.byteLength);
+    let endPTS = lastPTS + this.mp4SampleDuration;
     this.emit('data', {
       combine: this.combine,
       type: 'video',
       buffer: bf,
       startPTS: firstPTS,
       startDTS: firstDTS,
-      endPTS: lastPTS + this.mp4SampleDuration,
+      endPTS,
       endDTS: this.nextAvcDts,
       videoInfo: {
         codec: avcTrack.codec,
         width: avcTrack.width,
         height: avcTrack.height,
-        fps: parseInt(90000 / this.mp4SampleDuration)
+        profileIdc: avcTrack.profileIdc % 256,
+        levelIdc: avcTrack.levelIdc % 256,
+        fps: parseInt(90000 / this.mp4SampleDuration),
+        timeline: {
+          start: firstPTS / 90000,
+          end: endPTS / 90000,
+        }
       }
     });
     bf = null;

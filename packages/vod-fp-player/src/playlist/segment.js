@@ -155,6 +155,7 @@ function drainSegmentFromStore() {
     return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findSeg).map(
       segInfo => {
         let { segment, buffer } = segInfo;
+        logger.log(`level:${segment.levelId} , id:${segment.id} , [${segment.start},${segment.end}]`)
         dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
         if (
           getState(ACTION.PLAYLIST.CAN_ABR).value() &&

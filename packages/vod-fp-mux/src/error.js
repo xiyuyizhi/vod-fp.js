@@ -18,3 +18,8 @@ export const INVALID_AES_128_KEY = {
   type: 'INVALID_AES_128_KEY',
   message: 'INVALID_AES_128_KEY'
 };
+
+export const SAMPLES_EMPTY = {
+  type: 'SAMPLES_EMPTY',
+  message: 'samples_empty: '
+}

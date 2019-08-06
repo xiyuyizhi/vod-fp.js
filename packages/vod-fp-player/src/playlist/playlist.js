@@ -239,6 +239,34 @@ function changePlaylistLevel({ getState, connect, dispatch }, levelId) {
   );
 }
 
+function _mergePlaylistWithLastLevel({ getState }, currenLevelId, lastLevelId) {
+  let currenLevel = getState(ACTION.PLAYLIST.FIND_LEVEL, currenLevelId);
+  let lastLevel = getState(ACTION.PLAYLIST.FIND_LEVEL, lastLevelId);
+
+  Maybe.of(curry((currentDetail, lastDetail) => {
+    logger.log(`need sync segment bound with last level [${currentDetail.startSN} , ${currentDetail.endSN}] , [${lastDetail.startSN} , ${lastDetail.endSN}]`)
+    let segs = currentDetail.segments;
+    let lastSegs = lastDetail.segments;
+    let last;
+    for (let i = 0; i < segs.length; i++) {
+      let seg = segs[i];
+      let lastSeg = lastSegs.find(x => x.id === seg.id);
+      if (lastSeg) {
+        seg.start = lastSeg.start;
+        seg.end = seg.start + seg.duration;
+        last = seg;
+      } else if (last) {
+        seg.start = last.end;
+        seg.end = seg.start + seg.duration;
+        last = seg;
+      }
+    }
+  }))
+    .ap(currenLevel.map(prop('detail')))
+    .ap(lastLevel.map(prop('detail')))
+
+}
+
 // use in abr condition,when level changed
 // we need to load the new level detail first
 function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
@@ -250,17 +278,28 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
           resolve();
           return;
         }
+        // check the nextAutoLevel if already load
+        let nextLevelHasDetail = getState(ACTION.PLAYLIST.FIND_LEVEL, nextAutoLevel).map(prop('detail'))
+
         subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
           Maybe.of(
             curry((_, levelUrl) => {
-              connect(_loadResource)('LEVEL', levelUrl).map(detail => {
-                logger.log('sync level detail when level changed in live');
-                connect(_mergePlaylist)(currenLevel, detail);
-              });
+              nextLevelHasDetail.map(() => {
+                // fetch the newest details
+                connect(_loadResource)('LEVEL', levelUrl).map(detail => {
+                  logger.log('sync level detail when level changed in live');
+                  connect(_mergePlaylist)(nextAutoLevel, detail);
+                });
+                return true;
+              }).getOrElse(() => {
+
+                connect(_mergePlaylistWithLastLevel)(nextAutoLevel, currenLevel)
+              })
             })
           )
             .ap(getState(ACTION.PLAYLIST.IS_LIVE))
             .ap(getState(ACTION.PLAYLIST.GET_LEVEL_URL));
+
           if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
             // load init.mp4 first
             subOnce(PROCESS.INIT_MP4_LOADED, () => {
@@ -274,6 +313,7 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
           dispatch(ACTION.PLAYLIST.LAST_LEVEL_ID, currenLevel);
           resolve();
         });
+
         connect(changePlaylistLevel)(nextAutoLevel);
       })
     )
@@ -291,6 +331,7 @@ _updateLevel = curry(_updateLevel);
 _updateMedia = curry(_updateMedia);
 _updateKey = curry(_updateKey);
 _checkHasMatchedMedia = curry(_checkHasMatchedMedia);
+_mergePlaylistWithLastLevel = curry(_mergePlaylistWithLastLevel);
 loadPlaylist = curry(loadPlaylist);
 changePlaylistLevel = curry(changePlaylistLevel);
 inSureNextLoadLevelReady = curry(inSureNextLoadLevelReady);

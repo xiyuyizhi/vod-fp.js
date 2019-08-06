@@ -234,7 +234,9 @@ const compositionLevel = curry(list => {
       let seg = {
         duration,
         start,
+        originStart: start,
         end: start + duration,
+        originEnd: start + duration,
         cc: lastCC
       };
       if (name) {

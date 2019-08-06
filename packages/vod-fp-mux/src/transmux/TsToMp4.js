@@ -26,6 +26,14 @@ export default class TsToMp4 extends PipeLine {
     }
   }
 
+  // for m3u8 segment not continuity
+  setDisContinuity() {
+    if (this.audioStream && this.videoStream) {
+      this.audioStream.emit('setDisContinuity');
+      this.videoStream.emit('setDisContinuity');
+    }
+  }
+
   setSequenceNumber(nb) {
     this.audioStream.emit('sequenceNumber', nb);
     this.videoStream.emit('sequenceNumber', nb);

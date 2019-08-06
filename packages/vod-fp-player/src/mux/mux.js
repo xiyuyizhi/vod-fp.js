@@ -87,20 +87,26 @@ function _toMuxTs() {
 
   return ({ getState, dispatch }, segment, buffer, sequeueNum, keyInfo) => {
     let worker = getState(ACTION.MUX).join();
-    if (
-      !lastSegment ||
-      (lastSegment && lastSegment.cc !== segment.cc) ||
-      (lastSegment && lastSegment.levelId !== segment.levelId)
+    if (!lastSegment) {
+      worker.postMessage({ type: 'resetInitSegment' });
+      worker.postMessage({ type: 'setDisContinuity' });
+      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
+    }
+    if (lastSegment &&
+      (lastSegment.levelId !== segment.levelId || lastSegment.cc !== segment.cc)
     ) {
       worker.postMessage({ type: 'resetInitSegment' });
+    }
+    if (lastSegment && lastSegment.cc !== segment.cc) {
+      worker.postMessage({ type: 'setDisContinuity' });
+      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
+    }
+    if (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1) {
       worker.postMessage({ type: 'setTimeOffset', data: segment.start });
     }
 
-    if (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1) {
-      logger.log('set time offset ', segment.start);
-      worker.postMessage({ type: 'setTimeOffset', data: segment.start });
-    }
     dispatch(ACTION.PROCESS, PROCESS.MUXING);
+
     worker.postMessage(
       {
         type: 'push',
@@ -137,7 +143,7 @@ function _toMuxFmp4({ dispatch }, buffer, initMp4) {
         geneMp4aCodec(mp4a.data.codecConfigLength) || 'mp4a.40.2';
       audioInfo.samplerate = mp4a.data.samplerate;
     }
-    if (tkhd && mp4a.data) {
+    if (tkhd && tkhd.data) {
       videoInfo.width = tkhd.data.width;
       videoInfo.height = tkhd.data.height;
     }

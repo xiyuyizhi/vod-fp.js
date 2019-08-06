@@ -15,6 +15,9 @@ export default class WorkerSimulate extends EventBus {
       case 'resetInitSegment':
         mux.resetInitSegment();
         break;
+      case 'setDisContinuity':
+        mux.setDisContinuity();
+        break;
       case 'setTimeOffset':
         mux.setTimeOffset(data);
         break;
