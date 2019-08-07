@@ -1,8 +1,8 @@
-import { PipeLine, Logger } from "vod-fp-utility"
+import { PipeLine, Logger } from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
-import { checkCombine } from "../utils/index"
+import { checkCombine } from '../utils/index';
 import ptsNormalize from '../utils/ptsNormalize';
-import { SAMPLES_EMPTY } from "../error"
+import { SAMPLES_EMPTY } from '../error';
 
 let logger = new Logger('mux');
 
@@ -18,7 +18,7 @@ export default class VideoFragmentStream extends PipeLine {
     this.initDTS = 0;
     this.mp4SampleDuration = 0;
     this.on('resetInitSegment', () => (this.initSegmentGenerate = false));
-    this.on('setDisContinuity', () => this.discontinuity = true)
+    this.on('setDisContinuity', () => (this.discontinuity = true));
     this.on(
       'sequenceNumber',
       sequenceNumber => (this.sequenceNumber = sequenceNumber)
@@ -36,7 +36,7 @@ export default class VideoFragmentStream extends PipeLine {
           logger.log('video gene init segment...');
           this.initSegment = MP4.initSegment([data]);
           this.initSegmentGenerate = true;
-        } catch (e) { }
+        } catch (e) {}
       }
     }
     if (this.avcTrack && data.videoTimeOffset !== undefined) {
@@ -64,7 +64,7 @@ export default class VideoFragmentStream extends PipeLine {
     if (!nbSamples) {
       let err = {
         ...SAMPLES_EMPTY
-      }
+      };
       err.message += 'video';
       this.emit('error', err);
       return;
@@ -88,7 +88,7 @@ export default class VideoFragmentStream extends PipeLine {
     });
 
     // 按dts排序
-    samples.sort(function (a, b) {
+    samples.sort(function(a, b) {
       const deltadts = a.dts - b.dts;
       const deltapts = a.pts - b.pts;
       return deltadts || deltapts;
@@ -96,20 +96,17 @@ export default class VideoFragmentStream extends PipeLine {
 
     logger.warn(
       `video remux:【initDTS:${
-      this.initDTS
-      } , nextAvcDts:${nextAvcDts}, samples[0]: dts - ${samples[0].dts}  pts - ${samples[0].pts}】`
+        this.initDTS
+      } , nextAvcDts:${nextAvcDts}, samples[0]: dts - ${
+        samples[0].dts
+      }  pts - ${samples[0].pts}】`
     );
 
     let sample = samples[0];
-    let delta = Math.round(sample.dts - nextAvcDts);
-    samples.forEach(sample => {
-      sample.dts -= delta;
-      sample.pts -= delta;
-    });
-
+    let delta;
     let firstDTS = Math.max(sample.dts, 0);
     let firstPTS = Math.max(sample.pts, 0);
-    logger.log(`firstDTS: ${firstDTS} , firstPTS: ${firstPTS}`)
+    logger.log(`firstDTS: ${firstDTS} , firstPTS: ${firstPTS}`);
     // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
     delta = Math.round((firstDTS - nextAvcDts) / 90);
     // if fragment are contiguous, detect hole/overlapping between fragments
@@ -234,7 +231,7 @@ export default class VideoFragmentStream extends PipeLine {
         fps: parseInt(90000 / this.mp4SampleDuration),
         timeline: {
           start: firstPTS / 90000,
-          end: endPTS / 90000,
+          end: endPTS / 90000
         }
       }
     });

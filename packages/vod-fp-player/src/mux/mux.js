@@ -89,10 +89,10 @@ function _toMuxTs() {
     let worker = getState(ACTION.MUX).join();
     if (!lastSegment) {
       worker.postMessage({ type: 'resetInitSegment' });
-      worker.postMessage({ type: 'setDisContinuity' });
       worker.postMessage({ type: 'setTimeOffset', data: segment.start });
     }
-    if (lastSegment &&
+    if (
+      lastSegment &&
       (lastSegment.levelId !== segment.levelId || lastSegment.cc !== segment.cc)
     ) {
       worker.postMessage({ type: 'resetInitSegment' });

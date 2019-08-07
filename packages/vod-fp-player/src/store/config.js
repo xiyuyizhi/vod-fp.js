@@ -24,7 +24,7 @@ const state = {
   maxFlyBufferLength: 160,
   tickInterval: 200,
   segmentMaxTimeout: 20 * 1000,
-  manualSeek: 0.15,
+  manualSeek: 0.16,
   maxFragLookUpTolerance: 0.2,
   maxBufferGapTolerance: 0.4,
   endStreamTolerance: 0.2,

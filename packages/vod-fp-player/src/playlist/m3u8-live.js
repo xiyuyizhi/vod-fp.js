@@ -2,7 +2,7 @@ import { F, Logger, Task, Maybe, Tick } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
 import { _loadResource } from './playlist';
 import { updateMediaDuration } from '../media/media';
-
+import { getBufferInfo } from '../buffer/buffer-helper';
 const { curry, prop } = F;
 let logger = new Logger('player');
 
@@ -44,10 +44,10 @@ function _convertCC(segments) {
 //     level changed to 3
 //     level 3 detaisl sn [3,6],flushed new details [9,12]、[10,13]、[11,14]
 /**
- * 
- * @param {*} param0 
+ *
+ * @param {*} param0
  * @param {*} levelId the current used level
- * @param {*} newDetails 
+ * @param {*} newDetails
  */
 function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
   let noNews = false;
@@ -69,7 +69,6 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
 
     let newStartSN = startSN;
     for (let i = 0; i <= endSN - startSN; i++) {
-
       if (oldSegments[i + delta]) {
         lastSegment = oldSegments[i + delta];
       } else {
@@ -94,14 +93,14 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
             ) {
               logger.warn(
                 `can‘t find a matched segment for ${startSN +
-                i}, startSN < lastLevel.startSN,continue loop`
+                  i}, startSN < lastLevel.startSN,continue loop`
               );
               newStartSN = startSN + i + 1;
               continue;
             }
             logger.warn(
               `can‘t find a matched segment for ${startSN +
-              i},use total duration as sync start`
+                i},use total duration as sync start`
             );
             newSeg.start = detail.duration;
             lastSegment = oldSegments[oldSegments.length - 1];
@@ -134,7 +133,11 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
     detail.endSN = last.id;
     detail.mediaSequence = detail.startSN;
     detail.live = detail.live;
-    detail.duration = Math.max(detail.duration, last.end);
+    detail.duration = Math.max(
+      detail.duration,
+      last.end,
+      connect(getBufferInfo)(last.end).bufferEnd
+    );
     dispatch(ACTION.PLAYLIST.UPDATE_LEVEL, {
       levelId,
       detail
@@ -149,8 +152,6 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
   });
   return noNews;
 }
-
-
 
 function bootStrapFlushPlaylist({ getState, getConfig, connect }) {
   let interval = getState(ACTION.PLAYLIST.AVG_SEG_DURATION)

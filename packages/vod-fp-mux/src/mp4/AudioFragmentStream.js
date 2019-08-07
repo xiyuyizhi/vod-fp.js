@@ -1,10 +1,9 @@
-import { PipeLine, Logger } from "vod-fp-utility"
+import { PipeLine, Logger } from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
 import AAC from '../utils/aac';
-import { checkCombine } from "../utils/index"
+import { checkCombine } from '../utils/index';
 import ptsNormalize from '../utils/ptsNormalize';
-import { SAMPLES_EMPTY } from "../error"
-
+import { SAMPLES_EMPTY } from '../error';
 
 let logger = new Logger('mux');
 
@@ -21,7 +20,7 @@ export default class AudioFragmentStream extends PipeLine {
     this.initSegment = new Uint8Array();
     this.aacTrack = null;
     this.on('resetInitSegment', () => (this.initSegmentGenerate = false));
-    this.on('setDisContinuity', () => this.discontinuity = true)
+    this.on('setDisContinuity', () => (this.discontinuity = true));
     this.on(
       'sequenceNumber',
       sequenceNumber => (this.sequenceNumber = sequenceNumber)
@@ -30,7 +29,7 @@ export default class AudioFragmentStream extends PipeLine {
 
   push(data) {
     if (data.type === 'metadata') {
-      this.combine = checkCombine(data.data)
+      this.combine = checkCombine(data.data);
     }
     if (data.type === 'audio') {
       this.aacTrack = data;
@@ -39,7 +38,7 @@ export default class AudioFragmentStream extends PipeLine {
           logger.log('audio gene init segment...');
           this.initSegment = MP4.initSegment([data]);
           this.initSegmentGenerate = true;
-        } catch (e) { }
+        } catch (e) {}
       }
     }
 
@@ -62,7 +61,6 @@ export default class AudioFragmentStream extends PipeLine {
   }
 
   remuxAudio(aacTrack, timeOffset, contiguous) {
-
     const scaleFactor = TIME_SCALE / aacTrack.samplerate;
     const sampleDuration = 1024 * scaleFactor;
     let offset;
@@ -79,12 +77,12 @@ export default class AudioFragmentStream extends PipeLine {
     if (!inputSamples.length) {
       let err = {
         ...SAMPLES_EMPTY
-      }
+      };
       err.message += 'audio';
       this.emit('error', err);
       return;
     }
-    logger.warn('audio,nextAudioDts,', nextAudioDts)
+    logger.warn('audio,nextAudioDts,', nextAudioDts);
     inputSamples.forEach(sample => {
       sample.originPts = sample.pts;
       sample.originDts = sample.dts;
@@ -98,36 +96,33 @@ export default class AudioFragmentStream extends PipeLine {
       nextAudioDts = aacTrack.samples[0].dts;
     }
     if (
-      !contiguous
-      // || Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.1
+      !contiguous ||
+      Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.1
     ) {
       if (!contiguous) {
         nextAudioDts = timeOffset * TIME_SCALE;
       } else {
-        nextAudioDts = Math.max(timeOffset * TIME_SCALE, nextAudioDts);
+        nextAudioDts = inputSamples[0].dts;
       }
       logger.warn(
-        `not contiguous,first sample dts:${inputSamples[0].dts} ,origin dts:${inputSamples[0].originDts},timeOffset = ${timeOffset} ,nextAudioDts =${nextAudioDts}`
+        `not contiguous,first sample dts:${inputSamples[0].dts} ,origin dts:${
+          inputSamples[0].originDts
+        },timeOffset = ${timeOffset} ,nextAudioDts =${nextAudioDts}`
       );
-      // let delta = inputSamples[0].dts - nextAudioDts;
-      // inputSamples.forEach(sample => {
-      //   sample.dts -= delta;
-      //   sample.pts -= delta;
-      // });
     }
 
     logger.warn(
       `audio remux:【initDTS:${
-      this.initDTS
+        this.initDTS
       } , nextAacPts:${nextAudioDts}, originPTS:${
-      inputSamples[0].originPts
+        inputSamples[0].originPts
       } ,  originDTS:${inputSamples[0].originDts} , samples[0]:${
-      inputSamples[0].dts
+        inputSamples[0].dts
       }】`
     );
     let totalMissingCount = 0;
     let totalDroppingCount = 0;
-    for (let i = 0, nextPts = nextAudioDts; i < inputSamples.length;) {
+    for (let i = 0, nextPts = nextAudioDts; i < inputSamples.length; ) {
       let sample = inputSamples[i];
       let delta;
       let pts = sample.pts;
@@ -159,7 +154,7 @@ export default class AudioFragmentStream extends PipeLine {
           if (!fillFrame) {
             logger.log(
               'Unable to get silent frame for given audio codec; duplicating last frame instead' +
-              '.'
+                '.'
             );
             fillFrame = sample.data.subarray();
           }

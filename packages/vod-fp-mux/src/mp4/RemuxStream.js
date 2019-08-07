@@ -1,4 +1,4 @@
-import { PipeLine, Logger } from "vod-fp-utility"
+import { PipeLine, Logger } from 'vod-fp-utility';
 import { NOT_FOUNT_IDR_FRAME } from '../error';
 let logger = new Logger('mux');
 
@@ -18,7 +18,9 @@ export default class RemuxStream extends PipeLine {
   push(track) {
     if (!track) return;
     if (track.type === 'metadata') {
-      this.trackLen = Object.keys(track.data).filter(x => track[x] !== -1).length;
+      this.trackLen = Object.keys(track.data).filter(
+        x => track[x] !== -1
+      ).length;
       this.emit('data', track);
       return;
     }
@@ -37,7 +39,12 @@ export default class RemuxStream extends PipeLine {
       const { audioTrack, videoTrack } = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;
-      if (videoTrack && audioTrack && videoTrack.samples.length && audioTrack.samples.length) {
+      if (
+        videoTrack &&
+        audioTrack &&
+        videoTrack.samples.length &&
+        audioTrack.samples.length
+      ) {
         let firstVideoSampleDts = videoTrack.samples[0].dts;
         let audiovideoDeltaDts =
           (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
