@@ -245,6 +245,8 @@ export default class AvcStream extends PipeLine {
       let config = expGolombDecoder.readSPS();
       this.avcTrack.width = config.width;
       this.avcTrack.height = config.height;
+      this.avcTrack.profileIdc = config.profileIdc;
+      this.avcTrack.levelIdc = config.levelIdc;
       this.avcTrack.pixelRatio = config.pixelRatio;
       this.avcTrack.sps = [unit.data];
       let codecarray = unit.data.subarray(1, 4);

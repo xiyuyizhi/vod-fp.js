@@ -134,6 +134,12 @@ export default class VideoFragmentStream extends PipeLine {
       }
     }
 
+    samples.sort(function(a, b) {
+      const deltadts = a.dts - b.dts;
+      const deltapts = a.pts - b.pts;
+      return deltadts || deltapts;
+    });
+
     sample = samples[samples.length - 1];
     let lastDTS = Math.max(sample.dts, 0);
     let lastPTS = Math.max(sample.pts, 0, lastDTS);

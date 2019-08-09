@@ -96,8 +96,6 @@ function _toMuxTs() {
       (lastSegment.levelId !== segment.levelId || lastSegment.cc !== segment.cc)
     ) {
       worker.postMessage({ type: 'resetInitSegment' });
-    }
-    if (lastSegment && lastSegment.cc !== segment.cc) {
       worker.postMessage({ type: 'setDisContinuity' });
       worker.postMessage({ type: 'setTimeOffset', data: segment.start });
     }

@@ -199,15 +199,15 @@ class ExpGolomb {
     skipUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don't need
     if (
-      profileIdc === 100
-      || profileIdc === 110
-      || profileIdc === 122
-      || profileIdc === 244
-      || profileIdc === 44
-      || profileIdc === 83
-      || profileIdc === 86
-      || profileIdc === 118
-      || profileIdc === 128
+      profileIdc === 100 ||
+      profileIdc === 110 ||
+      profileIdc === 122 ||
+      profileIdc === 244 ||
+      profileIdc === 44 ||
+      profileIdc === 83 ||
+      profileIdc === 86 ||
+      profileIdc === 118 ||
+      profileIdc === 128
     ) {
       let chromaFormatIdc = readUEG();
       if (chromaFormatIdc === 3) {
@@ -328,15 +328,17 @@ class ExpGolomb {
       }
     }
     return {
+      profileIdc,
+      levelIdc,
       width: Math.ceil(
-        (picWidthInMbsMinus1 + 1) * 16
-          - frameCropLeftOffset * 2
-          - frameCropRightOffset * 2
+        (picWidthInMbsMinus1 + 1) * 16 -
+          frameCropLeftOffset * 2 -
+          frameCropRightOffset * 2
       ),
       height:
-        (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16
-        - (frameMbsOnlyFlag ? 2 : 4)
-          * (frameCropTopOffset + frameCropBottomOffset),
+        (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
+        (frameMbsOnlyFlag ? 2 : 4) *
+          (frameCropTopOffset + frameCropBottomOffset),
       pixelRatio: pixelRatio
     };
   }
