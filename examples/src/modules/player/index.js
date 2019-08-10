@@ -1,4 +1,8 @@
 import Vod from 'vod-fp-player';
+import {
+  Button, Input, Row, Col
+} from 'antd';
+import './index.less';
 
 export default class Player extends React.Component {
   constructor(props) {
@@ -82,36 +86,42 @@ export default class Player extends React.Component {
     const { url, error } = this.state;
     return (
       <div>
-        <h1>vod player demo</h1>
-        <div>
-          <input
-            className="url_input"
-            value={url}
-            onChange={this.getMediaUrl}
-          />
-          <button onClick={this.load}>load</button>
-          <div style={{ transform: 'scale(0.8)', marginTop: '5px' }}>
-            右键查看 debug 信息、console 查看 log
-          </div>
-        </div>
-        <div>
-          <div id="player">
-            <video
-              autoPlay
-              controls
-              width="600"
-              height="400"
-              ref={media => (this.media = media)}
-            />
-          </div>
-          {/* <div>{this._renderResolution()}</div> */}
-        </div>
-        {error ? (
-          <div>
-            <h1>some error occur...</h1>
-            <h4>{JSON.stringify(error)}</h4>
-          </div>
-        ) : null}
+        <Row>
+          <Col span={12} offset={6}>
+            <h1>vod player demo</h1>
+            <div>
+              <Input
+                className="normal_input"
+                value={url}
+                onChange={this.getMediaUrl}
+              />
+              <Button type="primary" onClick={this.load}>
+                load
+              </Button>
+              <div style={{ transform: 'scale(0.8)', marginTop: '5px' }}>
+                右键查看 debug 信息、console 查看 log
+              </div>
+            </div>
+            <div>
+              <div id="player">
+                <video
+                  autoPlay
+                  controls
+                  width="600"
+                  height="400"
+                  ref={media => (this.media = media)}
+                />
+              </div>
+              {/* <div>{this._renderResolution()}</div> */}
+            </div>
+            {error ? (
+              <div>
+                <h1>some error occur...</h1>
+                <h4>{JSON.stringify(error)}</h4>
+              </div>
+            ) : null}
+          </Col>
+        </Row>
       </div>
     );
   }

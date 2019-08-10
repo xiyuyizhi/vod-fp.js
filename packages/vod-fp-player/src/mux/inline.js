@@ -1,10 +1,10 @@
 import { EventBus } from 'vod-fp-utility';
-import { TsToMp4 } from 'vod-fp-mux';
+import Mux from 'vod-fp-mux';
 
 export default class WorkerSimulate extends EventBus {
   constructor() {
     super();
-    this.mux = new TsToMp4();
+    this.mux = new Mux.TsToMp4();
     this.muxEvents();
   }
 

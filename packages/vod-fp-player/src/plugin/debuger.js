@@ -34,7 +34,7 @@ const debugInfoUlStyle = {
 
 const debugInfoItemStyle = {
   display: 'inline-block',
-  width: '100px',
+  width: '110px',
   'text-align': 'right',
   'margin-right': '20px'
 };
@@ -68,7 +68,7 @@ function _initDebugWindow(container, connect) {
   }
   _window = document.createElement('div');
   _window.className = CLASSNMAE.VOD_DEBUG_INFO;
-  _window.style.width = '220px';
+  _window.style.width = '250px';
   _window.style.left = `20px`;
   _window.style.top = `20px`;
   Object.assign(_window.style, defaultStyle);

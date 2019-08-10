@@ -1,5 +1,5 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
-import { probe } from '../probe/ts-probe';
+import { tsProbe } from '../utils/probe';
 import { NOT_VALID_TS_FORMAT } from '../error';
 
 let logger = new Logger('mux');
@@ -9,7 +9,7 @@ export default class TsPacketStream extends PipeLine {
     if (buffer instanceof ArrayBuffer) {
       buffer = new Uint8Array(buffer);
     }
-    const syncOffset = probe(buffer);
+    const syncOffset = tsProbe(buffer);
     logger.log('监测ts流第一个同步字节的位置: ', syncOffset);
     if (syncOffset === -1) {
       this.emit('error', NOT_VALID_TS_FORMAT);

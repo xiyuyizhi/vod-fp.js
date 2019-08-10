@@ -5,6 +5,12 @@ const fs = require('fs');
 const ROOT = process.cwd();
 const PACKAGE_ROOT = `packages/vod-fp-${process.env.BUILD}/`;
 
+const OUT_NAME_MAP = {
+  mux: 'Mux',
+  player: 'Vod',
+  utility: 'Util'
+};
+
 const config = {
   mode: 'production',
   devtool: 'source-map',
@@ -12,7 +18,7 @@ const config = {
     filename: path.join(ROOT, PACKAGE_ROOT, 'src/index.js')
   },
   output: {
-    library: 'Vod',
+    library: OUT_NAME_MAP[process.env.BUILD],
     libraryTarget: 'umd',
     libraryExport: 'default',
     globalObject: 'this',

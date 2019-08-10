@@ -2,11 +2,13 @@
   "name": "examples",
   "version": "0.0.1",
   "dependencies": {
+    "antd": "^3.21.4",
     "handy-demo-common": "latest",
-    "react": "^16.5.2",
-    "react-dom": "^16.5.2",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0",
     "react-router-dom": "^4.3.1",
-    "vod-fp-player": "latest"
+    "vod-fp-player": "latest",
+    "vod-fp-mux": "latest"
   },
   "devDependencies": {
     "handy-service": "latest",
@@ -25,7 +27,8 @@
   "presets": {
     "preset": "manual",
     "features": [
-      "linter"
+      "linter",
+      "antd"
     ],
     "linter": "eslint_airbnb",
     "lintCondition": "commit",

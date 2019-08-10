@@ -1,6 +1,6 @@
 {
   "name": "vod-fp",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "MSE-EME player (hls & fmp4) , write with functional style",
   "directories": {
     "test": "tests"

@@ -1,7 +1,7 @@
-import { TsToMp4 } from 'vod-fp-mux';
+import Mux from 'vod-fp-mux';
 
 export default () => {
-  let mux = new TsToMp4();
+  let mux = new Mux.TsToMp4();
 
   mux.on('data', data => {
     self.postMessage({ type: 'data', data });

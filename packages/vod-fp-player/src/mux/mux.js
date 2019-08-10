@@ -1,6 +1,6 @@
 import work from 'webworkify-webpack';
 import { F, CusError, Logger } from 'vod-fp-utility';
-import { Mp4Parser } from 'vod-fp-mux';
+import Mux from 'vod-fp-mux';
 import { ACTION, PROCESS } from '../store';
 import { SEGMENT_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
@@ -8,7 +8,7 @@ import { findMp4Box, geneAvcCodec, geneMp4aCodec } from '../utils/index';
 import WorkerSimulate from './inline';
 
 const logger = new Logger('player');
-
+const { Mp4Parser } = Mux;
 const VIDEO_CODEC_PATH = [
   'moov',
   'trak',

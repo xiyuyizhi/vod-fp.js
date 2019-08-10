@@ -64,7 +64,7 @@ export default class TsElementaryStream extends PipeLine {
      * stream_id : 8bit
      * PES_packet_length : 16bit
      * PTS_DTS_flags : 2bit 【PES_packet_length后第2字节前2位】& 0xc0  [0x10 0x11]
-     * PES_header_data_length : 【PTS_DTS_flags 后1字节】
+     * PES_header_data_length : 【PTS_DTS_flags 后第1字节】
      */
     let pesLen = 0;
     let pts;
