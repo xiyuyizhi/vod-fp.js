@@ -1,7 +1,5 @@
 import Vod from 'vod-fp-player';
-import {
-  Button, Input, Row, Col
-} from 'antd';
+import { Button, Input, Row, Col } from 'antd';
 import './index.less';
 
 export default class Player extends React.Component {
@@ -79,7 +77,15 @@ export default class Player extends React.Component {
       <div>
         <Row>
           <Col span={12} offset={6}>
-            <h1>vod player demo</h1>
+            <h1>
+              vod player demo{' '}
+              <a
+                style={{ fontSize: 16, marginLeft: 10 }}
+                href="https://xiyuyizhi.github.io/vod-fp.js/onlineTool"
+              >
+                online tool
+              </a>
+            </h1>
             <div>
               <Input
                 className="normal_input"

@@ -1,7 +1,5 @@
 import Mux from 'vod-fp-mux';
-import {
-  Input, Button, Row, Col, Alert
-} from 'antd';
+import { Input, Button, Row, Col, Alert } from 'antd';
 import TsRender from './TsRender';
 import loader from './loader';
 import './index.less';
@@ -47,12 +45,10 @@ export default class Parser extends React.Component {
   };
 
   _resolveBuffer(buffer) {
-    let pipeline = ProbeList.filter(x => x.probe(buffer) !== -1).map(
-      x => x.type
-    );
-    if (pipeline.length) {
+    let probe = ProbeList.filter(x => x.probe(buffer) !== -1).map(x => x.type);
+    if (probe.length) {
       this.setState({
-        format: pipeline[0],
+        format: probe[0],
         buffer,
         key: performance.now(),
         error: ''
@@ -60,20 +56,27 @@ export default class Parser extends React.Component {
       return;
     }
     this.setState({
+      format: '',
       error: '不支持的视频格式'
     });
   }
 
   render() {
-    let {
-      format, buffer, key, error
-    } = this.state;
+    let { format, buffer, key, error } = this.state;
     return (
       <div>
         <Row>
           <Col span={6} />
           <Col span={12}>
-            <h1> online parse ts、fmp4、flv format</h1>
+            <h1>
+              online parse ts format
+              <a
+                style={{ fontSize: 16, marginLeft: 10 }}
+                href="https://xiyuyizhi.github.io/vod-fp.js"
+              >
+                return
+              </a>
+            </h1>
             <div>
               <Input
                 placeholder="eg: find a url of  ts format file from samewhere online"

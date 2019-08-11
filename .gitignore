@@ -1,5 +1,6 @@
 node_modules/
 /packages/**/lib
 /dist/
+docs/*.map
 .DS_Store
 .vscode/
