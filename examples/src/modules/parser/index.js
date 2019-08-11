@@ -1,8 +1,9 @@
 import Mux from 'vod-fp-mux';
 import {
-  Input, Button, Row, Col
+  Input, Button, Row, Col, Alert
 } from 'antd';
 import TsRender from './TsRender';
+import loader from './loader';
 import './index.less';
 
 const { Probe } = Mux;
@@ -12,45 +13,76 @@ const ProbeList = [{ type: 'ts', probe: Probe.tsProbe }];
 export default class Parser extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { format: '' };
+    this.sourceUrl = '';
+    this.state = { format: '', key: 0, error: '' };
   }
+
+  getUrl = e => {
+    this.sourceUrl = e.target.value;
+  };
+
+  loadSource = () => {
+    if (!this.sourceUrl) return;
+    loader(this.sourceUrl)
+      .then(res => {
+        this.setState({ error: '' });
+        this._resolveBuffer(new Uint8Array(res));
+      })
+      .catch(e => {
+        this.setState({
+          error: e.message
+        });
+      });
+  };
 
   fileChanged = e => {
     let file = e.target.files[0];
     const reader = new FileReader();
     reader.onload = e => {
       const buffer = new Uint8Array(e.target.result);
-      let pipeline = ProbeList.filter(x => x.probe(buffer) !== -1).map(
-        x => x.type
-      );
-      if (pipeline.length) {
-        this.setState({
-          format: pipeline[0],
-          buffer
-        });
-        return;
-      }
-      this.setState({
-        format: 'no'
-      });
+      this._resolveBuffer(buffer);
     };
     reader.readAsArrayBuffer(file);
     this.fileEle.value = '';
   };
 
+  _resolveBuffer(buffer) {
+    let pipeline = ProbeList.filter(x => x.probe(buffer) !== -1).map(
+      x => x.type
+    );
+    if (pipeline.length) {
+      this.setState({
+        format: pipeline[0],
+        buffer,
+        key: performance.now(),
+        error: ''
+      });
+      return;
+    }
+    this.setState({
+      error: '不支持的视频格式'
+    });
+  }
+
   render() {
-    let { format, buffer } = this.state;
+    let {
+      format, buffer, key, error
+    } = this.state;
     return (
       <div>
         <Row>
-          <Col span={12} offset={6}>
+          <Col span={6} />
+          <Col span={12}>
             <h1> online parse ts、fmp4、flv format</h1>
             <div>
               <Input
                 placeholder="eg: find a url of  ts format file from samewhere online"
                 className="normal_input"
+                onChange={this.getUrl}
               />
-              <Button type="primary">load</Button>
+              <Button type="primary" onClick={this.loadSource}>
+                load
+              </Button>
             </div>
             <div>
               <div className="upload-tips"> or upload from local</div>
@@ -61,12 +93,12 @@ export default class Parser extends React.Component {
                 onChange={this.fileChanged}
               />
             </div>
+            <div className="format-show">
+              {format === 'ts' ? <TsRender buffer={buffer} key={key} /> : null}
+              {error && <Alert message={error} type="error" />}
+            </div>
           </Col>
-        </Row>
-        <Row>
-          <Col>Result</Col>
-          {format === 'ts' ? <TsRender buffer={buffer} /> : null}
-          {format === 'no' && <h2>不能解析</h2>}
+          <Col span={6} />
         </Row>
       </div>
     );

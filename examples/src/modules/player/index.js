@@ -26,15 +26,6 @@ export default class Player extends React.Component {
         error: e
       });
     });
-    // player.on(Vod.Events.MANIFEST_LOADED, pl => {
-    //   // 创建清晰度选项
-    //   const { levels } = pl;
-    //   if (levels.length > 1) {
-    //     this.setState({
-    //       resolutionList: levels
-    //     });
-    //   }
-    // });
   }
 
   changeResolution = e => {
@@ -112,7 +103,6 @@ export default class Player extends React.Component {
                   ref={media => (this.media = media)}
                 />
               </div>
-              {/* <div>{this._renderResolution()}</div> */}
             </div>
             {error ? (
               <div>
