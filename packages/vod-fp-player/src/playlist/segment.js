@@ -78,8 +78,6 @@ function _loadSource({ connect, getConfig }, url, levelId = 1) {
 
 // segment -> Task
 function loadSegment({ getConfig, getState, connect, dispatch }, segment) {
-  dispatch(ACTION.LOADPROCESS, LOADPROCESS.SEGMENT_LOADING);
-
   let _loadTask = getState(ACTION.PLAYLIST.FIND_MEDIA_SEGEMENT, {
     levelId: segment.levelId,
     id: segment.id
@@ -98,9 +96,10 @@ function loadSegment({ getConfig, getState, connect, dispatch }, segment) {
       });
     })
     .getOrElse(() => connect(_loadSource)(segment.url, segment.levelId));
+  let isLive = getState(ACTION.PLAYLIST.IS_LIVE).value();
 
   return _loadTask
-    .filterRetry(e => !e.is(LOADER_ERROR.ABORT))
+    .filterRetry(e => !isLive && !e.is(LOADER_ERROR.ABORT))
     .retry(
       getConfig(ACTION.CONFIG.REQUEST_RETRY_COUNT),
       getConfig(ACTION.CONFIG.REQUEST_RETRY_DELAY)
@@ -147,15 +146,17 @@ function loadSegment({ getConfig, getState, connect, dispatch }, segment) {
 // if it‘s not ,we need append the init.mp4 buffer first.
 function drainSegmentFromStore() {
   let lastAppend;
-  return (
-    { getState, getConfig, connect, dispatch, subOnce },
-    findSeg
-  ) => {
-    // findSeg: the selected segement in check buffer,we need check is it stored in fly buffer store
+  return ({ getState, getConfig, connect, dispatch, subOnce }, findSeg) => {
+    // findSeg: the selected segement in check buffer,
+    // we need check is it stored in fly buffer store
     return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findSeg).map(
       segInfo => {
         let { segment, buffer } = segInfo;
-        logger.log(`level:${segment.levelId} , id:${segment.id} , [${segment.start},${segment.end}]`)
+        logger.log(
+          `level:${segment.levelId} , id:${segment.id} , [${segment.start},${
+            segment.end
+          }]`
+        );
         dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
         if (
           getState(ACTION.PLAYLIST.CAN_ABR).value() &&
@@ -163,7 +164,11 @@ function drainSegmentFromStore() {
           lastAppend.levelId !== segment.levelId &&
           getState(ACTION.PLAYLIST.FORMAT) === 'fmp4'
         ) {
-          logger.log(`the next append segment levelId changed [${lastAppend.levelId} -> ${segment.levelId}],need append init sgemnt first`)
+          logger.log(
+            `the next append segment levelId changed [${
+              lastAppend.levelId
+            } -> ${segment.levelId}],need append init sgemnt first`
+          );
           lastAppend = segment;
           connect(loadInitMP4)(segment.levelId, true);
           setTimeout(() => {
@@ -188,9 +193,8 @@ function drainSegmentFromStore() {
         return true;
       }
     );
-  }
+  };
 }
-
 
 function removeSegmentFromStore({ getState, dispatch }) {
   getState(ACTION.PLAYLIST.CURRENT_SEGMENT_ID).map(id => {
@@ -198,7 +202,11 @@ function removeSegmentFromStore({ getState, dispatch }) {
   });
 }
 
-function _loadInit({ getState, dispatch, getConfig, connect }, levelId, immediateMux) {
+function _loadInit(
+  { getState, dispatch, getConfig, connect },
+  levelId,
+  immediateMux
+) {
   getState(ACTION.PLAYLIST.FIND_INIT_MP4_URLS)
     .map(trace(`log: find level ${levelId} init mp4 urls`))
     .chain(initUrls => {
@@ -236,8 +244,8 @@ function _loadInit({ getState, dispatch, getConfig, connect }, levelId, immediat
 }
 
 /**
- * 
- * @param {object} param0 
+ *
+ * @param {object} param0
  * @param {number} levelId the level need to load metadata
  * @param {boolean} immediateMux if mux right when loaded
  * condition:

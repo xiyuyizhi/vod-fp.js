@@ -11,8 +11,8 @@ import playlist from './playlist';
 import media from './media';
 import buffer from './buffer';
 import flyBuffer from './flyBuffer';
-import abr from "./abr"
-import loadInfo from "./loadInfo"
+import abr from './abr';
+import loadInfo from './loadInfo';
 
 const { map, prop, compose, trace } = F;
 let logger = new Logger('player');
@@ -132,7 +132,6 @@ function getGlobalState() {
           const { loadProcessTs, loadProcess } = state.value();
           let ts = (performance.now() - loadProcessTs).toFixed(2);
           logger.log(`LOAD_PROCESS: ${loadProcess}(${ts} ms) -> ${payload}`);
-          dispatch(payload)
           return state.map(x => {
             x.loadProcessTs = performance.now();
             x.loadProcess = payload;
@@ -183,7 +182,16 @@ function getGlobalState() {
   };
 }
 
-ACTION = combineActions(ACTION, config, playlist, media, buffer, flyBuffer, abr, loadInfo);
+ACTION = combineActions(
+  ACTION,
+  config,
+  playlist,
+  media,
+  buffer,
+  flyBuffer,
+  abr,
+  loadInfo
+);
 
 function getInitState() {
   return combineStates(

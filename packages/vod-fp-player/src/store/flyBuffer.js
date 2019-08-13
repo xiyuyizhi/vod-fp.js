@@ -8,6 +8,7 @@ export default {
     FLY_BUFFER_RANGES: 'flyBufferRanges',
     STORE_NEW_SEGMENT: 'storeNewSegment',
     GET_MATCHED_SEGMENT: 'getMatchedSegment',
+    GET_FIRST_SEGMENT_BEYOND_CURRENTTIME: 'getFirstSegmentBeyondCurrentTime',
     REMOVE_SEGMENT_FROM_STORE: 'removeSegmentFromStore'
   },
   getState() {
@@ -45,6 +46,14 @@ export default {
             map(trace('log: do mux and append')),
             map(head),
             map(filter(x => x.segment.id === segment.id)),
+            map(prop('segmentsStore'))
+          )(state);
+        },
+        getFirstSegmentBeyondCurrentTime(state, currentTime) {
+          return compose(
+            map(prop('segment')),
+            map(head),
+            map(filter(x => x.segment.start >= currentTime)),
             map(prop('segmentsStore'))
           )(state);
         }

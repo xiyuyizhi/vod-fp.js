@@ -209,31 +209,31 @@ function _caclLiveSyncPosition({ getState, getConfig }) {
     .ap(getState(ACTION.PLAYLIST.DURATION));
 }
 
-function checkSyncLivePosition({ getState, connect }, media, bufferEnd) {
-  Maybe.of(
-    curry((live, slidePosition) => {
+// number -> number when break away,nothing when not
+function checkSyncLivePosition({ getState, connect, dispatch }, bufferEnd) {
+  return Maybe.of(
+    curry((_, slidePosition) => {
       //check the current play time is break away from the live point
       if (bufferEnd < slidePosition) {
-        logger.log(
-          'bufferEnd:',
-          bufferEnd,
-          'slidePosition:',
-          slidePosition,
-          'end:',
-          media.duration
-        );
-        connect(_caclLiveSyncPosition).map(liveSyncPostion => {
-          media.currentTime = liveSyncPostion;
+        logger.log('bufferEnd:', bufferEnd, 'slidePosition:', slidePosition);
+        return connect(_caclLiveSyncPosition).chain(liveSyncPostion => {
           logger.log(
             'break away from the live point,sync position',
-            media.currentTime
+            liveSyncPostion,
+            'bufferEnd: ',
+            bufferEnd
           );
+          dispatch(ACTION.BUFFER.LIVE_LOAD_POINT, liveSyncPostion);
+          return liveSyncPostion;
         });
       }
     })
   )
     .ap(getState(ACTION.PLAYLIST.IS_LIVE))
-    .ap(getState(ACTION.PLAYLIST.SLIDE_POSITION));
+    .ap(getState(ACTION.PLAYLIST.SLIDE_POSITION))
+    .getOrElse(() => {
+      dispatch(ACTION.BUFFER.LIVE_LOAD_POINT, -1);
+    });
 }
 
 _mergePlaylist = curry(_mergePlaylist);

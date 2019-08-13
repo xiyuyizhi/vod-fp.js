@@ -110,6 +110,19 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
     dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
   }
 
+  Maybe.of(
+    curry((_, bufferInfo, slidePosition, media) => {
+      if (bufferInfo.bufferEnd < slidePosition) {
+        logger.log('media seeking to', segBound.start);
+        media.currentTime = segBound.start;
+      }
+    })
+  )
+    .ap(getState(ACTION.PLAYLIST.IS_LIVE))
+    .ap(getState(ACTION.BUFFER.GET_BUFFER_INFO))
+    .ap(getState(ACTION.PLAYLIST.SLIDE_POSITION))
+    .ap(getState(ACTION.MEDIA.MEDIA_ELE));
+
   //清除无用元素
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);

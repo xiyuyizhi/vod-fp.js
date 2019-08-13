@@ -16,7 +16,8 @@ export default {
     VIDEO_INFO: 'videoInfo',
     AUDIO_INFO: 'audioInfo',
     GET_BUFFER_INFO: 'getBufferInfo',
-    GET_FLY_BUFFER_INFO: 'getFlyBufferInfo'
+    GET_FLY_BUFFER_INFO: 'getFlyBufferInfo',
+    LIVE_LOAD_POINT: 'liveLoadPoint'
   },
   getState() {
     return {
@@ -28,6 +29,7 @@ export default {
       videoAppended: false,
       videoInfo: null,
       audioInfo: null,
+      liveLoadPoint: -1,
       derive: {
         videoBufferInfo(state, payload) {
           if (payload) {
@@ -67,8 +69,17 @@ export default {
           );
         },
         getFlyBufferInfo(state, payload, _store) {
-          return this.getBufferInfo(null, null, _store).map(relBuffer => {
-            return _store.connect(getFlyBufferInfo)(relBuffer.bufferEnd);
+          return state.map(prop('liveLoadPoint')).map(liveLoadPoint => {
+            if (liveLoadPoint == -1) {
+              return this.getBufferInfo(null, null, _store).chain(relBuffer => {
+                return _store.connect(getFlyBufferInfo)(relBuffer.bufferEnd);
+              });
+            }
+            return {
+              bufferLength: 0,
+              bufferStart: liveLoadPoint,
+              bufferEnd: liveLoadPoint
+            };
           });
         }
       }
