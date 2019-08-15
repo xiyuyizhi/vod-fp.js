@@ -220,19 +220,23 @@ function _checkFlushBuffer({ getState, getConfig, connect }) {
 }
 
 function flushBuffer({ getState, dispatch }, start, end) {
-  let videoSb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER);
-  let audioSb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER);
-  return Success.of(
-    curry((videoSb, audioSb) => {
-      if (!videoSb.updating && !audioSb.updating) {
-        videoSb.remove(start, end);
-        audioSb.remove(start, end);
+  return maybeToEither(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER))
+    .map(vsb => {
+      if (!vsb.updating) {
+        vsb.remove(start, end);
       }
     })
-  )
-    .ap(maybeToEither(videoSb))
-    .ap(maybeToEither(audioSb))
+    .chain(() => {
+      return maybeToEither(getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER)).map(
+        asb => {
+          if (!asb.updating) {
+            asb.remove(start, end);
+          }
+        }
+      );
+    })
     .error(e => {
+      if (!e) return;
       dispatch(
         ACTION.ERROR,
         e.merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))

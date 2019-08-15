@@ -132,6 +132,7 @@ function getGlobalState() {
           const { loadProcessTs, loadProcess } = state.value();
           let ts = (performance.now() - loadProcessTs).toFixed(2);
           logger.log(`LOAD_PROCESS: ${loadProcess}(${ts} ms) -> ${payload}`);
+          dispatch(payload);
           return state.map(x => {
             x.loadProcessTs = performance.now();
             x.loadProcess = payload;

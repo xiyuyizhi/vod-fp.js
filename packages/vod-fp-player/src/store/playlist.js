@@ -292,9 +292,13 @@ export default {
                 'new buffer:',
                 [start, end],
                 '\n video buffer: ',
-                bufferDump(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).join()),
+                getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER)
+                  .map(sb => bufferDump(sb))
+                  .join(),
                 '\n audio buffer: ',
-                bufferDump(getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).join())
+                getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER)
+                  .map(sb => bufferDump(sb))
+                  .join()
               );
               let len = segments.length - 1;
               segments.forEach((x, index) => {

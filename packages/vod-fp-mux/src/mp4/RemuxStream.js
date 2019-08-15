@@ -1,10 +1,14 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
 import { NOT_FOUNT_IDR_FRAME } from '../error';
+import AAC from '../utils/aac';
+import { checkCombine } from '../utils/index';
+
 let logger = new Logger('mux');
 
 export default class RemuxStream extends PipeLine {
   constructor() {
     super();
+    this.combine = true;
     this.trackLen = 0;
     this.incomeTrackLen = 0;
     this.audioTrack = null;
@@ -16,17 +20,19 @@ export default class RemuxStream extends PipeLine {
   }
 
   push(track) {
-    if (!track) return;
-    if (track.type === 'metadata') {
+    if (track && track.type === 'metadata') {
       this.trackLen = Object.keys(track.data).filter(
-        x => track[x] !== -1
+        x => track.data[x] !== -1
       ).length;
+      this.combine = checkCombine(track.data);
       this.emit('data', track);
       return;
     }
-    this.incomeTrackLen += 1;
-    this[`${track.type}Track`] = track;
-    this.emit('data', track);
+    if (track) {
+      this.incomeTrackLen += 1;
+      this[`${track.type}Track`] = track;
+      this.emit('data', track);
+    }
   }
 
   flush() {
@@ -35,7 +41,6 @@ export default class RemuxStream extends PipeLine {
       return;
     }
     if (this.incomeTrackLen === this.trackLen) {
-      this.incomeTrackLen = 0;
       const { audioTrack, videoTrack } = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;
@@ -75,6 +80,10 @@ export default class RemuxStream extends PipeLine {
           contiguous: this.timeOffset === undefined
         });
       } else if (videoTrack || audioTrack) {
+        if (this.combine && !audioTrack.samples.length) {
+          //mock audio track info
+          this.emit('data', this.mockAudioTrack(videoTrack, audioTrack));
+        }
         this.emit('data', {
           audioTimeOffset,
           videoTimeOffset,
@@ -90,6 +99,35 @@ export default class RemuxStream extends PipeLine {
       this.timeOffset = undefined;
       this.audioTrack = null;
       this.videoTrack = null;
+      this.incomeTrackLen = 0;
     }
+  }
+
+  mockAudioTrack(videoTrack, audioTrack) {
+    let { samples } = videoTrack;
+    let track = audioTrack;
+    let samplerate = 44100;
+    let frameDuration = (1024 * 90000) / samplerate;
+    track.sequenceNumber = videoTrack.sequenceNumber;
+    track.samplerate = samplerate;
+    track.timescale = samplerate;
+    track.config = [18, 16];
+    track.channel = 2;
+    track.frameDuration = frameDuration;
+    track.codec = 'mp4a.40.2';
+
+    let startDTS = samples[0].dts;
+    let ednDTS = samples[samples.length - 1].dts;
+    let nbSamples = (ednDTS - startDTS) / frameDuration;
+    let silentFrame = AAC.getSilentFrame(track.codec, track.channel);
+    let samps = [];
+    for (let i = 0; i < nbSamples; i++) {
+      let stamp = startDTS + i * frameDuration;
+      samps.push({ data: silentFrame, pts: stamp, dts: stamp });
+      track.len += silentFrame.byteLength;
+    }
+    track.samples = samps;
+    logger.warn('mock audio track', track);
+    return track;
   }
 }

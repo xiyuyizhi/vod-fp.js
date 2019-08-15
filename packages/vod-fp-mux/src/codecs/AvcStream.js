@@ -21,7 +21,7 @@ export default class AvcStream extends PipeLine {
 
   push(data) {
     if (data.type === 'video') {
-      this.geneTrack('video');
+      this.geneTrack();
       this.parseAVC(data.pes);
     }
   }

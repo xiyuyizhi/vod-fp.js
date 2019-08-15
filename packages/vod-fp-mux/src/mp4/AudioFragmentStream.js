@@ -30,6 +30,7 @@ export default class AudioFragmentStream extends PipeLine {
   push(data) {
     if (data.type === 'metadata') {
       this.combine = checkCombine(data.data);
+      return true;
     }
     if (data.type === 'audio') {
       this.aacTrack = data;
@@ -97,7 +98,8 @@ export default class AudioFragmentStream extends PipeLine {
     }
     if (
       !contiguous ||
-      Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.1
+      (Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.1 &&
+        Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 < 2)
     ) {
       if (!contiguous) {
         nextAudioDts = timeOffset * TIME_SCALE;
@@ -149,7 +151,7 @@ export default class AudioFragmentStream extends PipeLine {
           let newStamp = Math.max(nextPts, 0);
           fillFrame = AAC.getSilentFrame(
             aacTrack.manifestCodec || aacTrack.codec,
-            aacTrack.channelCount
+            aacTrack.channel
           );
           if (!fillFrame) {
             logger.log(

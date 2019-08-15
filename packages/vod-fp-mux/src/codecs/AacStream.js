@@ -7,24 +7,32 @@ export default class AacStream extends PipeLine {
   constructor() {
     super();
     this.aacTrack = null;
+    this.hasAudio = true;
   }
 
   geneTrack(type) {
     if (this.aacTrack === null) {
       this.aacTrack = getDefaultAACTrack();
     }
+    return this.aacTrack;
   }
 
   push(data) {
+    if (data.type === 'metadata') {
+      this.hasAudio = data.data.audioId !== -1;
+    }
     if (data.type === 'audio') {
-      this.geneTrack('audio');
+      this.geneTrack();
       this.parseADTS(data.pes.data, data.pes.dts);
       data.pes.data = null;
     }
   }
 
   flush() {
-    this.emit('data', this.aacTrack);
+    this.emit(
+      'data',
+      this.hasAudio && !this.aacTrack ? this.geneTrack() : this.aacTrack
+    );
     logger.log('aacTrack', this.aacTrack);
     this.emit('done');
     this.aacTrack = null;

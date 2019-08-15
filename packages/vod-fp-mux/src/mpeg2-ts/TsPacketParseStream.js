@@ -1,6 +1,6 @@
 import { PipeLine, Logger } from 'vod-fp-utility';
 import { NOT_FOUNT_PMT, LACK_VIDEO_OR_AUDIO_DATA } from '../error';
-import { checkCombine } from "../utils/index"
+import { checkCombine } from '../utils/index';
 let logger = new Logger('mux');
 
 export default class TsPacketParseStream extends PipeLine {
@@ -189,9 +189,7 @@ export default class TsPacketParseStream extends PipeLine {
     if (!this.streamInfo) {
       this.emit('error', NOT_FOUNT_PMT);
     }
-    if (checkCombine(this.streamInfo) && (!this.hasVideoData || !this.hasAudioData)) {
-      this.emit('error', LACK_VIDEO_OR_AUDIO_DATA);
-    }
+
     this.emit('done');
   }
 }
