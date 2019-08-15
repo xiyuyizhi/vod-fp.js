@@ -1,5 +1,5 @@
 
-
+import ExpGolomb from '../src/utils/exp-golomb';
 const SOUND_FORMAT = [
 
 ]
@@ -41,8 +41,8 @@ function _parseFlvHead(buffer) {
 function _parseFlvBody(buffer) {
   let offset = 9;
   offset += 4; // previous tag size, 4 byte
-  let length = buffer.byteLength;
-  // let length = 18888;
+  // let length = buffer.byteLength;
+  let length = 25000;
   while (offset < length) {
     console.group('a new flvTag')
     let tagLength = _parseFlvTag(buffer, offset);
@@ -78,7 +78,7 @@ function _parseFlvTag(buffer, offset) {
   let timestamp = (buffer[offset] << 16) | (buffer[offset + 1] << 8) | buffer[offset + 2];
   offset += 3;
   let timestampExtended = buffer[offset];
-  let ts = timestampExtended << 8 | timestamp
+  let ts = timestampExtended << 8 | timestamp // ms
 
   offset += 1;
   offset += 3; // skip streamID
@@ -181,7 +181,6 @@ function _parseFilterParams() { }
 
 function _parseAudioData(buffer, metadata) {
   let { encrypted, soundFormat, aacPacketType } = metadata;
-  // console.log(buffer)
   if (!buffer.byteLength) return;
   if (encrypted) {
     // the audio data body is EncryptedBody
@@ -191,15 +190,49 @@ function _parseAudioData(buffer, metadata) {
       if (aacPacketType === 0) {
         //AudioSpecificConfig
         console.warn('AudioSpecificConfig')
-        console.log(buffer);
+        let audioConfig = _parseAudioSpecificConfig(buffer);
+        console.log(audioConfig);
       } else {
         // raw aac frame data in UI8 []
+        // console.log(buffer)
       }
     } else {
 
     }
   }
 }
+
+function _parseAudioSpecificConfig(buffer) {
+  /**
+  *  audioObjectType    5bit
+  *  samplingFrquecyIndex   4bit
+  *  if(samplingFrquencyIndex === 0xf)
+  *     samplingFrequency   24bit 
+  *  channelConfiguration   4bit |01111000|
+  */
+  let audioObjectType = (buffer[0] & 0xf8) >> 3;
+  let samplingFrquecyIndex = ((buffer[0] & 0x07) << 1) | ((buffer[1] & 0x80) >> 7)
+  let samplingFrequency;
+  let channelConfiguration;
+  if (samplingFrquecyIndex === 0xf) {
+    if (buffer.byteLength < 5) {
+      throw new Error('contain samplingFrequency, at least 5 byte need')
+    }
+    samplingFrequency = ((buffer[1] & 0x7f) << 17) |
+      (buffer[2] << 9) |
+      (buffer[3] << 1) |
+      ((buffer[4] & 0x80) >> 7);
+    channelConfiguration = (buffer[4] & 0x78) >> 3;
+  }
+  channelConfiguration = (buffer[1] & 0x78) >> 3;
+  return {
+    audioObjectType,
+    samplingFrquecyIndex,
+    samplingFrequency,
+    channelConfiguration
+  }
+}
+
 
 function _parseVideoData(buffer, metadata) {
   let { frameType, codecId, avcPacketType } = metadata;
@@ -209,11 +242,63 @@ function _parseVideoData(buffer, metadata) {
     if (avcPacketType === 0) {
       // AVCDecoderConfigurationRecord
       console.warn('AVCDecoderConfigurationRecord');
-      console.log(buffer);
+      let avcConfig = _parseAvcDecodeerConfigurationRecord(buffer)
+      console.log(avcConfig)
     } else {
       // nalUs
-
+      console.log(buffer)
     }
+  }
+}
+
+function _parseAvcDecodeerConfigurationRecord(buffer) {
+  /**
+   *  configurationVerison = 1  uint(8)
+   *  avcProfileIndication      uint(8)
+   *  profile_compatibility     uint(8)
+   *  avcLevelIndication        uint(8)
+   *  reserved   `111111`       bit(6)
+   *  lengthSizeMinusOne        uint(2)
+   *  reserved   `111`          bit(3)
+   *  numOfSPS                  uint(5)
+   *  for(numOfSPS)
+   *    spsLength               uint(16)
+   *    spsNALUnit              spsLength个字节
+   *  numOfPPS                  uint(8)
+   *  for(numOfPPS)
+   *     ppsLength              uint(16)
+   *     ppsNALUnit             ppsLength个字节
+   */
+
+  let offset = 1;
+  let profileIdc = buffer[offset];
+  let profileComp = buffer[offset + 1];
+  let levelIdc = buffer[offset + 2];
+  offset += 2;
+  offset += 2;
+  let numOfSPS = buffer[offset] & 0x1f;
+  let sps = [];
+  let pps = [];
+  offset += 1;
+  for (let i = 0; i < numOfSPS; i++) {
+    let spsLength = (buffer[offset] << 8) | buffer[offset + 1];
+    offset += 2;
+    sps.push(buffer.subarray(offset, offset + spsLength))
+    offset += spsLength;
+  }
+  let numOfPPS = buffer[offset];
+  offset += 1;
+  for (let j = 0; j < numOfPPS; j++) {
+    let ppsLength = (buffer[offset] << 8) | buffer[offset + 1];
+    offset += 2;
+    pps.push(buffer.subarray(offset, offset + ppsLength))
+    offset += ppsLength;
+  }
+  return {
+    profileIdc,
+    levelIdc,
+    sps,
+    pps
   }
 }
 
