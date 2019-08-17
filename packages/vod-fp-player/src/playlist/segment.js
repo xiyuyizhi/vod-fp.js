@@ -249,9 +249,9 @@ function _loadInit(
  * @param {number} levelId the level need to load metadata
  * @param {boolean} immediateMux if mux right when loaded
  * condition:
- *    1. manual change level
- *    2. in abr,level changed
- *    3. in dragSegmentFromStore, segment level changed,need append metadata
+ *    1. manual change level  immediateMux=true
+ *    2. in abr,level changed  immediateMux=false
+ *    3. in dragSegmentFromStore, segment level changed,need append metadata immediateMux=true
  */
 function loadInitMP4({ connect, getState, dispatch }, levelId, immediateMux) {
   dispatch(ACTION.PROCESS, PROCESS.INIT_MP4_LOADING);
@@ -281,12 +281,12 @@ function loadInitMP4({ connect, getState, dispatch }, levelId, immediateMux) {
 
 _loadSource = curry(_loadSource);
 _loadInit = curry(_loadInit);
-abortLoadingSegment = F.curry(abortLoadingSegment);
-findSegment = F.curry(findSegment);
-loadSegment = F.curry(loadSegment);
-findSegmentOfCurrentPosition = F.curry(findSegmentOfCurrentPosition);
-drainSegmentFromStore = F.curry(drainSegmentFromStore());
-removeSegmentFromStore = F.curry(removeSegmentFromStore);
+abortLoadingSegment = curry(abortLoadingSegment);
+findSegment = curry(findSegment);
+loadSegment = curry(loadSegment);
+findSegmentOfCurrentPosition = curry(findSegmentOfCurrentPosition);
+drainSegmentFromStore = curry(drainSegmentFromStore());
+removeSegmentFromStore = curry(removeSegmentFromStore);
 loadInitMP4 = curry(loadInitMP4);
 export {
   findSegment,

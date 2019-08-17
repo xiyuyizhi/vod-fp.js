@@ -28,6 +28,7 @@ export default class VideoFragmentStream extends PipeLine {
   push(data) {
     if (data.type === 'metadata') {
       this.combine = checkCombine(data.data);
+      return;
     }
     if (data.type === 'video') {
       this.avcTrack = data;

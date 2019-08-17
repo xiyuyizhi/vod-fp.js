@@ -15,6 +15,7 @@ export default class RemuxStream extends PipeLine {
     this.videoTrack = null;
     this.timeOffset = undefined;
     this.on('timeOffset', offset => {
+      logger.log('set time offset', offset);
       this.timeOffset = offset;
     });
   }
@@ -51,9 +52,12 @@ export default class RemuxStream extends PipeLine {
         audioTrack.samples.length
       ) {
         let firstVideoSampleDts = videoTrack.samples[0].dts;
-        let audiovideoDeltaDts =
+        let audiovideoDeltaDts = Math.min(
           (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
-          videoTrack.inputTimeScale;
+            videoTrack.inputTimeScale,
+          (audioTrack.samples[0].pts - videoTrack.samples[0].pts) /
+            videoTrack.inputTimeScale
+        );
         if (Math.abs(audiovideoDeltaDts) >= 0.5) {
           logger.warn('音视频first dts差距过大');
           //可能存在视频非开始于关键帧，在上一阶段丢弃了那些关键帧之前的，导致音视频dts差距过大

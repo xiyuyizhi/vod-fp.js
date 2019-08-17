@@ -116,7 +116,7 @@ function getFlyBufferInfo({ getState, getConfig }, currentPosition) {
   );
 }
 
-_bufferMerge = F.curry(_bufferMerge);
-getBufferInfo = F.curry(getBufferInfo);
-getFlyBufferInfo = F.curry(getFlyBufferInfo);
+_bufferMerge = curry(_bufferMerge);
+getBufferInfo = curry(getBufferInfo);
+getFlyBufferInfo = curry(getFlyBufferInfo);
 export { getBufferInfo, bufferDump, getFlyBufferInfo };

@@ -66,6 +66,7 @@ function _bindMediaEvent(
 
   media.addEventListener('ended', () => {
     logger.log('end....');
+    dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
   });
 
   subscribe(ACTION.EVENTS.ERROR, () => {
@@ -128,14 +129,10 @@ function updateMediaDuration({ getState }) {
     F.curry((ms, duration) => {
       let vsb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER).getOrElse(null);
       let asb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER).getOrElse(null);
-      if (vsb && asb) {
-        if (ms.readyState === 'open' && !vsb.updating && !asb.updating) {
-          ms.duration = duration;
-        }
-      } else {
-        if (ms.readyState === 'open') {
-          ms.duration = duration;
-        }
+      if (vsb && vsb.updating) return;
+      if (asb && asb.updating) return;
+      if (ms.readyState === 'open') {
+        ms.duration = duration;
       }
     })
   )

@@ -7,6 +7,7 @@ import {
   maybe,
   maybeToEither,
   eitherToMaybe,
+  Task,
   Logger
 } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
@@ -14,6 +15,7 @@ import { checkManualSeek } from '../media/media';
 import { MEDIA_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
 import { getBufferInfo } from './buffer-helper';
+import { checkSeekAfterBufferAppend } from '../playlist/m3u8-live';
 const { map, compose, curry, join, chain, prop, trace } = F;
 
 let logger = new Logger('player');
@@ -23,7 +25,6 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
     map(x => {
       if (x === true) {
         // video audio all append
-        connect(_checkFlushBuffer);
         connect(_afterAppended)(true);
       } else {
         dispatch(me, true);
@@ -39,7 +40,6 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
             ACTION.BUFFER.VIDEO_APPENDED
           );
         } else {
-          connect(_checkFlushBuffer);
           connect(_afterAppended)(false);
         }
       });
@@ -52,7 +52,6 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
             ACTION.BUFFER.AUDIO_APPENDED
           );
         } else {
-          connect(_checkFlushBuffer);
           connect(_afterAppended)(false);
         }
       });
@@ -110,24 +109,14 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
     dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
   }
 
-  Maybe.of(
-    curry((_, bufferInfo, slidePosition, media) => {
-      if (bufferInfo.bufferEnd < slidePosition) {
-        logger.log('media seeking to', segBound.start);
-        media.currentTime = segBound.start;
-      }
-    })
-  )
-    .ap(getState(ACTION.PLAYLIST.IS_LIVE))
-    .ap(getState(ACTION.BUFFER.GET_BUFFER_INFO))
-    .ap(getState(ACTION.PLAYLIST.SLIDE_POSITION))
-    .ap(getState(ACTION.MEDIA.MEDIA_ELE));
-
+  connect(checkSeekAfterBufferAppend);
   //清除无用元素
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
   connect(removeSegmentFromStore);
-  dispatch(ACTION.PROCESS, PROCESS.IDLE);
+  connect(_checkFlushBuffer).map(() => {
+    dispatch(ACTION.PROCESS, PROCESS.IDLE);
+  });
 }
 
 // (Maybe,string,string)  -> Maybe
@@ -207,6 +196,7 @@ function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
   });
 }
 
+// void -> Task
 function _checkFlushBuffer({ getState, getConfig, connect }) {
   let media = getState(ACTION.MEDIA.MEDIA_ELE).join();
   let flushEnd = Math.max(
@@ -215,33 +205,40 @@ function _checkFlushBuffer({ getState, getConfig, connect }) {
   );
   if (connect(getBufferInfo)(flushEnd).bufferLength && flushEnd) {
     logger.log(`flush buffer , [0,${flushEnd}]`);
-    connect(flushBuffer)(0, flushEnd);
+    return connect(flushBuffer)(0, flushEnd);
   }
+  return Task.resolve();
 }
 
+// (number,number) ->Task
 function flushBuffer({ getState, dispatch }, start, end) {
-  return maybeToEither(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER))
+  let vsb = getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER)
     .map(vsb => {
       if (!vsb.updating) {
         vsb.remove(start, end);
       }
+      return vsb;
     })
-    .chain(() => {
-      return maybeToEither(getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER)).map(
-        asb => {
-          if (!asb.updating) {
-            asb.remove(start, end);
-          }
-        }
-      );
+    .getOrElse(null);
+
+  let asb = getState(ACTION.BUFFER.AUDIO_SOURCEBUFFER)
+    .map(asb => {
+      if (!asb.updating) {
+        asb.remove(start, end);
+      }
+      return asb;
     })
-    .error(e => {
-      if (!e) return;
-      dispatch(
-        ACTION.ERROR,
-        e.merge(CusError.of(MEDIA_ERROR.SOURCEBUFFER_ERROR))
-      );
-    });
+    .getOrElse(null);
+
+  return Task.of((resolve, reject) => {
+    let timer;
+    timer = setInterval(() => {
+      if (asb && asb.updating) return;
+      if (vsb && vsb.updating) return;
+      clearInterval(timer);
+      resolve();
+    }, 2);
+  });
 }
 
 function abortBuffer({ getState, dispatch }) {

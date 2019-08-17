@@ -51,15 +51,10 @@ function changeLevel() {
           dispatch(ACTION.FLYBUFFER.REMOVE_SEGMENT_FROM_STORE);
           media.map(m => m.pause());
           if (getState(ACTION.PLAYLIST.FORMAT) === 'fmp4') {
-            setTimeout(() => {
-              // hack,
-              // there may remove buffer in processing,and if the init.mp4 is in store,
-              // the init.mp4 mux and append may start quickly before remove buffer finish.
-              subOnce(PROCESS.INIT_MP4_LOADED, () => {
-                resume();
-              });
-              connect(loadInitMP4)(levelId.join(), true);
-            }, 50);
+            subOnce(PROCESS.INIT_MP4_LOADED, () => {
+              resume();
+            });
+            connect(loadInitMP4)(levelId.join(), true);
             return;
           }
           resume();

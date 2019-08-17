@@ -236,7 +236,29 @@ function checkSyncLivePosition({ getState, connect, dispatch }, bufferEnd) {
     });
 }
 
+// in ts live,check the current time break away from live windows
+// then need to seek to the new buffer area
+function checkSeekAfterBufferAppend({ getState }) {
+  Maybe.of(
+    curry((_, bufferInfo, slidePosition, media) => {
+      if (bufferInfo.bufferEnd < slidePosition) {
+        logger.log('media seeking to', segBound.start);
+        media.currentTime = segBound.start;
+      }
+    })
+  )
+    .ap(getState(ACTION.PLAYLIST.IS_LIVE))
+    .ap(getState(ACTION.BUFFER.GET_BUFFER_INFO))
+    .ap(getState(ACTION.PLAYLIST.SLIDE_POSITION))
+    .ap(getState(ACTION.MEDIA.MEDIA_ELE));
+}
+
 _mergePlaylist = curry(_mergePlaylist);
 bootStrapFlushPlaylist = curry(bootStrapFlushPlaylist);
 checkSyncLivePosition = curry(checkSyncLivePosition);
-export { _mergePlaylist, bootStrapFlushPlaylist, checkSyncLivePosition };
+export {
+  _mergePlaylist,
+  bootStrapFlushPlaylist,
+  checkSyncLivePosition,
+  checkSeekAfterBufferAppend
+};

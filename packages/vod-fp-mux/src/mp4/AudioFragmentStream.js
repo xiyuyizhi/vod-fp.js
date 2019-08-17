@@ -30,7 +30,7 @@ export default class AudioFragmentStream extends PipeLine {
   push(data) {
     if (data.type === 'metadata') {
       this.combine = checkCombine(data.data);
-      return true;
+      return;
     }
     if (data.type === 'audio') {
       this.aacTrack = data;
