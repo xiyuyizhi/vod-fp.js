@@ -108,6 +108,7 @@ export default class AvcStream extends PipeLine {
               sliceType === 7 ||
               sliceType === 9
             ) {
+              logger.warn('I about slice');
               this.avcSample.key = true;
             }
           }

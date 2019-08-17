@@ -17,13 +17,13 @@
 
 > 目前 hls 还可以使用 fmp4 流,且是个趋势。至少在浏览器端我们不需要做 ts mux 这部分工作。
 
-## ts 详解
+## ts 流解析
 
 可参考 wiki[https://en.wikipedia.org/wiki/MPEG_transport_stream] 和 iso-13818-1 规范
 
-ts 流格式整体架构类似网络协议的数据包,一层包一层，每一层有 header,有 payload,最里面承载着原始流(音视频编码)数据
+ts 流格式整体结构类似网络协议的数据包,一层包一层，每一层有 header,有 payload,最里面承载着原始流(音视频编码)数据
 
-![](./ts1.png)
+![](./img/ts1.png)
 
 `最外层,ts流可分割成 连续的 长度为188字节的 ts packet,每个packet 以 0x47(71) 开始,Ox47也叫同步字节`
 
@@ -40,7 +40,7 @@ ts packet 的前四个字节叫做 ts header,头部信息
 
 这头部信息里有三个关键指标
 
-1. Payload unit start indicator (PUSI) 决定 ts packet 的 payload 承载的是一个新的 PES,还是当前 PES 中的一部分数据
+1. Payload unit start indicator (PUSI) 决定 ts packet 的 payload 承载的是一个新的 PES,还是当前 PES 中的一部分数据,将 ts packet 分割成 PES 时依赖这个标记
 
 2) 是 PID,标识 这个 ts packet 中的 payload 承载的是什么数据,PAT? PMT? or 音视频的 PES？
 
@@ -66,13 +66,13 @@ ts packet 的前四个字节叫做 ts header,头部信息
 
 ### pes
 
-pes 就是用来承载音视频原始数据的.
+pes 就是用来承载音视频原始数据的,对于视频编码数据,一般一个 pes 包含一个 access unit,代表一帧画面
 
 由前 6 字节的 pes header + 3 字节的 pes extendsion + PES header data length + payload 组成
 
-![](./ts2.png)
+![](./img/ts2.png)
 
-![](./ts3.png)
+![](./img/ts3.png)
 
 在 pes header 中有两个至关重要的项, **pts、dts** ,表示音视频数据的解码时间和展示时间
 
