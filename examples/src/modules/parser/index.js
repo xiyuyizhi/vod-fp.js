@@ -1,18 +1,28 @@
 import Mux from 'vod-fp-mux';
-import { Input, Button, Row, Col, Alert } from 'antd';
+import {Input, Button, Row, Col, Alert} from 'antd';
 import TsRender from './TsRender';
 import loader from './loader';
 import './index.less';
 
-const { Probe } = Mux;
+const {Probe} = Mux;
 
-const ProbeList = [{ type: 'ts', probe: Probe.tsProbe }];
+const ProbeList = [
+  {
+    type: 'ts',
+    probe: Probe.tsProbe
+  }
+];
 
 export default class Parser extends React.Component {
   constructor(props) {
     super(props);
     this.sourceUrl = '';
-    this.state = { format: '', key: 0, error: '' };
+    this.state = {
+      format: '',
+      key: 0,
+      error: '',
+      loading: false
+    };
   }
 
   getUrl = e => {
@@ -20,17 +30,15 @@ export default class Parser extends React.Component {
   };
 
   loadSource = () => {
-    if (!this.sourceUrl) return;
-    loader(this.sourceUrl)
-      .then(res => {
-        this.setState({ error: '' });
-        this._resolveBuffer(new Uint8Array(res));
-      })
-      .catch(e => {
-        this.setState({
-          error: e.message
-        });
-      });
+    if (!this.sourceUrl) 
+      return;
+    this.setState({loading: true})
+    loader(this.sourceUrl).then(res => {
+      this.setState({error: '', loading: false});
+      this._resolveBuffer(new Uint8Array(res));
+    }).catch(e => {
+      this.setState({error: e.message, loading: false});
+    });
   };
 
   fileChanged = e => {
@@ -55,25 +63,24 @@ export default class Parser extends React.Component {
       });
       return;
     }
-    this.setState({
-      format: '',
-      error: '不支持的视频格式'
-    });
+    this.setState({format: '', error: '不支持的视频格式'});
   }
 
   render() {
-    let { format, buffer, key, error } = this.state;
+    let {format, buffer, key, error, loading} = this.state;
     return (
       <div>
         <Row>
-          <Col span={6} />
+          <Col span={6}/>
           <Col span={12}>
             <h1>
               online parse ts format
               <a
-                style={{ fontSize: 16, marginLeft: 10 }}
-                href="https://xiyuyizhi.github.io/vod-fp.js"
-              >
+                style={{
+                fontSize: 16,
+                marginLeft: 10
+              }}
+                href="https://xiyuyizhi.github.io/vod-fp.js">
                 return
               </a>
             </h1>
@@ -81,27 +88,28 @@ export default class Parser extends React.Component {
               <Input
                 placeholder="eg: find a url of  ts format file from samewhere online"
                 className="normal_input"
-                onChange={this.getUrl}
-              />
-              <Button type="primary" onClick={this.loadSource}>
+                onChange={this.getUrl}/>
+              <Button type="primary" onClick={this.loadSource} loading={loading}>
                 load
               </Button>
             </div>
             <div>
-              <div className="upload-tips"> or upload from local</div>
+              <div className="upload-tips">
+                or upload from local</div>
               <input
                 ref={el => (this.fileEle = el)}
                 type="file"
                 className="normal_input"
-                onChange={this.fileChanged}
-              />
+                onChange={this.fileChanged}/>
             </div>
             <div className="format-show">
-              {format === 'ts' ? <TsRender buffer={buffer} key={key} /> : null}
-              {error && <Alert message={error} type="error" />}
+              {format === 'ts'
+                ? <TsRender buffer={buffer} key={key}/>
+                : null}
+              {error && <Alert message={error} type="error"/>}
             </div>
           </Col>
-          <Col span={6} />
+          <Col span={6}/>
         </Row>
       </div>
     );

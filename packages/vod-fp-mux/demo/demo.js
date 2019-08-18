@@ -1,12 +1,12 @@
-import { Logger } from 'vod-fp-utility';
+import {Logger} from 'vod-fp-utility';
 import Vod from 'vod-fp-player';
-import * as Mp4Parser from '../src/mp4-parser';
-import parseFlv from '../src/flv-parser';
+import Mp4Stringify from '../src/stringify/Mp4Stringify';
+import FlvStream from "../src/transmux/FlvToMp4"
 
 Logger.use(['mux', 'player']);
 
 let logger = new Logger('mux');
-
+let flvStream = new FlvStream();
 const vod = new Vod();
 vod.attachMedia(document.querySelector('video'));
 
@@ -40,21 +40,23 @@ function convertBufferToStr(buffer) {
 
 const localMp4 = localStorage.getItem('mp4');
 if (localMp4) {
-  logger.log(Mp4Parser.parseMp4(convertStrToBuffer(localMp4)));
+  logger.log(Mp4Stringify(convertStrToBuffer(localMp4)));
 }
 const localFlv = localStorage.getItem('flv');
 if (localFlv) {
-  logger.log(parseFlv(convertStrToBuffer(localFlv)));
+  logger.log(flvStream.push(convertStrToBuffer(localFlv)));
+  flvStream.flush()
 }
 
 let todo = {
   flv: (str, buffer) => {
     localStorage.setItem('flv', str);
-    logger.log(parseFlv(buffer));
+    logger.log(flvStream.push(convertStrToBuffer(buffer)));
+    flvStream.flush()
   },
   mp4: (str, buffer) => {
     localStorage.setItem('mp4', str);
-    logger.log(Mp4Parser.parseMp4(buffer));
+    logger.log(Mp4Stringify(buffer));
   }
 };
 

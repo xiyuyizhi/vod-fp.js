@@ -13,8 +13,6 @@ export default class FlvToMp4 extends PipeLine {
         .entryStream
         .push(buffer);
     } catch (e) {
-      console.log(e);
-
       this.emit('error', e);
     }
   }
@@ -57,6 +55,13 @@ export default class FlvToMp4 extends PipeLine {
     es.pipe(flvAudioTagStream)
     es.pipe(flvVideoTagStream)
     es.pipe(flvDataTagStream)
+
+    this.bindEvent([
+      flvAudioTagStream, flvVideoTagStream
+    ], 'data');
+    this.bindEvent([
+      flvAudioTagStream, flvVideoTagStream
+    ], 'done');
 
   }
 }

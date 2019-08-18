@@ -1,6 +1,11 @@
 import Mux from 'vod-fp-mux';
 import {
-  Card, Row, Col, Button, Alert, Modal
+  Card,
+  Row,
+  Col,
+  Button,
+  Alert,
+  Modal
 } from 'antd';
 
 Array.prototype.toString = function () {
@@ -21,36 +26,44 @@ export default class TsRender extends React.Component {
   }
 
   bindEvent() {
-    this.tsStringify.on('data', d => {
-      this.setState(preState => {
-        return {
-          tracks: preState.tracks.concat(d)
-        };
+    this
+      .tsStringify
+      .on('data', d => {
+        if (!d) 
+          return;
+        this.setState(preState => {
+          return {
+            tracks: preState
+              .tracks
+              .concat(d)
+          };
+        });
       });
-    });
-    this.tsStringify.on('error', e => {
-      this.setState({
-        error: e
+    this
+      .tsStringify
+      .on('error', e => {
+        this.setState({error: e});
       });
-    });
   }
 
   componentDidMount() {
-    this.tsStringify.push(this.props.buffer);
-    this.tsStringify.flush();
+    this
+      .tsStringify
+      .push(this.props.buffer);
+    this
+      .tsStringify
+      .flush();
   }
 
   loadSamples(id) {
-    this.setState({
-      id
-    });
-    let track = this.state.tracks.filter(x => x.id === id);
+    this.setState({id});
+    let track = this
+      .state
+      .tracks
+      .filter(x => x.id === id);
     if (track.length) {
       track = track[0];
-      this.setState({
-        currentSamples: track.samples,
-        id: id
-      });
+      this.setState({currentSamples: track.samples, id: id});
     }
   }
 
@@ -75,6 +88,7 @@ export default class TsRender extends React.Component {
       levelIdc,
       sps,
       pps,
+      samples,
       pixelRatio
     } = track;
     return (
@@ -89,13 +103,13 @@ export default class TsRender extends React.Component {
         <li>pixelRatio:{pixelRatio.toString()}</li>
         <li>pps:{pps.toString()}</li>
         <li>sps:{sps.toString()}</li>
+        <li>samples count:{samples.length}</li>
         <li>
           <Button
             type="primary"
             onClick={() => {
-              this.loadSamples(id);
-            }}
-          >
+            this.loadSamples(id);
+          }}>
             load samples
           </Button>
         </li>
@@ -112,6 +126,7 @@ export default class TsRender extends React.Component {
       frameDuration,
       config,
       chanel,
+      samples,
       adtsObjectType
     } = track;
     return (
@@ -123,13 +138,13 @@ export default class TsRender extends React.Component {
         <li>adtsObjectType:{adtsObjectType}</li>
         <li>frameDuration:{frameDuration.toFixed(2)}</li>
         <li>config:{config.toString()}</li>
+        <li>samples count:{samples.length}</li>
         <li>
           <Button
             type="primary"
             onClick={() => {
-              this.loadSamples(id);
-            }}
-          >
+            this.loadSamples(id);
+          }}>
             load samples
           </Button>
         </li>
@@ -140,33 +155,44 @@ export default class TsRender extends React.Component {
   _renderSmaples(samples, id) {
     return (
       <div>
-        <h2>{id === 1 ? '视频采样数据' : id === 2 ? '音频采样数据' : null}</h2>
+        <h2>{id === 1
+            ? '视频采样数据'
+            : id === 2
+              ? '音频采样数据'
+              : null}</h2>
         {samples.map(sample => {
           let key = sample.pts + ':' + sample.dts;
-          return sample.key !== undefined ? (
-            <div key={key} className="sample">
-              pts:{sample.pts} dts:{sample.dts} key:
-              {sample.key ? 'true' : 'false'}
-              <span style={{ marginLeft: 10 }}>
-                {`units: [ ${sample.units
-                  .map(x => `nalType: ${x.nalType}`)
-                  .join(' , ')} ]`}
-              </span>
-            </div>
-          ) : (
-            <div key={key} className="sample">
-              pts:{sample.pts} dts:{sample.dts}
-            </div>
-          );
+          return sample.key !== undefined
+            ? (
+              <div key={key} className="sample">
+                pts:{sample.pts + '   '}
+                dts:{sample.dts + '   '}
+                key: {sample.key
+                  ? 'true'
+                  : 'false'}
+                <span style={{
+                  marginLeft: 10
+                }}>
+                  {`units: [ ${sample
+                    .units
+                    .map(x => `nalType: ${x.nalType}`)
+                    .join(' , ')} ]`}
+                </span>
+              </div>
+            )
+            : (
+              <div key={key} className="sample">
+                pts:{sample.pts + '   '}
+                dts:{sample.dts}
+              </div>
+            );
         })}
       </div>
     );
   }
 
   render() {
-    let {
-      tracks, error, currentSamples, id
-    } = this.state;
+    let {tracks, error, currentSamples, id} = this.state;
     return (
       <Row>
         <Col span={24}>
@@ -180,7 +206,7 @@ export default class TsRender extends React.Component {
           );
         })}
         <Col span={24}>
-          {error && <Alert message={error.message} type="error" />}
+          {error && <Alert message={error.message} type="error"/>}
         </Col>
         <Col span={24}>{this._renderSmaples(currentSamples, id)}</Col>
       </Row>

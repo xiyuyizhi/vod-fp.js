@@ -2,6 +2,10 @@ export const NOT_VALID_TS_FORMAT = {
   type: 'NOT_VALID_TS_FORMAT',
   message: 'not_valid_ts_format'
 };
+export const NOT_VALID_FLV_FORMAT = {
+  type: 'NOT_VALID_FLV_FORMAT',
+  message: 'not_valid_flv_format'
+};
 export const LACK_VIDEO_OR_AUDIO_DATA = {
   type: 'LACK_VIDEO_OR_AUDIO_DATA',
   message: 'lack_video_or_audio_data'

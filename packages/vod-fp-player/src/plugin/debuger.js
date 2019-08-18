@@ -1,7 +1,7 @@
-import { Maybe, F, Tick } from 'vod-fp-utility';
-import { ACTION } from '../store';
+import {Maybe, F, Tick} from 'vod-fp-utility';
+import {ACTION} from '../store';
 
-const { curry } = F;
+const {curry} = F;
 
 const CLASSNMAE = {
   VOD_MENU_CLASSNAME: 'vod-context-menu',
@@ -74,8 +74,7 @@ function _initDebugWindow(container, connect) {
   Object.assign(_window.style, defaultStyle);
   _window.innerHTML = `
     <div style="${_parseStyleStr(closeIconStyle)}" class="${
-    CLASSNMAE.VOD_DEBUG_INFO_CLOSE
-  }">X</div>
+  CLASSNMAE.VOD_DEBUG_INFO_CLOSE}">X</div>
     <div class="${CLASSNMAE.VOD_DEBUG_INFO_AREA}"></div>
   `;
   _window.addEventListener('click', e => {
@@ -92,7 +91,8 @@ function _initDebugWindow(container, connect) {
 
 function _startFlush(container, connect) {
   let ele = container.querySelector(`.${CLASSNMAE.VOD_DEBUG_INFO_AREA}`);
-  return Tick.of()
+  return Tick
+    .of()
     .addTask(() => {
       _renderDebugInfo(connect(_collectDebugInfo), ele);
     })
@@ -100,56 +100,46 @@ function _startFlush(container, connect) {
     .immediateRun();
 }
 
-function _collectDebugInfo({ getState, getConfig }) {
-  return Maybe.of(
-    curry(
-      (
-        bufferInfo,
-        flyBufferInfo,
-        videoInfo,
-        audioInfo,
-        speed,
-        currentLevelId,
-        media
-      ) => {
-        let flyBuffer = flyBufferInfo.bufferLength.toFixed(2);
-        let buffer = bufferInfo.bufferLength.toFixed(2);
-        let maxFlyBuffer = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
-        let maxBuffer = getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH);
-        return {
-          bufferInfo: buffer + ' / ' + maxBuffer,
-          flyBufferInfo: flyBuffer + ' / ' + maxFlyBuffer,
-          format: getState(ACTION.PLAYLIST.FORMAT),
-          mode: getState(ACTION.PLAYLIST.MODE),
-          videoWidth: videoInfo.width,
-          videoHeight: videoInfo.height,
-          videoCodec: videoInfo.codec,
-          fps: videoInfo.fps,
-          audioCodec: audioInfo.codec,
-          samplerate: audioInfo.samplerate,
-          speed:
-            (buffer > maxBuffer && media.paused) || flyBuffer > maxFlyBuffer
-              ? '0KB/s'
-              : speed > 1
-              ? speed.toFixed(2) + 'MB/s'
-              : (speed * 1000).toFixed(2) + 'KB/s',
-          currentLevelId
-        };
-      }
-    )
-  )
-    .ap(getState(ACTION.BUFFER.GET_BUFFER_INFO))
-    .ap(getState(ACTION.BUFFER.GET_FLY_BUFFER_INFO))
-    .ap(getState(ACTION.BUFFER.VIDEO_INFO))
-    .ap(getState(ACTION.BUFFER.AUDIO_INFO))
-    .ap(getState(ACTION.LOADINFO.GET_DOWNLOAD_SPEED))
-    .ap(getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID))
-    .ap(getState(ACTION.MEDIA.MEDIA_ELE))
-    .join();
+function _collectDebugInfo({getState, getConfig}) {
+  let bufferInfo = getState(ACTION.BUFFER.GET_BUFFER_INFO).value();
+  let flyBufferInfo = getState(ACTION.BUFFER.GET_FLY_BUFFER_INFO).value();
+  let videoInfo = getState(ACTION.BUFFER.VIDEO_INFO).value();
+  let audioInfo = getState(ACTION.BUFFER.AUDIO_INFO).value();
+  let speed = getState(ACTION.LOADINFO.GET_DOWNLOAD_SPEED).value();
+  let currentLevelId = getState(ACTION.PLAYLIST.CURRENT_LEVEL_ID).value();
+  let media = getState(ACTION.MEDIA.MEDIA_ELE).value();
+
+  let flyBuffer = flyBufferInfo
+    .bufferLength
+    .toFixed(2);
+  let buffer = bufferInfo
+    .bufferLength
+    .toFixed(2);
+  let maxFlyBuffer = getConfig(ACTION.CONFIG.MAX_FLY_BUFFER_LENGTH);
+  let maxBuffer = getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH);
+  return {
+    bufferInfo: buffer + ' / ' + maxBuffer,
+    flyBufferInfo: flyBuffer + ' / ' + maxFlyBuffer,
+    format: getState(ACTION.PLAYLIST.FORMAT),
+    mode: getState(ACTION.PLAYLIST.MODE),
+    videoWidth: videoInfo && videoInfo.width || '--',
+    videoHeight: videoInfo && videoInfo.height || '--',
+    videoCodec: videoInfo && videoInfo.codec || '--',
+    fps: videoInfo && videoInfo.fps || '--',
+    audioCodec: audioInfo && audioInfo.codec || '--',
+    samplerate: audioInfo && audioInfo.samplerate || '--',
+    speed: (buffer > maxBuffer && media.paused) || flyBuffer > maxFlyBuffer
+      ? '0KB/s'
+      : speed > 1
+        ? speed.toFixed(2) + 'MB/s'
+        : (speed * 1000).toFixed(2) + 'KB/s',
+    currentLevelId
+  };
 }
 
 function _parseStyleStr(styles) {
-  return Object.keys(styles)
+  return Object
+    .keys(styles)
     .map(key => `${key}:${styles[key]}`)
     .join(';');
 }
@@ -166,24 +156,19 @@ function _renderDebugInfo(info, ele) {
     'fps',
     'bufferInfo',
     'flyBufferInfo',
-    'speed',
-    { key: 'currentLevelId', label: 'current load level' }
-  ]
-    .map(x => {
-      if (typeof x === 'string') {
-        return `<li><span style="${_parseStyleStr(
-          debugInfoItemStyle
-        )}">${x}:</span>${info[x]}</li>`;
-      }
-      return `<li><span style="${_parseStyleStr(debugInfoItemStyle)}">${
-        x.label
-      }:</span>${info[x.key]}</li>`;
-    })
-    .join('\n');
+    'speed', {
+      key: 'currentLevelId',
+      label: 'current load level'
+    }
+  ].map(x => {
+    if (typeof x === 'string') {
+      return `<li><span style="${_parseStyleStr(debugInfoItemStyle)}">${x}:</span>${info[x]}</li>`;
+    }
+    return `<li><span style="${_parseStyleStr(debugInfoItemStyle)}">${
+    x.label}:</span>${info[x.key]}</li>`;
+  }).join('\n');
 
-  ele.innerHTML = `<div><ul style="${_parseStyleStr(
-    debugInfoUlStyle
-  )}">${_lis}</ul></div>`;
+  ele.innerHTML = `<div><ul style="${_parseStyleStr(debugInfoUlStyle)}">${_lis}</ul></div>`;
 }
 
 function _renderContextMenu(pointX, pointY, container, connect) {
@@ -203,11 +188,9 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   Object.assign(menu.style, defaultStyle);
   menu.innerHTML = `
     <div style="${_parseStyleStr(closeIconStyle)}" class="${
-    CLASSNMAE.VOD_MENU_CLOSE
-  }">X</div>
+  CLASSNMAE.VOD_MENU_CLOSE}">X</div>
     <div style="cursor:pointer" class="${
-      CLASSNMAE.VOD_DEBUG_BTN
-    }">调试信息</div>
+  CLASSNMAE.VOD_DEBUG_BTN}">调试信息</div>
   `;
   menu.addEventListener('click', e => {
     switch (e.target.className) {
@@ -223,7 +206,9 @@ function _renderContextMenu(pointX, pointY, container, connect) {
   container.appendChild(menu);
 }
 
-function debuger({ connect }, container) {
+function debuger({
+  connect
+}, container) {
   container.addEventListener('contextmenu', e => {
     e.preventDefault();
     _renderContextMenu(e.offsetX, e.offsetY, container, connect);
