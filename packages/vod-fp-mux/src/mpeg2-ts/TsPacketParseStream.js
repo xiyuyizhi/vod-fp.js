@@ -1,6 +1,6 @@
-import { PipeLine, Logger } from 'vod-fp-utility';
-import { NOT_FOUNT_PMT, LACK_VIDEO_OR_AUDIO_DATA } from '../error';
-import { checkCombine } from '../utils/index';
+import {PipeLine, Logger} from 'vod-fp-utility';
+import {ERROR, withMessage} from '../error';
+import {checkCombine} from '../utils/index';
 let logger = new Logger('mux');
 
 export default class TsPacketParseStream extends PipeLine {
@@ -15,11 +15,7 @@ export default class TsPacketParseStream extends PipeLine {
     let adaptionsOffset = 0;
     let header = this.parseTsHeader(packet.subarray(0, 4));
     let payload = packet.subarray(4);
-    if (
-      header &&
-      (header.adaptationFiledControl === 3 ||
-        header.adaptationFiledControl === 2)
-    ) {
+    if (header && (header.adaptationFiledControl === 3 || header.adaptationFiledControl === 2)) {
       adaptionsOffset = this.parseAdaptationFiled(payload) + 1;
     }
     this.parsePayload(payload, adaptionsOffset, header);
@@ -63,10 +59,12 @@ export default class TsPacketParseStream extends PipeLine {
   }
 
   _equalPmtId(pid, pmtId) {
-    if (pid === pmtId) return true;
-    if (pid % 256 && pid % 256 === pmtId % 256) return true;
-  }
-
+    if (pid === pmtId) 
+      return true;
+    if (pid % 256 && pid % 256 === pmtId % 256) 
+      return true;
+    }
+  
   parsePayload(payload, offset, header = {}) {
     /**
      * https://en.wikipedia.org/wiki/Program-specific_information
@@ -105,7 +103,7 @@ export default class TsPacketParseStream extends PipeLine {
     if (!this.streamInfo) {
       return;
     }
-    const { videoId, audioId } = this.streamInfo;
+    const {videoId, audioId} = this.streamInfo;
     switch (header.pid) {
       case videoId:
         this.hasVideoData = true;
@@ -124,7 +122,7 @@ export default class TsPacketParseStream extends PipeLine {
         });
         break;
       default:
-      // logger.warn('unknow pid ', header.pid);
+        // logger.warn('unknow pid ', header.pid);
     }
   }
 
@@ -149,12 +147,10 @@ export default class TsPacketParseStream extends PipeLine {
      *  reserved : 4bit
      *  ES_info_length: 12bit
      */
-    const sectionLen =
-      ((payload[offset + 1] & 0x0f) << 8) | payload[offset + 2];
+    const sectionLen = ((payload[offset + 1] & 0x0f) << 8) | payload[offset + 2];
     const tableEnd = offset + 3 + sectionLen - 4;
     const pNum = (payload[offset + 3] << 8) | payload[offset + 4];
-    const pil =
-      ((payload[offset + 10] & 0x0f) << 8) | payload[offset + 11] || 0;
+    const pil = ((payload[offset + 10] & 0x0f) << 8) | payload[offset + 11] || 0;
     offset = offset + 11 + pil + 1; // stream_type position
     const result = {
       videoId: -1,
@@ -187,7 +183,7 @@ export default class TsPacketParseStream extends PipeLine {
 
   flush() {
     if (!this.streamInfo) {
-      this.emit('error', NOT_FOUNT_PMT);
+      this.emit('error', withMessage(ERROR.PARSE_ERROR, 'lack stream info'));
     }
 
     this.emit('done');

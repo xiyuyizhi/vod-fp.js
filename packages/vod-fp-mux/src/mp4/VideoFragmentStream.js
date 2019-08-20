@@ -3,7 +3,7 @@ import MP4 from '../utils/Mp4Box';
 import {checkCombine} from '../utils/index';
 import ptsNormalize from '../utils/ptsNormalize';
 import ExpGolomb from "../utils/exp-golomb"
-import {SAMPLES_EMPTY} from '../error';
+import {ERROR, withMessage} from '../error';
 
 let logger = new Logger('mux');
 
@@ -61,11 +61,7 @@ export default class VideoFragmentStream extends PipeLine {
     let nbSamples = samples.length;
     let nextAvcDts = this.nextAvcDts;
     if (!nbSamples) {
-      let err = {
-        ...SAMPLES_EMPTY
-      };
-      err.message += 'video';
-      this.emit('error', err);
+      this.emit('error', withMessage(ERROR.PARSE_ERROR, 'video samples is empty'));
       return;
     }
     if (!nextAvcDts) {

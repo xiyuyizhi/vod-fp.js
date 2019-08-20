@@ -1,6 +1,7 @@
 import {PipeLine, Logger} from 'vod-fp-utility';
 import {FREQUENCIES_MAP} from "../default"
-
+import {ERROR, withMessage} from "../error"
+import {geneAudioTrackConfig} from "../utils/index"
 let logger = new Logger('mux');
 
 export default class FlvAudioTagStream extends PipeLine {
@@ -86,28 +87,33 @@ export default class FlvAudioTagStream extends PipeLine {
     *     samplingFrequency   24bit
     *  channelConfiguration   4bit |01111000|
     */
-    let audioObjectType = (buffer[0] & 0xf8) >> 3;
-    let samplingFrquecyIndex = ((buffer[0] & 0x07) << 1) | ((buffer[1] & 0x80) >> 7)
+    let aObjectT = buffer[0] >> 3;
+    let samplingFrquecyIndex = ((buffer[0] & 0x07) << 1) | (buffer[1] >> 7)
     let samplingFrequency;
     let channelConfiguration;
     if (samplingFrquecyIndex === 0xf) {
       if (buffer.byteLength < 5) {
-        throw new Error('contain samplingFrequency, at least 5 byte need')
+        this.emit('error', withMessage(ERROR.PARSE_ERROR, 'contain samplingFrequency, at least 5 byte need'))
       }
       samplingFrequency = ((buffer[1] & 0x7f) << 17) | (buffer[2] << 9) | (buffer[3] << 1) | ((buffer[4] & 0x80) >> 7);
       channelConfiguration = (buffer[4] & 0x78) >> 3;
     }
     channelConfiguration = (buffer[1] & 0x78) >> 3;
-    return {audioObjectType, samplingFrquecyIndex, samplingFrequency, channelConfiguration}
+
+    let {config, audioObjectType} = geneAudioTrackConfig(aObjectT, samplingFrquecyIndex, channelConfiguration);
+
+    return {config, audioObjectType, samplingFrquecyIndex, samplingFrequency, channelConfiguration}
   }
 
   _parseEncryptionHeader() {}
+
   _parseFilterParams() {}
 
   _geneAudioTrack(audioConfig) {
-    let {audioObjectType, channelConfiguration, samplingFrquecyIndex} = audioConfig;
+    let {config, audioObjectType, channelConfiguration, samplingFrquecyIndex} = audioConfig;
     return {
       samples: [],
+      config,
       type: 'audio',
       len: 0,
       samplerate: 0,

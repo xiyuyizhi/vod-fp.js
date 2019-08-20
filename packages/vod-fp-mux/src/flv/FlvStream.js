@@ -1,5 +1,5 @@
 import {PipeLine, Logger} from 'vod-fp-utility';
-import {NOT_VALID_FLV_FORMAT} from '../error';
+import {ERROR, withMessage} from '../error';
 import {flvProbe} from "../utils/probe"
 
 let logger = new Logger('mux');
@@ -11,7 +11,7 @@ export default class FlvStream extends PipeLine {
       buffer = new Uint8Array(buffer);
     }
     if (!flvProbe(buffer)) {
-      this.emit('error', NOT_VALID_TS_FORMAT);
+      this.emit('error', withMessage(ERROR.NOT_VALID_FORMAT, 'not valid flv format'));
       return;
     }
     let metadata = this._parseFlvHead(buffer);

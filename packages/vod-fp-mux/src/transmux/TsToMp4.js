@@ -1,13 +1,9 @@
-import { PipeLine } from 'vod-fp-utility';
+import {PipeLine} from 'vod-fp-utility';
 import aesjs from 'aes-js';
-import {
-  TsPacketStream,
-  TsPacketParseStream,
-  TsElementaryStream
-} from '../mpeg2-ts';
-import { AacStream, AvcStream, MetaDataStream } from '../codecs';
-import { RemuxStream, VideoFragmentStream, AudioFragmentStream } from '../mp4';
-import { INVALID_AES_128_KEY } from '../error';
+import {TsPacketStream, TsPacketParseStream, TsElementaryStream} from '../mpeg2-ts';
+import {AacStream, AvcStream, MetaDataStream} from '../codecs';
+import {RemuxStream, VideoFragmentStream, AudioFragmentStream} from '../mp4';
+import {ERROR, withMessage} from '../error';
 
 export default class TsToMp4 extends PipeLine {
   constructor(options) {
@@ -21,26 +17,40 @@ export default class TsToMp4 extends PipeLine {
 
   resetInitSegment() {
     if (this.audioStream && this.videoStream) {
-      this.audioStream.emit('resetInitSegment');
-      this.videoStream.emit('resetInitSegment');
+      this
+        .audioStream
+        .emit('resetInitSegment');
+      this
+        .videoStream
+        .emit('resetInitSegment');
     }
   }
 
   // for m3u8 segment not continuity
   setDisContinuity() {
     if (this.audioStream && this.videoStream) {
-      this.audioStream.emit('setDisContinuity');
-      this.videoStream.emit('setDisContinuity');
+      this
+        .audioStream
+        .emit('setDisContinuity');
+      this
+        .videoStream
+        .emit('setDisContinuity');
     }
   }
 
   setSequenceNumber(nb) {
-    this.audioStream.emit('sequenceNumber', nb);
-    this.videoStream.emit('sequenceNumber', nb);
+    this
+      .audioStream
+      .emit('sequenceNumber', nb);
+    this
+      .videoStream
+      .emit('sequenceNumber', nb);
   }
 
   setTimeOffset(offset) {
-    this.remuxStream.emit('timeOffset', offset);
+    this
+      .remuxStream
+      .emit('timeOffset', offset);
   }
 
   _createInitializationVector(segmentNumber) {
@@ -54,9 +64,12 @@ export default class TsToMp4 extends PipeLine {
 
   _getIv(iv, sequenceNumber) {
     if (iv) {
-      if (iv.buffer) return iv;
+      if (iv.buffer) 
+        return iv;
       iv = iv.replace('0x', '');
-      return iv.split(/\B(?=(?:.{2})+$)/g).map(x => parseInt(x, 16));
+      return iv
+        .split(/\B(?=(?:.{2})+$)/g)
+        .map(x => parseInt(x, 16));
     }
     return this._createInitializationVector(sequenceNumber);
   }
@@ -65,36 +78,36 @@ export default class TsToMp4 extends PipeLine {
     try {
       this.setSequenceNumber(sequenceNumber);
       if (keyInfo && keyInfo.method === 'AES-128') {
-        let { key, iv } = keyInfo;
-        if (
-          !(key instanceof ArrayBuffer || key instanceof Uint8Array) ||
-          key.byteLength !== 16
-        ) {
-          this.emit('error', INVALID_AES_128_KEY);
+        let {key, iv} = keyInfo;
+        if (!(key instanceof ArrayBuffer || key instanceof Uint8Array) || key.byteLength !== 16) {
+          this.emit('error', withMessage(ERROR.PARSE_ERROR, 'invalid aes-128 key'));
           return;
         }
-        let aesCbc = new aesjs.ModeOfOperation.cbc(
-          new Uint8Array(key),
-          this._getIv(iv, sequenceNumber)
-        );
-        this.entryStream.push(
-          aesCbc.decrypt(
-            buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
-          )
-        );
+        let aesCbc = new aesjs
+          .ModeOfOperation
+          .cbc(new Uint8Array(key), this._getIv(iv, sequenceNumber));
+        this
+          .entryStream
+          .push(aesCbc.decrypt(buffer instanceof Uint8Array
+            ? buffer
+            : new Uint8Array(buffer)));
       } else {
-        this.entryStream.push(buffer);
+        this
+          .entryStream
+          .push(buffer);
       }
     } catch (e) {
-      this.emit('error', e);
+      this.emit('error', withMessage(ERROR.RUNTIME_ERROR, `${e.name}:${e.message}`));
     }
   }
 
   flush() {
     try {
-      this.entryStream.flush();
+      this
+        .entryStream
+        .flush();
     } catch (e) {
-      this.emit('error', e);
+      this.emit('error', withMessage(ERROR.RUNTIME_ERROR, `${e.name}:${e.message}`));
     }
   }
 
@@ -118,26 +131,28 @@ export default class TsToMp4 extends PipeLine {
     let audioFragmentStream = new AudioFragmentStream();
     let videoFragmentStream = new VideoFragmentStream();
 
-    this.bindEvent(
-      [
-        entryStream,
-        remuxStream,
-        tsPacketParseStream,
-        tsElementaryStream,
-        metaDataStream,
-        aacStream,
-        avcStream,
-        audioFragmentStream,
-        videoFragmentStream
-      ],
-      'error'
-    );
+    this.bindEvent([
+      entryStream,
+      remuxStream,
+      tsPacketParseStream,
+      tsElementaryStream,
+      metaDataStream,
+      aacStream,
+      avcStream,
+      audioFragmentStream,
+      videoFragmentStream
+    ], 'error');
     this.entryStream = entryStream;
     this.remuxStream = remuxStream;
 
-    es = this.entryStream.pipe(tsPacketParseStream).pipe(tsElementaryStream);
+    es = this
+      .entryStream
+      .pipe(tsPacketParseStream)
+      .pipe(tsElementaryStream);
 
-    es.pipe(metaDataStream).pipe(remuxStream);
+    es
+      .pipe(metaDataStream)
+      .pipe(remuxStream);
 
     this.audioStream = es
       .pipe(aacStream)
@@ -148,7 +163,11 @@ export default class TsToMp4 extends PipeLine {
       .pipe(avcStream)
       .pipe(remuxStream)
       .pipe(videoFragmentStream);
-    this.bindEvent([this.videoStream, this.audioStream], 'data');
-    this.bindEvent([this.videoStream, this.audioStream], 'done');
+    this.bindEvent([
+      this.videoStream, this.audioStream
+    ], 'data');
+    this.bindEvent([
+      this.videoStream, this.audioStream
+    ], 'done');
   }
 }

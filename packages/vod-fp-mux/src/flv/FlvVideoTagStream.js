@@ -86,14 +86,56 @@ export default class FlvVideoTagStream extends PipeLine {
         this.videoTrack = this._geneVideoTrack(avcConfig)
       }
       if (avcPacketType === 1) {
-        // nalUs
+        let {units, keyframe} = this._parseAvcNalUnits(buffer, this.videoTrack.nalUnitSizeLength)
         this
           .videoTrack
           .samples
-          .push({dts: ts, compositionTime, data: [buffer]})
+          .push({
+            dts: ts,
+            key: frameType === 1 || keyframe,
+            compositionTime,
+            pts: ts + compositionTime,
+            units
+          })
         this.videoTrack.len += buffer.byteLength;
       }
     }
+  }
+
+  _parseAvcNalUnits(buffer, nalUnitSizeLength) {
+
+    let units = [],
+      length = 0;
+    let offset = 0;
+    let lengthSize = nalUnitSizeLength;
+    let dataSize = buffer.byteLength;
+    let keyframe = false;
+    while (offset < dataSize) {
+      if (offset + 4 >= dataSize) {
+        break;
+      }
+      let naluSize = (buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | buffer[offset + 3]; // the nal length
+      if (lengthSize === 3) {
+        naluSize >>>= 8;
+      }
+      if (naluSize > dataSize - lengthSize) {
+        logger.warn('invalid naluSize')
+        return;
+      }
+      offset += lengthSize;
+      let unitType = buffer[offset] & 0x1f;
+      if (unitType === 5) { // IDR
+        keyframe = true;
+      }
+      let data = buffer.subarray(offset, offset + naluSize);
+      let unit = {
+        type: unitType,
+        data: data
+      };
+      units.push(unit);
+      offset += naluSize;
+    }
+    return {units, keyframe}
   }
 
   _parseAvcDecodeerConfigurationRecord(buffer) {
@@ -119,8 +161,11 @@ export default class FlvVideoTagStream extends PipeLine {
     let profileIdc = buffer[offset];
     let profileComp = buffer[offset + 1];
     let levelIdc = buffer[offset + 2];
+    let nalUnitSizeLength;
     offset += 2;
-    offset += 2;
+    offset += 1;
+    nalUnitSizeLength = buffer[offset] & 3 + 1;
+    offset += 1;
     let numOfSPS = buffer[offset] & 0x1f;
     let sps = [];
     let pps = [];
@@ -139,7 +184,7 @@ export default class FlvVideoTagStream extends PipeLine {
       pps.push(buffer.subarray(offset, offset + ppsLength))
       offset += ppsLength;
     }
-    return {profileIdc, levelIdc, sps, pps}
+    return {profileIdc, levelIdc, sps, pps, nalUnitSizeLength}
   }
 
   _parseEncryptionHeader() {}
@@ -147,10 +192,11 @@ export default class FlvVideoTagStream extends PipeLine {
   _parseFilterParams() {}
 
   _geneVideoTrack(avcConfig) {
-    let {profileIdc, levelIdc, sps, pps} = avcConfig;
+    let {profileIdc, levelIdc, sps, pps, nalUnitSizeLength} = avcConfig;
     let expGolombDecoder = new ExpGolomb(sps[0]);
     let config = expGolombDecoder.readSPS();
     return {
+      nalUnitSizeLength,
       samples: [],
       inputTimeScale: 90000,
       timescale: 90000,

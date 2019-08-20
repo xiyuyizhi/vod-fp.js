@@ -1,6 +1,6 @@
-import { PipeLine, Logger } from 'vod-fp-utility';
-import { FREQUENCIES_MAP, getDefaultAACTrack } from '../default';
-
+import {PipeLine, Logger} from 'vod-fp-utility';
+import {FREQUENCIES_MAP, getDefaultAACTrack} from '../default';
+import {geneAudioTrackConfig} from "../utils/index"
 let logger = new Logger('mux');
 
 export default class AacStream extends PipeLine {
@@ -29,10 +29,9 @@ export default class AacStream extends PipeLine {
   }
 
   flush() {
-    this.emit(
-      'data',
-      this.hasAudio && !this.aacTrack ? this.geneTrack() : this.aacTrack
-    );
+    this.emit('data', this.hasAudio && !this.aacTrack
+      ? this.geneTrack()
+      : this.aacTrack);
     logger.log('aacTrack', this.aacTrack);
     this.emit('done');
     this.aacTrack = null;
@@ -74,7 +73,9 @@ export default class AacStream extends PipeLine {
       }
       start += 1;
       const id = (payload[start] & 0x08) >> 3;
-      const headerSize = (payload[start] & 0x01) === 1 ? 7 : 9;
+      const headerSize = (payload[start] & 0x01) === 1
+        ? 7
+        : 9;
       start += 1;
       if (!aacTrack.samplerate) {
         aacTrack.versionId = id;
@@ -82,21 +83,19 @@ export default class AacStream extends PipeLine {
         aacTrack.samplerateIndex = (payload[start] & 0x3c) >> 2;
         aacTrack.samplerate = FREQUENCIES_MAP[aacTrack.samplerateIndex];
         aacTrack.timescale = aacTrack.samplerate;
-        aacTrack.channel =
-          ((payload[start] & 0x01) << 2) | ((payload[start + 1] & 0xc0) >> 6);
+        aacTrack.channel = ((payload[start] & 0x01) << 2) | ((payload[start + 1] & 0xc0) >> 6);
         aacTrack.frameDuration = this.getFrameDuration(aacTrack.samplerate);
         this.getAudioConfig(aacTrack);
       }
       start += 1;
-      const frameLength =
-        ((payload[start] & 0x03) << 11) |
-        (payload[start + 1] << 3) |
-        ((payload[start + 2] & 0xe0) >> 5);
-      aacTrack.samples.push({
-        data: payload.subarray(offset + headerSize, offset + frameLength),
-        pts: startDts + aacTrack.frameDuration * frameIndex,
-        dts: startDts + aacTrack.frameDuration * frameIndex
-      });
+      const frameLength = ((payload[start] & 0x03) << 11) | (payload[start + 1] << 3) | ((payload[start + 2] & 0xe0) >> 5);
+      aacTrack
+        .samples
+        .push({
+          data: payload.subarray(offset + headerSize, offset + frameLength),
+          pts: startDts + aacTrack.frameDuration * frameIndex,
+          dts: startDts + aacTrack.frameDuration * frameIndex
+        });
       aacTrack.len += frameLength;
       offset += frameLength;
       frameIndex++;
@@ -105,33 +104,11 @@ export default class AacStream extends PipeLine {
 
   getAudioConfig(aacTrack) {
     let audioCodec = aacTrack.audioCodec;
-    let config = new Array(2);
     let adtsObjectType = 2;
-    let samplerateIndex = aacTrack.samplerateIndex;
-    let adtsExtensionSampleingIndex = aacTrack.samplerateIndex;
-    if (samplerateIndex >= 6) {
-      adtsObjectType = 5;
-      adtsExtensionSampleingIndex -= 3;
-      config = new Array(4);
-    }
-    // if (!audioCodec && adtsExtensionSampleingIndex >= 6) {
-    // adtsExtensionSampleingIndex -= 3; } else {   if (audioCodec &&
-    // audioCodec.indexOf('mp4a.40.2') !== -1 && ((samplerateIndex >= 6 &&
-    // aacTrack.channel === 1) || (!audioCodec && aacTrack.channel === 1))) {
-    // adtsObjectType = 2;     config = new Array(2);   }
-    // adtsExtensionSampleingIndex = samplerateIndex; }
-    config[0] = adtsObjectType << 3;
-    config[0] |= (samplerateIndex & 0x0e) >> 1;
-    config[1] |= (samplerateIndex & 0x01) << 7;
-    config[1] |= aacTrack.channel << 3;
-    if (adtsObjectType === 5) {
-      config[1] |= (adtsExtensionSampleingIndex & 0x0e) >> 1;
-      config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
-      config[2] |= 2 << 2;
-      config[3] = 0;
-    }
+    let {channel, samplerateIndex} = aacTrack;
+    let {config, audioObjectType} = geneAudioTrackConfig(adtsObjectType, samplerateIndex, channel);
     aacTrack.config = config;
-    aacTrack.codec = 'mp4a.40.' + adtsObjectType;
+    aacTrack.codec = 'mp4a.40.' + audioObjectType;
   }
 
   getFrameDuration(samplerate) {
