@@ -31,7 +31,7 @@ const state = {
   maxLevelRetryCount: 2,
   requestRetryCount: 2,
   requestRetryDelay: 1000,
-  workerEnable: false,
+  workerEnable: true,
   // abr about
   abrEnable: true,
   abrEwmaFastVoD: 3,
@@ -43,7 +43,7 @@ const state = {
 };
 
 export default {
-  module: 'CONFIG',
+  module : 'CONFIG',
   ACTION,
   getState() {
     return state;

@@ -5,6 +5,7 @@ import {ACTION, PROCESS} from '../store';
 import {SEGMENT_ERROR} from '../error';
 import {removeSegmentFromStore} from '../playlist/segment';
 import {findMp4Box, geneAvcCodec, geneMp4aCodec} from '../utils/index';
+import {isFlv} from "../utils/probe"
 import WorkerSimulate from './inline';
 
 const logger = new Logger('player');
@@ -83,12 +84,22 @@ function setTimeOffset({
 
 function _toMuxTs() {
   let lastSegment = null;
-
+  let hasDetectFormat = false;
   return ({
     getState,
     dispatch
   }, segment, buffer, sequeueNum, keyInfo) => {
     let worker = getState(ACTION.MUX).join();
+    if (!hasDetectFormat) {
+      hasDetectFormat = true;
+      let flv = isFlv(new Uint8Array(buffer, 0, 4));
+      worker.postMessage({
+        type: 'selectDemuxer',
+        data: flv
+          ? 'flv'
+          : 'ts'
+      })
+    }
     if (!lastSegment) {
       worker.postMessage({type: 'resetInitSegment'});
       worker.postMessage({type: 'setTimeOffset', data: segment.start});

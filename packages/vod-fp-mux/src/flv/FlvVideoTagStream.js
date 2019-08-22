@@ -19,7 +19,10 @@ export default class FlvVideoTagStream extends PipeLine {
   }
 
   flush() {
-    logger.log(this.videoTrack);
+    logger.log('videoTrack', this.videoTrack);
+    this.emit('data', this.videoTrack);
+    this.videoTrack = null;
+    this.emit('done')
   }
 
   _parseFlvPaylod(buffer, encrypted, ts) {
@@ -93,8 +96,8 @@ export default class FlvVideoTagStream extends PipeLine {
           .push({
             dts: ts,
             key: frameType === 1 || keyframe,
-            compositionTime,
-            pts: ts + compositionTime,
+            compositionTime: compositionTime * 90,
+            pts: ts + compositionTime * 90,
             units
           })
         this.videoTrack.len += buffer.byteLength;

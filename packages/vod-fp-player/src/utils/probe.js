@@ -3,4 +3,10 @@ function isSupportMS() {
   return window.MediaSource && MediaSource.isTypeSupported(mimeCodec);
 }
 
-export { isSupportMS };
+function isFlv(buffer) {
+  return [buffer[0], buffer[1], buffer[2]]
+    .map(x => String.fromCharCode(x))
+    .join('') === 'FLV'
+}
+
+export {isSupportMS, isFlv};

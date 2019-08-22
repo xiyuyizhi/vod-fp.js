@@ -1,14 +1,19 @@
 import {PipeLine, Logger} from 'vod-fp-utility';
+import {ERROR, withMessage} from "../error"
 
 export default class FlvTagStream extends PipeLine {
 
-  push(data) {
-    let {metadata, buffer} = data;
-    let offset = 0;
-    offset += 4; // previous tag size, 4 byte
+  push(buffer) {
+    let offset = 4; // previous tag size, 4 byte
     let length = buffer.byteLength;
     while (offset < length) {
       let tagInfo = this._parseFlvTag(buffer, offset);
+
+      if (tagInfo.encrypted) {
+        this.emit('error', withMessage(ERROR.PARSE_ERROR), 'encrypted flv,not support yet');
+        break;
+      }
+
       this.emit('data', tagInfo)
       offset += tagInfo.tagLength; // 11为 FlvTag 的header
       let prevTagSize = (buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | (buffer[offset + 3])
@@ -48,7 +53,7 @@ export default class FlvTagStream extends PipeLine {
       tagType,
       dataSize,
       tagLength: dataSize + 11,
-      ts,
+      ts: ts * 90,
       payload: buffer.subarray(offset, offset + dataSize)
     }
   }

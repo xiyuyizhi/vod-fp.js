@@ -19,7 +19,10 @@ export default class FlvAudioTagStream extends PipeLine {
   }
 
   flush() {
-    logger.log(this.audioTrack);
+    logger.log('audioTrack', this.audioTrack)
+    this.emit('data', this.audioTrack)
+    this.audioTrack = null;
+    this.emit('done')
   }
 
   _parseFlvPaylod(buffer, encrypted, ts) {
@@ -71,7 +74,7 @@ export default class FlvAudioTagStream extends PipeLine {
             this
               .audioTrack
               .samples
-              .push({dts: ts, data: [buffer]})
+              .push({dts: ts, pts: ts, data: buffer})
             this.audioTrack.len += buffer.byteLength;
           }
         }

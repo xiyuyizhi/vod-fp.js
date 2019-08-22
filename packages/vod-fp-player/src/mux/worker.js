@@ -1,18 +1,31 @@
 import Mux from 'vod-fp-mux';
 
-export default () => {
-  let mux = new Mux.TsToMp4();
+export default() => {
 
-  mux.on('data', data => {
-    self.postMessage({ type: 'data', data });
-  });
+  let mux;
 
-  mux.on('error', e => {
-    self.postMessage({ type: 'error', data: e });
-  });
+  function initMuxer(type) {
+    if (type === 'flv') {
+      mux = new Mux.FlvToMp4()
+    }
+    if (type === 'ts') {
+      mux = new Mux.TsToMp4();
+    }
+    mux.on('data', data => {
+      self.postMessage({type: 'data', data});
+    });
+
+    mux.on('error', e => {
+      self.postMessage({type: 'error', data: e});
+    });
+  }
+
   self.addEventListener('message', e => {
-    let { type, data } = e.data;
+    let {type, data} = e.data;
     switch (type) {
+      case 'selectDemuxer':
+        initMuxer(data);
+        break;
       case 'resetInitSegment':
         mux.resetInitSegment();
         break;

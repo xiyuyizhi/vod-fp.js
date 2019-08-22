@@ -9,6 +9,7 @@ let logger = new Logger('mux');
 let flvStream = new FlvStream();
 
 flvStream.on('error', e => console.log(e))
+flvStream.on('data', e => console.log(e))
 
 const vod = new Vod();
 vod.attachMedia(document.querySelector('video'));
@@ -54,7 +55,7 @@ if (localFlv) {
 let todo = {
   flv: (str, buffer) => {
     localStorage.setItem('flv', str);
-    logger.log(flvStream.push(convertStrToBuffer(buffer)));
+    logger.log(flvStream.push(buffer));
     flvStream.flush()
   },
   mp4: (str, buffer) => {

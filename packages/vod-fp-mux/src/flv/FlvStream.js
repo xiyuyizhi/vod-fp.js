@@ -15,10 +15,13 @@ export default class FlvStream extends PipeLine {
       return;
     }
     let metadata = this._parseFlvHead(buffer);
+
     this.emit('data', {
-      metadata,
-      buffer: buffer.subarray(9)
+      type: 'metadata',
+      data: metadata
     })
+
+    this.emit('data', buffer.subarray(9))
   }
 
   _parseFlvHead(buffer) {
@@ -35,11 +38,15 @@ export default class FlvStream extends PipeLine {
     * Byte 6 - 9     DataOffset   the length of this header in bytes
     *
     */
-
+    let hasAudio = (buffer[4] & 0x04) >> 2
+    let hasVideo = (buffer[4] & 0x01)
     return {
-      version: buffer[3],
-      audio: (buffer[4] & 0x04) >> 2,
-      video: (buffer[4] & 0x01)
+      audio: hasAudio === 1
+        ? 1
+        : -1,
+      video: hasVideo === 1
+        ? 1
+        : -1
     }
   }
 

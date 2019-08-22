@@ -173,7 +173,7 @@ export default class TsPacketParseStream extends PipeLine {
           break;
         case 0x03:
         case 0x04:
-          logger.warn('mp3 audio found,not support yet');
+          this.emit('error', withMessage(ERROR.PARSE_ERROR, 'mp3 audio found,not support yet'));
           break;
         default:
       }

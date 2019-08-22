@@ -163,6 +163,7 @@ export default class TsToMp4 extends PipeLine {
       .pipe(avcStream)
       .pipe(remuxStream)
       .pipe(videoFragmentStream);
+
     this.bindEvent([
       this.videoStream, this.audioStream
     ], 'data');
