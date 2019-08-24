@@ -6,15 +6,13 @@ DOING...
 
 - [函数式+状态管理探索前端开发](./notes/statemanage_fp.md)
 
-- 音视频总结
+- 音视频记录
 
   - [ts 篇](./notes/ts.md)
 
   - [h264 篇](./notes/h264.md)
 
   - [mp4 篇](./notes/mp4.md)
-
-  - [flv 篇](./notes/flv.md)
 
   - [drm 篇](./notes/drm.md)
 

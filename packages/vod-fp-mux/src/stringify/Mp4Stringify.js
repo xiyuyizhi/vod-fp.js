@@ -34,6 +34,7 @@
 
 import {Logger} from 'vod-fp-utility';
 import {BytesForward, getBoxType} from '../utils/BytesForward';
+import {mp4Probe} from "../utils/probe"
 
 let logger = new Logger('mux');
 
@@ -47,6 +48,8 @@ const MAX_UINT32_COUNT = Math.pow(2, 32);
  *      两种类型的 brand , [major_brand,compatible_brands]
  */
 function parseMp4(buffer) {
+  console.log(mp4Probe(buffer));
+
   logger.log(`--------mp4 parser,${buffer.byteLength}-----------`);
   const boxStore = splitBox(buffer instanceof ArrayBuffer
     ? new Uint8Array(buffer)

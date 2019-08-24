@@ -59,7 +59,9 @@ let todo = {
     flvStream.flush()
   },
   mp4: (str, buffer) => {
-    localStorage.setItem('mp4', str);
+    if (str) {
+      localStorage.setItem('mp4', str);
+    }
     logger.log(Mp4Stringify(buffer));
   }
 };
@@ -69,8 +71,11 @@ let changeHandler = (type, e) => {
   const reader = new FileReader();
   reader.onload = e => {
     const buffer = e.target.result;
-    const bfStr = convertBufferToStr(new Uint8Array(buffer));
-    todo[type](bfStr, buffer);
+    let bfStr;
+    if (buffer.byteLength < 1024 * 1024) {
+      bfStr = convertBufferToStr(new Uint8Array(buffer));
+    }
+    todo[type](bfStr, new Uint8Array(buffer));
   };
   reader.readAsArrayBuffer(file);
 };

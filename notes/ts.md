@@ -108,6 +108,10 @@ pts 在字节流中的表示,共 33 位
 
 \+ (第五字节 & 0xfe) / 2
 
+** 采样数据 **
+
+> 对 ts 的处理 主要就是从 ts 流中提取出采样数据(视频帧数据、音频采样数据),而与这些采样数据密切关联的数据就是解码时间、展示时间,ts 中就是 pts、dts,而 mp4 中 就是 baseMediaDecodeTime、compositionTime、compositionTime offset 等。
+
 `pes 的 payload 承载的就是真实的例如主流的 h264,aac 编码器编码的采样数据. 而音视频编码格式又是如何结构化表示的呢?参见下一篇。`
 
 [h264、aac 篇](./h264.md)
