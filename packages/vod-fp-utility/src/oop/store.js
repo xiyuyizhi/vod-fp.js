@@ -58,7 +58,7 @@ function createStore(initState, actions = {}) {
   let events = {
     all: []
   };
-  const _store = {
+  let _store = {
     ACTION: actions,
     id: storeId++,
     events,
@@ -183,8 +183,8 @@ function createStore(initState, actions = {}) {
       let props = path.split('.');
       let prop = props[0];
       if (props.length === 1) {
-        if (state[prop]) return Maybe.of(state[prop]);
-        if (state.derive[prop]) {
+        if (state[prop] !== undefined) return Maybe.of(state[prop]);
+        if (state.derive[prop] !== undefined) {
           return state.derive[prop](Maybe.of(state), payload, _store);
         }
         return Maybe.of();
@@ -216,6 +216,7 @@ function createStore(initState, actions = {}) {
       events = {
         all: []
       };
+      state = null;
     }
   };
   return _store;

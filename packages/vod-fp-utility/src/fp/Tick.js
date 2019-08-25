@@ -2,6 +2,7 @@ export default class Tick {
   constructor() {
     this._tickInterval = 150;
     this._timer = null;
+    this._interval = 0;
     this._tasks = [];
   }
 
@@ -11,15 +12,20 @@ export default class Tick {
 
   addTask(f, needTick) {
     if (!this._tasks.filter(t => t.task === f).length) {
-      this._tasks.push({
-        ts: performance.now(),
-        task: f
-      });
+      this
+        ._tasks
+        .push({
+          ts: performance.now(),
+          task: f
+        });
     }
     return this;
   }
 
   interval(time) {
+    if (this._interval) {
+      this._clean();
+    }
     this._interval = time;
     this._tickInterval = time * 0.5;
     this._initTimer();
@@ -39,13 +45,13 @@ export default class Tick {
     let _tasks;
 
     if (nextTick) {
-      _tasks = this._tasks.filter(t => t.nextTick);
+      _tasks = this
+        ._tasks
+        .filter(t => t.nextTick);
     } else {
-      _tasks = this._tasks.filter(
-        t =>
-          immediately ||
-          (!t.nextTick && performance.now() - t.ts >= this._interval)
-      );
+      _tasks = this
+        ._tasks
+        .filter(t => immediately || (!t.nextTick && performance.now() - t.ts >= this._interval));
     }
     _tasks.forEach(t => {
       t.ts = performance.now();
@@ -78,10 +84,12 @@ export default class Tick {
   resume() {
     this._clean();
     this.immediateRun();
-    this._tasks.forEach(t => {
-      t.needTick = false;
-      t.ts = performance.now();
-    });
+    this
+      ._tasks
+      .forEach(t => {
+        t.needTick = false;
+        t.ts = performance.now();
+      });
     this._initTimer();
   }
 }

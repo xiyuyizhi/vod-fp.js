@@ -1,9 +1,9 @@
-import {PipeLine, Logger} from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import MP4 from '../utils/Mp4Box';
 import AAC from '../utils/aac';
-import {checkCombine} from '../utils/index';
+import { checkCombine } from '../utils/index';
 import ptsNormalize from '../utils/ptsNormalize';
-import {ERROR, withMessage} from '../error';
+import { ERROR, withMessage } from '../error';
 
 let logger = new Logger('mux');
 
@@ -21,7 +21,10 @@ export default class AudioFragmentStream extends PipeLine {
     this.aacTrack = null;
     this.on('resetInitSegment', () => (this.initSegmentGenerate = false));
     this.on('setDisContinuity', () => (this.discontinuity = true));
-    this.on('sequenceNumber', sequenceNumber => (this.sequenceNumber = sequenceNumber));
+    this.on(
+      'sequenceNumber',
+      sequenceNumber => (this.sequenceNumber = sequenceNumber)
+    );
   }
 
   push(data) {
@@ -42,7 +45,7 @@ export default class AudioFragmentStream extends PipeLine {
 
     if (this.aacTrack && data.audioTimeOffset !== undefined) {
       this.aacTrack['sequenceNumber'] = this.sequenceNumber;
-      let {samples, inputTimeScale} = this.aacTrack;
+      let { samples, inputTimeScale } = this.aacTrack;
       let timeOffset = data.timeOffset;
       if ((!this.initDTS || this.discontinuity) && samples.length) {
         this.initDTS = samples[0].dts - 90000 * (timeOffset || 0);
@@ -73,32 +76,46 @@ export default class AudioFragmentStream extends PipeLine {
     let nextAudioDts = this.nextAacDts;
 
     if (!inputSamples.length) {
-      this.emit('error', withMessage(ERROR.PARSE_ERROR, 'audio samples is empty'));
+      this.emit(
+        'error',
+        withMessage(ERROR.PARSE_ERROR, 'audio samples is empty')
+      );
       return;
     }
     logger.warn('audio,nextAudioDts,', nextAudioDts);
     inputSamples.forEach(sample => {
       sample.originPts = sample.pts;
       sample.originDts = sample.dts;
-      sample.pts = sample.dts = ptsNormalize(sample.pts - this.initDTS, timeOffset * TIME_SCALE);
+      sample.pts = sample.dts = ptsNormalize(
+        sample.pts - this.initDTS,
+        timeOffset * TIME_SCALE
+      );
     });
 
     if (!nextAudioDts) {
       nextAudioDts = aacTrack.samples[0].dts;
     }
-    if (!contiguous || (Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.1 && Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 < 2)) {
+    if (
+      !contiguous ||
+      (Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 > 0.1 &&
+        Math.abs(inputSamples[0].dts - nextAudioDts) / 90000 < 2)
+    ) {
       if (!contiguous) {
         nextAudioDts = timeOffset * TIME_SCALE;
       } else {
         nextAudioDts = inputSamples[0].dts;
       }
-      logger.warn(`not contiguous,first sample dts:${inputSamples[0].dts} ,origin dts:${inputSamples[0].originDts},timeOffset = ${timeOffset} ,nextAudioDts =${nextAudioDts}`);
+      logger.warn(
+        `not contiguous,first sample dts:${inputSamples[0].dts} ,origin dts:${inputSamples[0].originDts},timeOffset = ${timeOffset} ,nextAudioDts =${nextAudioDts}`
+      );
     }
 
-    logger.warn(`audio remux:【initDTS:${this.initDTS} , nextAacPts:${nextAudioDts}, originPTS:${inputSamples[0].originPts} ,  originDTS:${inputSamples[0].originDts} , samples[0]:${inputSamples[0].dts}】`);
+    logger.warn(
+      `audio remux:【initDTS:${this.initDTS} , nextAacPts:${nextAudioDts}, originPTS:${inputSamples[0].originPts} ,  originDTS:${inputSamples[0].originDts} , samples[0]:${inputSamples[0].dts}】`
+    );
     let totalMissingCount = 0;
     let totalDroppingCount = 0;
-    for (let i = 0, nextPts = nextAudioDts; i < inputSamples.length;) {
+    for (let i = 0, nextPts = nextAudioDts; i < inputSamples.length; ) {
       let sample = inputSamples[i];
       let delta;
       let pts = sample.pts;
@@ -106,22 +123,33 @@ export default class AudioFragmentStream extends PipeLine {
       const duration = Math.abs((1000 * delta) / TIME_SCALE);
       if (delta <= -1 * sampleDuration) {
         totalDroppingCount += 1;
-        logger.warn(`Dropping 1 audio frame @ ${ (nextPts / TIME_SCALE).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
+        logger.warn(
+          `Dropping 1 audio frame @ ${(nextPts / TIME_SCALE).toFixed(
+            3
+          )}s due to ${Math.round(duration)} ms overlap.`
+        );
         inputSamples.splice(i, 1);
         aacTrack.len -= sample.data.length;
       } else if (delta >= sampleDuration && nextPts) {
         let missing = Math.round(delta / sampleDuration);
         totalMissingCount += missing;
-        logger.warn(`Injecting ${missing} audio frame @ ${ (nextPts / TIME_SCALE).toFixed(3)}s due to ${Math.round((1000 * delta) / TIME_SCALE)} ms gap.`);
+        logger.warn(
+          `Injecting ${missing} audio frame @ ${(nextPts / TIME_SCALE).toFixed(
+            3
+          )}s due to ${Math.round((1000 * delta) / TIME_SCALE)} ms gap.`
+        );
         for (let j = 0; j < missing; j++) {
           let newStamp = Math.max(nextPts, 0);
-          fillFrame = AAC.getSilentFrame(aacTrack.manifestCodec || aacTrack.codec, aacTrack.channel);
+          fillFrame = AAC.getSilentFrame(
+            aacTrack.manifestCodec || aacTrack.codec,
+            aacTrack.channel
+          );
           if (!fillFrame) {
-            logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead' +
-                '.');
-            fillFrame = sample
-              .data
-              .subarray();
+            logger.log(
+              'Unable to get silent frame for given audio codec; duplicating last frame instead' +
+                '.'
+            );
+            fillFrame = sample.data.subarray();
           }
           inputSamples.splice(i, 0, {
             data: fillFrame,
@@ -199,14 +227,20 @@ export default class AudioFragmentStream extends PipeLine {
       // this.nextAacDts.toFixed(0));
       aacTrack.len = 0;
       aacTrack.samples = outputSamples;
-      moof = MP4.moof(aacTrack.sequenceNumber, firstPTS / scaleFactor, aacTrack);
+      moof = MP4.moof(
+        aacTrack.sequenceNumber,
+        firstPTS / scaleFactor,
+        aacTrack
+      );
 
       aacTrack.samples = [];
       const start = firstPTS / TIME_SCALE;
       const end = this.nextAacDts / TIME_SCALE;
       // const audioData = {   data1: moof,   data2: mdat,   startPTS: start, endPTS:
       // end,   startDTS: start,   endDTS: end,   nb: nbSamples };
-      let bf = new Uint8Array(this.initSegment.byteLength + moof.byteLength + mdat.byteLength);
+      let bf = new Uint8Array(
+        this.initSegment.byteLength + moof.byteLength + mdat.byteLength
+      );
       bf.set(this.initSegment, 0);
       bf.set(moof, this.initSegment.byteLength);
       bf.set(mdat, this.initSegment.byteLength + moof.byteLength);

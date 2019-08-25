@@ -61,7 +61,7 @@ function _bindMediaEvent(
   media.addEventListener('waiting', () => {
     logger.log('waiting....,is seeking?', media.seeking);
     if (media.seeking) return;
-    media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK);
+    media.currentTime += getConfig(ACTION.CONFIG.MANUAL_SEEK) || 0;
   });
 
   media.addEventListener('ended', () => {

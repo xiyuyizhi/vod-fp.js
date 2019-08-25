@@ -49,7 +49,9 @@ let ACTION = {
   ABORTABLE: 'abortAble',
   REMOVE_ABORTABLE: 'removeAbortAble',
   MAIN_LOOP: 'mainLoop',
-  MAIN_LOOP_HANDLE: 'mainLoopHandle'
+  MAIN_LOOP_HANDLE: 'mainLoopHandle',
+  HAS_DETECT_FORMAT: 'hasDetectFormat',
+  LAST_MUXED_SEGMENT: 'lastMuxedSegment'
 };
 
 /**
@@ -72,18 +74,21 @@ function getGlobalState() {
     abortAble: [],
     processTs: performance.now(),
     loadProcessTs: performance.now(),
+    hasDetectFormat: false,
+    lastMuxedSegment: null,
     // derive属性包括、对声明在stata中的某个【同名】属性的修改、查询或者只是对某个属性的操作
     derive: {
-      innerError(state, payload, { dispatch }) {
+      innerError(state, payload, { dispatch, ACTION }) {
         if (payload) {
           logger.log('Error log:', payload);
           function _handleError(s) {
-            if (s.errorCount >= 3 || s.error.value().fatal === true) {
+            if (s.errorCount >= 3 || s.error.fatal() === true) {
               logger.log('error occur many times.....,emit error out');
               s.errorCount = 0;
               s.error.fatal(true);
               dispatch(ACTION.EVENTS.ERROR, s.error.value());
               dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+              dispatch(ACTION.PLAYLIST.REMOVE_FLUSH_TASK);
               if (s.mux) {
                 global.URL.revokeObjectURL(s.mux.objectURL);
               }
@@ -164,20 +169,11 @@ function getGlobalState() {
         }
       },
       mainLoopHandle(state, payload) {
-        if (payload === 'stop') {
-          logger.log('timer stoped');
-          compose(
-            map(tick => tick.stop()),
-            map(prop('mainLoop'))
-          )(state);
-        }
-        if (payload === 'resume') {
-          logger.log('timer resume');
-          compose(
-            map(tick => tick.resume()),
-            map(prop('mainLoop'))
-          )(state);
-        }
+        logger.log(`timer ${payload}`);
+        compose(
+          map(tick => tick[payload]()),
+          map(prop('mainLoop'))
+        )(state);
       }
     }
   };
@@ -196,7 +192,9 @@ ACTION = combineActions(
 
 function getInitState() {
   return combineStates(
-    { getState: getGlobalState },
+    {
+      getState: getGlobalState
+    },
     config,
     playlist,
     media,

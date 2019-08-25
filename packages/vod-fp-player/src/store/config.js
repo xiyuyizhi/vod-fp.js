@@ -21,15 +21,15 @@ const ACTION = {
 
 const state = {
   maxBufferLength: 60,
-  maxFlyBufferLength: 160,
+  maxFlyBufferLength: 100,
   tickInterval: 200,
   segmentMaxTimeout: 20 * 1000,
   manualSeek: 0.16,
   maxFragLookUpTolerance: 0.2,
   maxBufferGapTolerance: 0.4,
   endStreamTolerance: 0.2,
-  maxLevelRetryCount: 2,
-  requestRetryCount: 2,
+  maxLevelRetryCount: 3,
+  requestRetryCount: 3,
   requestRetryDelay: 1000,
   workerEnable: true,
   // abr about
@@ -43,7 +43,7 @@ const state = {
 };
 
 export default {
-  module : 'CONFIG',
+  module: 'CONFIG',
   ACTION,
   getState() {
     return state;

@@ -9,11 +9,13 @@ export default {
     STORE_NEW_SEGMENT: 'storeNewSegment',
     GET_MATCHED_SEGMENT: 'getMatchedSegment',
     GET_FIRST_SEGMENT_BEYOND_CURRENTTIME: 'getFirstSegmentBeyondCurrentTime',
-    REMOVE_SEGMENT_FROM_STORE: 'removeSegmentFromStore'
+    REMOVE_SEGMENT_FROM_STORE: 'removeSegmentFromStore',
+    LAST_APPENDED_SEGMENT: 'lastAppendedSegment'
   },
   getState() {
     return {
       segmentsStore: [],
+      lastAppendedSegment: null,
       derive: {
         flyBufferRanges(state) {
           return compose(

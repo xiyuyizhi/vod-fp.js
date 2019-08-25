@@ -144,56 +144,53 @@ function loadSegment({ getConfig, getState, connect, dispatch }, segment) {
 // when it‘s fmp4,before drain segment,
 // we need check the next segment levelId is equal the current segment,
 // if it‘s not ,we need append the init.mp4 buffer first.
-function drainSegmentFromStore() {
-  let lastAppend;
-  return ({ getState, getConfig, connect, dispatch, subOnce }, findSeg) => {
-    // findSeg: the selected segement in check buffer,
-    // we need check is it stored in fly buffer store
-    return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findSeg).map(
-      segInfo => {
-        let { segment, buffer } = segInfo;
+function drainSegmentFromStore(
+  { getState, getConfig, connect, dispatch, subOnce },
+  findSeg
+) {
+  // findSeg: the selected segement in check buffer,
+  // we need check is it stored in fly buffer store
+  return getState(ACTION.FLYBUFFER.GET_MATCHED_SEGMENT, findSeg).map(
+    segInfo => {
+      let { segment, buffer } = segInfo;
+      let lastAppend = getState(ACTION.FLYBUFFER.LAST_APPENDED_SEGMENT).value();
+      logger.log(
+        `level:${segment.levelId} , id:${segment.id} , [${segment.start},${segment.end}]`
+      );
+      dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
+      if (
+        getState(ACTION.PLAYLIST.CAN_ABR).value() &&
+        lastAppend &&
+        lastAppend.levelId !== segment.levelId &&
+        getState(ACTION.PLAYLIST.FORMAT) === 'fmp4'
+      ) {
         logger.log(
-          `level:${segment.levelId} , id:${segment.id} , [${segment.start},${
-            segment.end
-          }]`
+          `the next append segment levelId changed [${lastAppend.levelId} -> ${segment.levelId}],need append init sgemnt first`
         );
-        dispatch(ACTION.PLAYLIST.CURRENT_SEGMENT_ID, segment.id);
-        if (
-          getState(ACTION.PLAYLIST.CAN_ABR).value() &&
-          lastAppend &&
-          lastAppend.levelId !== segment.levelId &&
-          getState(ACTION.PLAYLIST.FORMAT) === 'fmp4'
-        ) {
-          logger.log(
-            `the next append segment levelId changed [${
-              lastAppend.levelId
-            } -> ${segment.levelId}],need append init sgemnt first`
+        dispatch(ACTION.FLYBUFFER.LAST_APPENDED_SEGMENT, segment);
+        connect(loadInitMP4)(segment.levelId, true);
+        setTimeout(() => {
+          connect(toMux)(
+            segment,
+            buffer,
+            segment.id,
+            getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
+            false
           );
-          lastAppend = segment;
-          connect(loadInitMP4)(segment.levelId, true);
-          setTimeout(() => {
-            connect(toMux)(
-              segment,
-              buffer,
-              segment.id,
-              getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
-              false
-            );
-          }, 50);
-          return true;
-        }
-        lastAppend = segment;
-        connect(toMux)(
-          segment,
-          buffer,
-          segment.id,
-          getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
-          false
-        );
+        }, 50);
         return true;
       }
-    );
-  };
+      dispatch(ACTION.FLYBUFFER.LAST_APPENDED_SEGMENT, segment);
+      connect(toMux)(
+        segment,
+        buffer,
+        segment.id,
+        getState(ACTION.PLAYLIST.FIND_KEY_INFO).value(),
+        false
+      );
+      return true;
+    }
+  );
 }
 
 function removeSegmentFromStore({ getState, dispatch }) {
@@ -285,7 +282,7 @@ abortLoadingSegment = curry(abortLoadingSegment);
 findSegment = curry(findSegment);
 loadSegment = curry(loadSegment);
 findSegmentOfCurrentPosition = curry(findSegmentOfCurrentPosition);
-drainSegmentFromStore = curry(drainSegmentFromStore());
+drainSegmentFromStore = curry(drainSegmentFromStore);
 removeSegmentFromStore = curry(removeSegmentFromStore);
 loadInitMP4 = curry(loadInitMP4);
 export {

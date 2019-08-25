@@ -9,7 +9,9 @@ export default class CusError {
       this._value = {
         fatal: true,
         type: value.constructor.name,
-        message: value.message + ',' + value.stack.slice(0, 120),
+        message: value.message + ',' + value
+          .stack
+          .slice(0, 120),
         originType: value.constructor.name // 非自定义错误
       };
     } else {
@@ -22,7 +24,8 @@ export default class CusError {
   }
 
   getOrElse(e) {
-    if (!this._value.originType) return this;
+    if (!this._value.originType) 
+      return this;
     return this._merge(e);
   }
 
@@ -38,7 +41,11 @@ export default class CusError {
   }
 
   fatal(flag) {
-    this._value.fatal = flag;
+    if (flag) {
+      this._value.fatal = flag;
+    } else {
+      return this._value.fatal;
+    }
   }
 
   value() {
@@ -58,9 +65,7 @@ export default class CusError {
   }
 
   is(another) {
-    return (
-      this._value.type === another.type && this._value.detail === another.detail
-    );
+    return (this._value.type === another.type && this._value.detail === another.detail);
   }
   isType(another) {
     return this._value.type === another.type;

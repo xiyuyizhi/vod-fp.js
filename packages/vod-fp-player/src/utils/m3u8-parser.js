@@ -2,8 +2,15 @@
  * https://tools.ietf.org/html/draft-pantos-http-live-streaming-23
  */
 
-import { F, Maybe, Success, Fail, CusError, either } from 'vod-fp-utility';
-import { M3U8_PARSE_ERROR } from '../error';
+import {
+  F,
+  Maybe,
+  Success,
+  Fail,
+  CusError,
+  either
+} from 'vod-fp-utility';
+import {M3U8_PARSE_ERROR} from '../error';
 
 const {
   curry,
@@ -34,43 +41,48 @@ const filterEmpty = filter(a => Boolean(a) && a !== ',');
 const DISCONTINUITY_TAG = 'discontinuity';
 const END_TAG = 'endlist';
 
-const isTag = line => line.trim().indexOf('#EXT') === 0;
-const splitLines = m3u8 =>
-  m3u8
-    .split(/\n/)
-    .filter(Boolean)
-    .filter(x => /^(#EXT|[^#])/.test(x))
-    .map(line => line.replace(/("|'|\s+)/g, '').trim());
+const isTag = line => line
+  .trim()
+  .indexOf('#EXT') === 0;
+const splitLines = m3u8 => m3u8
+  .split(/\n/)
+  .filter(Boolean)
+  .filter(x => /^(#EXT|[^#])/.test(x))
+  .map(line => line.replace(/("|'|\s+)/g, '').trim());
 
 const keyFormat = key => {
   const matched = key.match(TAG_PATTERN);
   if (matched && matched.length) {
     key = matched[1];
   }
-  const [head, ...rest] = splitByAcross(key);
-  return (
-    head.toLowerCase() +
-    rest.map(item => item[0] + item.slice(1).toLowerCase()).join('')
-  );
+  const [head,
+    ...rest] = splitByAcross(key);
+  return (head.toLowerCase() + rest.map(item => item[0] + item.slice(1).toLowerCase()).join(''));
 };
 
 const combinePair = curry((baseUrl, args) => {
-  let [key, value] = args;
+  let [key,
+    value] = args;
   if (key === DISCONTINUITY_TAG) {
-    return { discontinuity: true };
+    return {discontinuity: true};
   }
   if (key === END_TAG) {
-    return { live: false };
+    return {live: false};
   }
   if (key === 'uri' || key === 'url') {
-    return { [key]: getUrl(baseUrl, value).url };
+    return {
+      [key]: getUrl(baseUrl, value).url
+    };
   }
-  if (!value) return {};
+  if (!value) 
+    return {};
   if (value.length === 1) {
     value = value[0];
-    value = isNaN(value) ? value : Number(value);
+    value = isNaN(value)
+      ? value
+      : Number(value);
   }
-  return { [key]: value };
+  return {[key]: value};
 });
 
 const combineObjs = list => {
@@ -82,41 +94,25 @@ const combineObjs = list => {
 };
 
 const extractAttrs = curry((baseUrl, attrs) => {
-  const extractAttr = compose(
-    ifElse(
-      x => x.length === 1,
-      head, //eg: EXTINF:duration
-      compose(
-        combinePair(baseUrl),
-        splitMap(keyFormat, identity)
-      ) // eg: EXT-X-MEDIA:TYPE=AUDIO,URI="XXXX"
-    ),
-    splitOnceByEq
-  );
-  return compose(
-    combineObjs,
-    map(extractAttr),
-    filterEmpty,
-    splitByComma
-  )(attrs);
+  const extractAttr = compose(ifElse(x => x.length === 1, head, //eg: EXTINF:duration
+      compose(combinePair(baseUrl), splitMap(keyFormat, identity)) // eg: EXT-X-MEDIA:TYPE=AUDIO,URI="XXXX"
+  ), splitOnceByEq);
+  return compose(combineObjs, map(extractAttr), filterEmpty, splitByComma)(attrs);
 });
 
 const extractTag = curry((baseUrl, tag) => {
-  return compose(
-    combinePair(baseUrl),
-    splitMap(keyFormat, extractAttrs(baseUrl)),
-    splitOnceByColon,
-    tail
-  )(tag);
+  return compose(combinePair(baseUrl), splitMap(keyFormat, extractAttrs(baseUrl)), splitOnceByColon, tail)(tag);
 });
 
 const getUrl = curry((baseUrl, url) => {
   if (!/^https?/.test(url)) {
     return {
-      url: Array.from(new Set(baseUrl.split('/').concat(url.split('/')))).join('/')
+      url: Array
+        .from(new Set(baseUrl.split('/').concat(url.split('/'))))
+        .join('/')
     };
   }
-  return { url };
+  return {url};
 });
 
 const fullfillM3u8 = curry((a, fn, b) => fn(a, b));
@@ -125,12 +121,7 @@ const fullfillM3u8 = curry((a, fn, b) => fn(a, b));
 
 const structureM3u8 = curry((baseUrl, m3u8) => {
   const getUrlWithBase = getUrl(baseUrl);
-  return compose(
-    map(ifElse(isTag, extractTag(baseUrl), getUrlWithBase)),
-    tail,
-    filter(Boolean),
-    splitLines
-  )(m3u8);
+  return compose(map(ifElse(isTag, extractTag(baseUrl), getUrlWithBase)), tail, filter(Boolean), splitLines)(m3u8);
 });
 
 const compositionMaster = list => {
@@ -142,7 +133,9 @@ const compositionMaster = list => {
   const fullfillMaster = fullfillM3u8(result);
   const fullfillLevels = fullfillMaster((result, item) => {
     if (item.streamInf) {
-      result.levels.push(item.streamInf);
+      result
+        .levels
+        .push(item.streamInf);
     }
     return item;
   });
@@ -157,10 +150,12 @@ const compositionMaster = list => {
           }
         ];
       } else {
-        result.iFrames.push({
-          id: result.iFrames.length,
-          ...item.iFrameStreamInf
-        });
+        result
+          .iFrames
+          .push({
+            id: result.iFrames.length,
+            ...item.iFrameStreamInf
+          });
       }
     }
     return item;
@@ -168,7 +163,9 @@ const compositionMaster = list => {
 
   const fullfillMedias = fullfillMaster((result, item) => {
     if (item.media) {
-      result.medias.push(item.media);
+      result
+        .medias
+        .push(item.media);
     }
     return item;
   });
@@ -187,21 +184,17 @@ const compositionMaster = list => {
     }
   });
 
-  forEach(
-    compose(
-      fullfillUniqueProp,
-      fullfillLevelUrl,
-      fullfillIFrameLevels,
-      fullfillMedias,
-      fullfillLevels
-    )
-  )(list);
-  result.levels.sort((a, b) =>
-    parseFloat(a.bandwidth) > parseFloat(b.bandwidth) ? 1 : -1
-  );
-  result.levels.forEach((x, index) => {
-    x.levelId = index + 1;
-  });
+  forEach(compose(fullfillUniqueProp, fullfillLevelUrl, fullfillIFrameLevels, fullfillMedias, fullfillLevels))(list);
+  result
+    .levels
+    .sort((a, b) => parseFloat(a.bandwidth) > parseFloat(b.bandwidth)
+      ? 1
+      : -1);
+  result
+    .levels
+    .forEach((x, index) => {
+      x.levelId = index + 1;
+    });
   return result;
 };
 
@@ -229,7 +222,9 @@ const compositionLevel = curry(list => {
       }
       duration = parseFloat(duration);
       let id = level.segments.length;
-      let start = level.segments[id - 1] ? level.segments[id - 1].end : 0;
+      let start = level.segments[id - 1]
+        ? level.segments[id - 1].end
+        : 0;
       // segment structure
       let seg = {
         duration,
@@ -243,10 +238,12 @@ const compositionLevel = curry(list => {
         seg.name = name;
       }
       let sn = mediaSequence + level.segments.length;
-      level.segments.push({
-        id: sn,
-        ...seg
-      });
+      level
+        .segments
+        .push({
+          id: sn,
+          ...seg
+        });
       level.startSN = level.startSN || sn;
       level.endSN = sn;
       level.duration += duration;
@@ -262,7 +259,8 @@ const compositionLevel = curry(list => {
   });
 
   const fullfillUniqueProp = fullfillLevel((result, item) => {
-    if (item.extinf || item.url) return;
+    if (item.extinf || item.url) 
+      return;
     if (item.discontinuity === true) {
       lastCC++;
       return;
@@ -280,19 +278,12 @@ const compositionLevel = curry(list => {
       }
     }
   });
-  forEach(
-    compose(
-      fullfillUniqueProp,
-      fullfillSegUrl,
-      fullfillSegment,
-      item => {
-        if (item.mediaSequence) {
-          mediaSequence = item.mediaSequence;
-        }
-        return item;
-      }
-    )
-  )(list);
+  forEach(compose(fullfillUniqueProp, fullfillSegUrl, fullfillSegment, item => {
+    if (item.mediaSequence !== undefined) {
+      mediaSequence = item.mediaSequence;
+    }
+    return item;
+  }))(list);
   return level;
 });
 
@@ -316,15 +307,9 @@ function _getBasePath(url) {
 export default curry((url, m3u8) => {
   // throw new Error(a);
   let baseUrl = _getBasePath(url);
-  const handleMaster = compose(
-    compositionMaster,
-    structureM3u8(baseUrl)
-  );
+  const handleMaster = compose(compositionMaster, structureM3u8(baseUrl));
 
-  const handleLevel = compose(
-    compositionLevel,
-    structureM3u8(baseUrl)
-  );
+  const handleLevel = compose(compositionLevel, structureM3u8(baseUrl));
 
   // object -> Either
   const usableCheck = res => {
@@ -336,16 +321,11 @@ export default curry((url, m3u8) => {
     }
     return Success.of(res);
   };
-  const handle = compose(
-    map(x => {
-      x.baseUrl = baseUrl;
-      x.url = url;
-      return x;
-    }),
-    chain(usableCheck),
-    map(ifElse(isMaster, handleMaster, handleLevel)),
-    valid
-  );
+  const handle = compose(map(x => {
+    x.baseUrl = baseUrl;
+    x.url = url;
+    return x;
+  }), chain(usableCheck), map(ifElse(isMaster, handleMaster, handleLevel)), valid);
   return handle(m3u8).error(e => {
     return e.getOrElse(CusError.of(M3U8_PARSE_ERROR.PARSE_ERROR));
   });

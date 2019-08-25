@@ -106,10 +106,10 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
       end: parseFloat((segBound.endPTS / 90000).toFixed(6))
     };
     connect(checkManualSeek)(segBound.start);
+    connect(checkSeekAfterBufferAppend)(segBound);
     dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
   }
 
-  connect(checkSeekAfterBufferAppend);
   //清除无用元素
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_REMOVE);
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_REMOVE);
@@ -243,7 +243,7 @@ function flushBuffer({ getState, dispatch }, start, end) {
 
 function abortBuffer({ getState, dispatch }) {
   Maybe.of(
-    curry((vsb, asb) => {
+    curry((vsb, asb, _) => {
       dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, null);
       dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, null);
       vsb.abort();
@@ -251,7 +251,12 @@ function abortBuffer({ getState, dispatch }) {
     })
   )
     .ap(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER))
-    .ap(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER));
+    .ap(getState(ACTION.BUFFER.VIDEO_SOURCEBUFFER))
+    .ap(
+      getState(ACTION.MEDIA.MEDIA_SOURCE)
+        .map(prop('readyState'))
+        .map(state => state === 'open' || undefined)
+    );
 }
 
 _afterAppended = curry(_afterAppended);

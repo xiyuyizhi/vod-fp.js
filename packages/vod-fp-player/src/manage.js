@@ -87,7 +87,8 @@ function destroy({ connect, dispatch }) {
   connect(abortLoadingSegment);
   connect(abortBuffer);
   connect(destroyMediaSource);
-  dispatch(ACTION.MAIN_LOOP_HANDLE, 'stop');
+  dispatch(ACTION.MAIN_LOOP_HANDLE, 'destroy');
+  dispatch(ACTION.PLAYLIST.REMOVE_FLUSH_TASK);
 }
 
 manage = F.curry(manage);

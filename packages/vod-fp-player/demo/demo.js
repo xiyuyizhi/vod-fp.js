@@ -1,4 +1,4 @@
-import {Logger} from 'vod-fp-utility';
+import { Logger } from 'vod-fp-utility';
 import Vod from '../src';
 
 // Logger.use(['base', 'mux', 'player']);
@@ -8,9 +8,7 @@ console.log('%c player start', 'background: #222; color: #bada55');
 
 document.addEventListener('keyup', e => {
   if (e.keyCode === 38) {
-    document
-      .querySelector('video')
-      .currentTime += 2;
+    document.querySelector('video').currentTime += 2;
   }
 });
 
@@ -22,7 +20,8 @@ if (location.search) {
 }
 
 function initPlayer(url) {
-  vod = new Vod({maxBufferLength: 30, maxFlyBufferLength: 60});
+  vod = new Vod({ maxBufferLength: 30, maxFlyBufferLength: 60 });
+  window.vod = vod;
   vod.attachMedia(document.querySelector('video'));
   vod.loadSource(url);
   vod.useDebug(document.querySelector('#player'));
@@ -31,7 +30,7 @@ function initPlayer(url) {
   });
   vod.on(Vod.Events.MANIFEST_LOADED, pl => {
     // 创建清晰度选项
-    const {levels} = pl;
+    const { levels } = pl;
     if (levels.length > 1) {
       let select = document.createElement('select');
       let selectHtml;
@@ -39,15 +38,16 @@ function initPlayer(url) {
       select.style.display = 'block';
       selectHtml = levels
         .filter(x => x.resolution || x.streamtype)
-        .map(({levelId, streamtype, resolution}) => `<option value='${levelId}'>${resolution || streamtype}</option>`)
+        .map(
+          ({ levelId, streamtype, resolution }) =>
+            `<option value='${levelId}'>${resolution || streamtype}</option>`
+        )
         .join('\n');
       select.innerHTML = selectHtml;
       select.addEventListener('change', e => {
         vod.changeLevel(e.target.value);
       });
-      document
-        .body
-        .appendChild(select);
+      document.body.appendChild(select);
     }
   });
 
@@ -60,6 +60,14 @@ function initPlayer(url) {
 }
 
 initPlayer(url);
+
+let reload = document.createElement('button');
+reload.innerHTML = 'reload';
+reload.addEventListener('click', () => {
+  vod.destroy();
+  initPlayer(url);
+});
+document.body.appendChild(reload);
 
 setTimeout(() => {
   return;

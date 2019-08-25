@@ -32,6 +32,8 @@ const ACTION = {
   CAN_ABR: 'canAbr',
   IS_LIVE: 'isLive',
   GET_LEVEL_URL: 'getLevelUrl',
+  FLUSH_TASK: 'flushTask',
+  REMOVE_FLUSH_TASK: 'removeFlushTask',
   SLIDE_POSITION: 'slidePosition' //直播窗口滑动点
 };
 
@@ -78,6 +80,7 @@ export default {
       currentSegmentId: -1,
       lastLevelId: 1,
       currentLevelId: 1,
+      flushTask: null,
       format: '', //ts | fmp4 | flv
       derive: {
         format(state) {
@@ -346,6 +349,9 @@ export default {
           return this.segments(state)
             .map(head)
             .map(x => x.start);
+        },
+        removeFlushTask(state) {
+          state.map(prop('flushTask')).map(x => x.destroy());
         }
       }
     };

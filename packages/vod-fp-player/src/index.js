@@ -2,13 +2,14 @@ import { EventBus } from 'vod-fp-utility';
 import Events from './events';
 import { createStore, getInitState, ACTION } from './store';
 import { manage, changeLevel, destroy } from './manage';
-import debuger from './plugin/debuger';
+import { debuger, clearDebuger } from './plugin/debuger';
 
 export default class Vod extends EventBus {
   constructor(options) {
     super();
     this.media = null;
     this.url = '';
+    this.debugerContainer = null;
     let initState = getInitState();
     initState.config = Object.assign(initState.config, options);
     this.store = createStore(initState, ACTION);
@@ -49,6 +50,7 @@ export default class Vod extends EventBus {
   }
 
   useDebug(container) {
+    this.debugerContainer = container;
     this.store.connect(debuger)(container);
   }
 
@@ -56,5 +58,6 @@ export default class Vod extends EventBus {
     this.store.connect(destroy);
     this.store.destroy();
     this.store = null;
+    clearDebuger(this.debugerContainer);
   }
 }
