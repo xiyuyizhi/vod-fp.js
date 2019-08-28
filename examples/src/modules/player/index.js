@@ -58,7 +58,7 @@ export default class Player extends React.Component {
 
   // live btn node
   fetchLiveStream = () => {
-    loader('http://api.xuyuyizhi.xyz/startLive', { responseType: 'json' })
+    loader('http://api.xiyuyizhi.xyz/startLive', { responseType: 'json' })
       .then(res => {
         if (res.code) {
           message.error(res.msg);
