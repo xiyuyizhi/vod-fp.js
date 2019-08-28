@@ -1,4 +1,4 @@
-import {PipeLine} from 'vod-fp-utility';
+import { PipeLine } from 'vod-fp-utility';
 import {
   FlvStream,
   FlvMetaDataStream,
@@ -7,7 +7,7 @@ import {
   FlvAudioTagStream,
   FlvDataTagStream
 } from '../flv';
-import {RemuxStream, AudioFragmentStream, VideoFragmentStream} from "../mp4"
+import { RemuxStream, AudioFragmentStream, VideoFragmentStream } from '../mp4';
 
 export default class FlvToMp4 extends PipeLine {
   constructor(options) {
@@ -23,9 +23,7 @@ export default class FlvToMp4 extends PipeLine {
 
   push(buffer) {
     try {
-      this
-        .entryStream
-        .push(buffer);
+      this.entryStream.push(buffer);
     } catch (e) {
       this.emit('error', e);
     }
@@ -33,9 +31,7 @@ export default class FlvToMp4 extends PipeLine {
 
   flush() {
     try {
-      this
-        .entryStream
-        .flush();
+      this.entryStream.flush();
     } catch (e) {
       this.emit('error', e);
     }
@@ -58,39 +54,39 @@ export default class FlvToMp4 extends PipeLine {
     let flvDataTagStream = new FlvDataTagStream();
     let flvMetaDataStream = new FlvMetaDataStream();
     let remuxStream = new RemuxStream();
-    let audioFragmentStream = new AudioFragmentStream()
-    let videoFragmentStream = new VideoFragmentStream()
+    let audioFragmentStream = new AudioFragmentStream();
+    let videoFragmentStream = new VideoFragmentStream();
 
-    this.bindEvent([
-      entryStream, flvTagStream, flvAudioTagStream, flvVideoTagStream, flvDataTagStream
-    ], 'error');
+    this.bindEvent(
+      [
+        entryStream,
+        flvTagStream,
+        flvAudioTagStream,
+        flvVideoTagStream,
+        flvDataTagStream
+      ],
+      'error'
+    );
+
+    flvTagStream.on('restBufferInfo', info => {
+      this.emit('restBufferInfo', info);
+    });
 
     this.entryStream = entryStream;
 
-    entryStream
-      .pipe(flvMetaDataStream)
-      .pipe(remuxStream);
+    entryStream.pipe(flvMetaDataStream).pipe(remuxStream);
 
-    es = this
-      .entryStream
-      .pipe(flvTagStream)
+    es = this.entryStream.pipe(flvTagStream);
 
-    es
-      .pipe(flvAudioTagStream)
+    es.pipe(flvAudioTagStream)
       .pipe(remuxStream)
-      .pipe(audioFragmentStream)
+      .pipe(audioFragmentStream);
 
-    es
-      .pipe(flvVideoTagStream)
+    es.pipe(flvVideoTagStream)
       .pipe(remuxStream)
-      .pipe(videoFragmentStream)
+      .pipe(videoFragmentStream);
 
-    this.bindEvent([
-      audioFragmentStream, videoFragmentStream
-    ], 'data');
-    this.bindEvent([
-      audioFragmentStream, videoFragmentStream
-    ], 'done');
-
+    this.bindEvent([audioFragmentStream, videoFragmentStream], 'data');
+    this.bindEvent([audioFragmentStream, videoFragmentStream], 'done');
   }
 }

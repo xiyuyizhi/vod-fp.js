@@ -1,7 +1,7 @@
 import { EventBus } from 'vod-fp-utility';
 import Events from './events';
 import { createStore, getInitState, ACTION } from './store';
-import { manage, changeLevel, destroy } from './manage';
+import { manageHls, manageFlvLive, changeLevel, destroy } from './manage';
 import { debuger, clearDebuger } from './plugin/debuger';
 
 export default class Vod extends EventBus {
@@ -12,9 +12,8 @@ export default class Vod extends EventBus {
     this.debugerContainer = null;
     let initState = getInitState();
     initState.config = Object.assign(initState.config, options);
-    this.store = createStore(initState, ACTION);
+    window.store = this.store = createStore(initState, ACTION);
     this._changeLevel = changeLevel();
-    window.store = this.store;
   }
 
   static get Events() {
@@ -39,13 +38,18 @@ export default class Vod extends EventBus {
 
   setUp() {
     if (this.media && this.url) {
-      const { subscribe, connect } = this.store;
+      const { subscribe, connect, getConfig } = this.store;
       Object.keys(ACTION.EVENTS).forEach(eveName => {
         subscribe(ACTION.EVENTS[eveName], data => {
           this.emit(Events[eveName], data.join());
         });
       });
-      connect(manage)(this.media, this.url);
+
+      if (getConfig(ACTION.CONFIG.FLV_LIVE)) {
+        connect(manageFlvLive)(this.media, this.url);
+      } else {
+        connect(manageHls)(this.media, this.url);
+      }
     }
   }
 

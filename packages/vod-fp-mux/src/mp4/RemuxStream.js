@@ -1,7 +1,7 @@
-import {PipeLine, Logger} from 'vod-fp-utility';
-import {ERROR, withMessage} from '../error';
+import { PipeLine, Logger } from 'vod-fp-utility';
+import { ERROR, withMessage } from '../error';
 import AAC from '../utils/aac';
-import {checkCombine} from '../utils/index';
+import { checkCombine } from '../utils/index';
 
 let logger = new Logger('mux');
 
@@ -22,10 +22,9 @@ export default class RemuxStream extends PipeLine {
 
   push(track) {
     if (track && track.type === 'metadata') {
-      this.trackLen = Object
-        .keys(track.data)
-        .filter(x => track.data[x] !== -1)
-        .length;
+      this.trackLen = Object.keys(track.data).filter(
+        x => track.data[x] !== -1
+      ).length;
       this.combine = checkCombine(track.data);
       this.emit('data', track);
       return;
@@ -43,24 +42,42 @@ export default class RemuxStream extends PipeLine {
       return;
     }
     if (this.incomeTrackLen === this.trackLen) {
-      const {audioTrack, videoTrack} = this;
+      console.log(this);
+      const { audioTrack, videoTrack } = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;
-      if (videoTrack && audioTrack && videoTrack.samples.length && audioTrack.samples.length) {
+      if (
+        videoTrack &&
+        audioTrack &&
+        videoTrack.samples.length &&
+        audioTrack.samples.length
+      ) {
         let firstVideoSampleDts = videoTrack.samples[0].dts;
-        let audiovideoDeltaDts = Math.min((audioTrack.samples[0].dts - videoTrack.samples[0].dts) / videoTrack.inputTimeScale, (audioTrack.samples[0].pts - videoTrack.samples[0].pts) / videoTrack.inputTimeScale);
+        let audiovideoDeltaDts = Math.min(
+          (audioTrack.samples[0].dts - videoTrack.samples[0].dts) /
+            videoTrack.inputTimeScale,
+          (audioTrack.samples[0].pts - videoTrack.samples[0].pts) /
+            videoTrack.inputTimeScale
+        );
         if (Math.abs(audiovideoDeltaDts) >= 0.5) {
           logger.warn('音视频first dts差距过大');
           //可能存在视频非开始于关键帧，在上一阶段丢弃了那些关键帧之前的，导致音视频dts差距过大
-          audioTrack.samples = audioTrack
-            .samples
-            .filter(sample => sample.dts >= firstVideoSampleDts);
+          audioTrack.samples = audioTrack.samples.filter(
+            sample => sample.dts >= firstVideoSampleDts
+          );
           audiovideoDeltaDts = 0;
         }
         //以小的为基准
         audioTimeOffset += Math.max(0, audiovideoDeltaDts);
         videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
-        logger.log('音,视频第一采样delta: ', audioTimeOffset, videoTimeOffset, audiovideoDeltaDts, 'timeoffset: ', this.timeOffset);
+        logger.log(
+          '音,视频第一采样delta: ',
+          audioTimeOffset,
+          videoTimeOffset,
+          audiovideoDeltaDts,
+          'timeoffset: ',
+          this.timeOffset
+        );
         this.emit('data', {
           videoTimeOffset,
           audioTimeOffset,
@@ -80,7 +97,10 @@ export default class RemuxStream extends PipeLine {
         });
       } else {
         logger.warn('不存在采样,应该是缺少IDR帧');
-        this.emit('error', withMessage(ERROR.PARSE_ERROR, 'no found idr frame'));
+        this.emit(
+          'error',
+          withMessage(ERROR.PARSE_ERROR, 'no found idr frame')
+        );
         return;
       }
       this.emit('done');
@@ -92,7 +112,7 @@ export default class RemuxStream extends PipeLine {
   }
 
   mockAudioTrack(videoTrack, audioTrack) {
-    let {samples} = videoTrack;
+    let { samples } = videoTrack;
     let track = audioTrack;
     let samplerate = 44100;
     let frameDuration = (1024 * 90000) / samplerate;
@@ -111,7 +131,7 @@ export default class RemuxStream extends PipeLine {
     let samps = [];
     for (let i = 0; i < nbSamples; i++) {
       let stamp = startDTS + i * frameDuration;
-      samps.push({data: silentFrame, pts: stamp, dts: stamp});
+      samps.push({ data: silentFrame, pts: stamp, dts: stamp });
       track.len += silentFrame.byteLength;
     }
     track.samples = samps;

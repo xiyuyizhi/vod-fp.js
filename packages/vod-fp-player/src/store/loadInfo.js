@@ -15,8 +15,8 @@ export default {
       derive: {
         collectDownloadSpeed(state, speed) {
           return state.map(x => {
-            if (x.speedList.length > 10) {
-              x.speedList = x.speedList.slice(5);
+            if (x.speedList.length > 8) {
+              x.speedList = x.speedList.slice(4);
             }
             x.speedList.push(speed);
             return x;

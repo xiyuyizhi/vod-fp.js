@@ -72,35 +72,35 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
 
   let segBound;
+
+  Maybe.of(
+    curry((videoBufferInfo, audioBufferInfo) => {
+      logger.log(
+        `buffer:  video=[${videoBufferInfo.startPTS /
+          90000},${videoBufferInfo.endPTS / 90000}]`,
+        `audio=[${audioBufferInfo.startPTS / 90000},${audioBufferInfo.endPTS /
+          90000}]`
+      );
+      let startPTS = Math.min(
+        videoBufferInfo.startPTS,
+        audioBufferInfo.startPTS
+      );
+      let endPTS = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
+      segBound = {
+        startPTS,
+        endPTS
+      };
+    })
+  )
+    .ap(getState(ACTION.BUFFER.VIDEO_BUFFER_INFO))
+    .ap(getState(ACTION.BUFFER.AUDIO_BUFFER_INFO));
+
   if (getState(ACTION.PLAYLIST.FORMAT) === 'ts') {
     if (!combine) {
       segBound = getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).getOrElse(() => {
         return getState(ACTION.BUFFER.AUDIO_BUFFER_INFO).value();
       });
-    } else {
-      Maybe.of(
-        curry((videoBufferInfo, audioBufferInfo) => {
-          logger.log(
-            `buffer:  video=[${videoBufferInfo.startPTS /
-              90000},${videoBufferInfo.endPTS / 90000}]`,
-            `audio=[${audioBufferInfo.startPTS /
-              90000},${audioBufferInfo.endPTS / 90000}]`
-          );
-          let startPTS = Math.min(
-            videoBufferInfo.startPTS,
-            audioBufferInfo.startPTS
-          );
-          let endPTS = Math.min(videoBufferInfo.endPTS, audioBufferInfo.endPTS);
-          segBound = {
-            startPTS,
-            endPTS
-          };
-        })
-      )
-        .ap(getState(ACTION.BUFFER.VIDEO_BUFFER_INFO))
-        .ap(getState(ACTION.BUFFER.AUDIO_BUFFER_INFO));
     }
-
     segBound = {
       start: parseFloat((segBound.startPTS / 90000).toFixed(6)),
       end: parseFloat((segBound.endPTS / 90000).toFixed(6))

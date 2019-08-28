@@ -83,7 +83,7 @@ export default {
       flushTask: null,
       format: '', //ts | fmp4 | flv
       derive: {
-        format(state) {
+        format(state, _, { getConfig, ACTION }) {
           return compose(
             map(uri => {
               if (/(mp4|m4s)/.test(uri)) return 'fmp4';
@@ -94,7 +94,9 @@ export default {
             map(head),
             map(prop('levels')),
             map(prop('pl'))
-          )(state).getOrElse('ts');
+          )(state).getOrElse(() => {
+            return getConfig(ACTION.CONFIG.FLV_LIVE) ? 'flv' : 'ts';
+          });
         },
         mode(state) {
           return compose(

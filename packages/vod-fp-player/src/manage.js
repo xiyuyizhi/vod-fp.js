@@ -8,17 +8,24 @@ import {
   abortLoadingSegment,
   findSegmentOfCurrentPosition
 } from './playlist/segment';
-import { flushBuffer, abortBuffer } from './buffer/buffer';
+import { flushBuffer, abortBuffer, bufferBootstrap } from './buffer/buffer';
+import { flvLiveBootstrap } from './flv/flv-live';
 
 let logger = new Logger('player');
 
-function manage({ dispatch, connect }, media, url) {
+function manageHls({ dispatch, connect }, media, url) {
   Task.resolve(connect(bootstrap))
     .ap(connect(loadPlaylist)(url))
     .ap(connect(createMediaSource)(media))
     .error(e => {
       dispatch(ACTION.ERROR, e);
     });
+}
+
+function manageFlvLive({ dispatch, connect }, media, url) {
+  connect(createMediaSource)(media);
+  connect(bufferBootstrap);
+  connect(flvLiveBootstrap)(url);
 }
 
 // change level from outside
@@ -91,6 +98,8 @@ function destroy({ connect, dispatch }) {
   dispatch(ACTION.PLAYLIST.REMOVE_FLUSH_TASK);
 }
 
-manage = F.curry(manage);
+manageHls = F.curry(manageHls);
+manageFlvLive = F.curry(manageFlvLive);
 destroy = F.curry(destroy);
-export { manage, changeLevel, destroy };
+
+export { manageHls, manageFlvLive, changeLevel, destroy };

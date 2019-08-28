@@ -45,7 +45,7 @@ function _readerStream({ dispatch }, reader, headers) {
       store.push(value);
       let tsTick = performance.now() - lastTs;
       //单次时间 > 1ms 有效
-      if (tsTick >= 1.2) {
+      if (tsTick >= 2) {
         dispatch(
           ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
           value.byteLength / tsTick / 1000

@@ -1,7 +1,5 @@
 import Vod from 'vod-fp-player';
-import {
-  Button, Input, Row, Col, Select, Modal, message
-} from 'antd';
+import { Button, Input, Row, Col, Select, Modal, message } from 'antd';
 import loader from 'utils/loader';
 import './index.less';
 
@@ -60,7 +58,7 @@ export default class Player extends React.Component {
 
   // live btn node
   fetchLiveStream = () => {
-    loader('http://api.xiyuyizhi.xyz/startLive', { responseType: 'json' })
+    loader('http://api.xuyuyizhi.xyz/startLive', { responseType: 'json' })
       .then(res => {
         if (res.code) {
           message.error(res.msg);
@@ -77,8 +75,22 @@ export default class Player extends React.Component {
                 <p>
                   {res.data.ts}
                   <Button
+                    style={{ marginLeft: 10 }}
                     type="primary"
-                    onClick={() => this.loadHlsLive(res.data.ts)}
+                    onClick={() => this.loadLive(res.data.ts)}
+                  >
+                    load
+                  </Button>
+                </p>
+              </div>
+              <div>
+                <h4>http flv</h4>
+                <p>
+                  {res.data.flv}
+                  <Button
+                    style={{ marginLeft: 10 }}
+                    type="primary"
+                    onClick={() => this.loadLive(res.data.flv)}
                   >
                     load
                   </Button>
@@ -93,7 +105,7 @@ export default class Player extends React.Component {
       });
   };
 
-  loadHlsLive = url => {
+  loadLive = url => {
     this.setState(
       {
         url: url
@@ -119,7 +131,11 @@ export default class Player extends React.Component {
   }
 
   _startPlayer(url) {
-    let v = new Vod({ maxBufferLength: 60, maxFlyBufferLength: 60 });
+    let v = new Vod({
+      maxBufferLength: 60,
+      maxFlyBufferLength: 60,
+      flvLive: url.indexOf('test.flv') === -1 ? false : true
+    });
     v.loadSource(url);
     v.attachMedia(this.media);
     v.useDebug(document.querySelector('#player'));
@@ -142,7 +158,7 @@ export default class Player extends React.Component {
         <Row>
           <Col span={12} offset={6}>
             <h1>
-              vod player demo{' '}
+              vod player demo
               <a
                 style={{
                   fontSize: 16,

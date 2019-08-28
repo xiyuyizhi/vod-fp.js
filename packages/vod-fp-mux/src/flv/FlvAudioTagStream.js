@@ -1,11 +1,10 @@
-import {PipeLine, Logger} from 'vod-fp-utility';
-import {FREQUENCIES_MAP} from "../default"
-import {ERROR, withMessage} from "../error"
-import {geneAudioTrackConfig} from "../utils/index"
+import { PipeLine, Logger } from 'vod-fp-utility';
+import { FREQUENCIES_MAP } from '../default';
+import { ERROR, withMessage } from '../error';
+import { geneAudioTrackConfig } from '../utils/index';
 let logger = new Logger('mux');
 
 export default class FlvAudioTagStream extends PipeLine {
-
   constructor() {
     super();
     this.audioTrack = null;
@@ -13,28 +12,29 @@ export default class FlvAudioTagStream extends PipeLine {
 
   push(data) {
     if (data.tagType === 8) {
-      let {encrypted, payload, ts} = data
-      this._parseFlvPaylod(payload, encrypted, ts)
+      let { encrypted, payload, ts } = data;
+      this._parseFlvPaylod(payload, encrypted, ts);
     }
   }
 
   flush() {
-    logger.log('audioTrack', this.audioTrack)
-    this.emit('data', this.audioTrack)
-    this.audioTrack = null;
-    this.emit('done')
+    logger.log('audioTrack', this.audioTrack);
+    this.emit('data', this.audioTrack);
+    if (this.audioTrack) {
+      this.audioTrack = Object.assign({}, this.audioTrack);
+      this.audioTrack.samples = [];
+    }
+    this.emit('done');
   }
 
   _parseFlvPaylod(buffer, encrypted, ts) {
-
     // parse header,encryption,filterPrams first
-    let audioHeaderInfo = this._parseAudioTagHeader(buffer)
+    let audioHeaderInfo = this._parseAudioTagHeader(buffer);
     if (encrypted) {
       this._parseEncryptionHeader();
       this._parseFilterParams();
     }
-    this._parseAudioData(buffer.subarray(2), encrypted, audioHeaderInfo, ts)
-
+    this._parseAudioData(buffer.subarray(2), encrypted, audioHeaderInfo, ts);
   }
 
   _parseAudioTagHeader(buffer) {
@@ -51,13 +51,12 @@ export default class FlvAudioTagStream extends PipeLine {
     let soundSize = (buffer[0] & 0x02) >> 1;
     let soundType = buffer[0] & 0x01;
     let aacPacketType = buffer[1];
-    return {soundFormat, soundRate, soundSize, soundType, aacPacketType}
+    return { soundFormat, soundRate, soundSize, soundType, aacPacketType };
   }
 
   _parseAudioData(buffer, encrypted, metadata, ts) {
-    let {soundFormat, aacPacketType} = metadata;
-    if (!buffer.byteLength) 
-      return;
+    let { soundFormat, aacPacketType } = metadata;
+    if (!buffer.byteLength) return;
     if (encrypted) {
       // the audio data body is EncryptedBody
     } else {
@@ -65,47 +64,68 @@ export default class FlvAudioTagStream extends PipeLine {
         // aac
         if (aacPacketType === 0) {
           //AudioSpecificConfig
-          logger.warn('AudioSpecificConfig')
+          logger.warn('AudioSpecificConfig');
           let audioConfig = this._parseAudioSpecificConfig(buffer);
-          this.audioTrack = this._geneAudioTrack(audioConfig);
+          let audioTrack = this._geneAudioTrack(audioConfig);
+          audioTrack.samples =
+            (this.audioTrack && this.audioTrack.samples) || [];
+          this.audioTrack = audioTrack;
         } else {
           // raw aac frame data in UI8 []
           if (this.audioTrack) {
-            this
-              .audioTrack
-              .samples
-              .push({dts: ts, pts: ts, data: buffer})
+            this.audioTrack.samples.push({ dts: ts, pts: ts, data: buffer });
             this.audioTrack.len += buffer.byteLength;
           }
         }
-      } else {}
+      } else {
+      }
     }
   }
 
   _parseAudioSpecificConfig(buffer) {
     /**
-    *  audioObjectType    5bit
-    *  samplingFrquecyIndex   4bit
-    *  if(samplingFrquencyIndex === 0xf)
-    *     samplingFrequency   24bit
-    *  channelConfiguration   4bit |01111000|
-    */
+     *  audioObjectType    5bit
+     *  samplingFrquecyIndex   4bit
+     *  if(samplingFrquencyIndex === 0xf)
+     *     samplingFrequency   24bit
+     *  channelConfiguration   4bit |01111000|
+     */
     let aObjectT = buffer[0] >> 3;
-    let samplingFrquecyIndex = ((buffer[0] & 0x07) << 1) | (buffer[1] >> 7)
+    let samplingFrquecyIndex = ((buffer[0] & 0x07) << 1) | (buffer[1] >> 7);
     let samplingFrequency;
     let channelConfiguration;
     if (samplingFrquecyIndex === 0xf) {
       if (buffer.byteLength < 5) {
-        this.emit('error', withMessage(ERROR.PARSE_ERROR, 'contain samplingFrequency, at least 5 byte need'))
+        this.emit(
+          'error',
+          withMessage(
+            ERROR.PARSE_ERROR,
+            'contain samplingFrequency, at least 5 byte need'
+          )
+        );
       }
-      samplingFrequency = ((buffer[1] & 0x7f) << 17) | (buffer[2] << 9) | (buffer[3] << 1) | ((buffer[4] & 0x80) >> 7);
+      samplingFrequency =
+        ((buffer[1] & 0x7f) << 17) |
+        (buffer[2] << 9) |
+        (buffer[3] << 1) |
+        ((buffer[4] & 0x80) >> 7);
       channelConfiguration = (buffer[4] & 0x78) >> 3;
     }
     channelConfiguration = (buffer[1] & 0x78) >> 3;
 
-    let {config, audioObjectType} = geneAudioTrackConfig(aObjectT, samplingFrquecyIndex, channelConfiguration);
+    let { config, audioObjectType } = geneAudioTrackConfig(
+      aObjectT,
+      samplingFrquecyIndex,
+      channelConfiguration
+    );
 
-    return {config, audioObjectType, samplingFrquecyIndex, samplingFrequency, channelConfiguration}
+    return {
+      config,
+      audioObjectType,
+      samplingFrquecyIndex,
+      samplingFrequency,
+      channelConfiguration
+    };
   }
 
   _parseEncryptionHeader() {}
@@ -113,7 +133,12 @@ export default class FlvAudioTagStream extends PipeLine {
   _parseFilterParams() {}
 
   _geneAudioTrack(audioConfig) {
-    let {config, audioObjectType, channelConfiguration, samplingFrquecyIndex} = audioConfig;
+    let {
+      config,
+      audioObjectType,
+      channelConfiguration,
+      samplingFrquecyIndex
+    } = audioConfig;
     return {
       samples: [],
       config,
@@ -125,7 +150,6 @@ export default class FlvAudioTagStream extends PipeLine {
       timescale: FREQUENCIES_MAP[samplingFrquecyIndex],
       channel: channelConfiguration,
       codec: 'mp4a.40.' + audioObjectType
-    }
+    };
   }
-
 }

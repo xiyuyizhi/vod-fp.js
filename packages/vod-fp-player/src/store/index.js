@@ -13,6 +13,7 @@ import buffer from './buffer';
 import flyBuffer from './flyBuffer';
 import abr from './abr';
 import loadInfo from './loadInfo';
+import flvLive from './flvLive';
 
 const { map, prop, compose, trace } = F;
 let logger = new Logger('player');
@@ -187,7 +188,8 @@ ACTION = combineActions(
   buffer,
   flyBuffer,
   abr,
-  loadInfo
+  loadInfo,
+  flvLive
 );
 
 function getInitState() {
@@ -201,7 +203,8 @@ function getInitState() {
     buffer,
     flyBuffer,
     abr,
-    loadInfo
+    loadInfo,
+    flvLive
   );
 }
 export { createStore, getInitState, ACTION, PROCESS, LOADPROCESS };
