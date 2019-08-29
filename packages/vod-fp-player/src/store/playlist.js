@@ -95,7 +95,7 @@ export default {
             map(prop('levels')),
             map(prop('pl'))
           )(state).getOrElse(() => {
-            return getConfig(ACTION.CONFIG.FLV_LIVE) ? 'flv' : 'ts';
+            return getConfig(ACTION.CONFIG.FLV_LIVE) ? 'flvLive' : 'ts';
           });
         },
         mode(state) {

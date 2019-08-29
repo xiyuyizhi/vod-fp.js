@@ -9,6 +9,7 @@ import {
   findSegmentOfCurrentPosition
 } from './playlist/segment';
 import { flushBuffer, abortBuffer, bufferBootstrap } from './buffer/buffer';
+import { muxBootstrap } from './mux/mux';
 import { flvLiveBootstrap } from './flv/flv-live';
 
 let logger = new Logger('player');
@@ -25,6 +26,7 @@ function manageHls({ dispatch, connect }, media, url) {
 function manageFlvLive({ dispatch, connect }, media, url) {
   connect(createMediaSource)(media);
   connect(bufferBootstrap);
+  connect(muxBootstrap);
   connect(flvLiveBootstrap)(url);
 }
 

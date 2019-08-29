@@ -42,7 +42,6 @@ export default class RemuxStream extends PipeLine {
       return;
     }
     if (this.incomeTrackLen === this.trackLen) {
-      console.log(this);
       const { audioTrack, videoTrack } = this;
       let audioTimeOffset = this.timeOffset || 0;
       let videoTimeOffset = this.timeOffset || 0;

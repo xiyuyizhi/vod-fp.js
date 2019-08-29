@@ -58,6 +58,11 @@ function muxBootstrap({ dispatch, connect, getConfig }) {
         dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
       }
     }
+    if (type === 'restBufferInfo') {
+      //for flv live
+      logger.log('chunks parsed,rest buffer info', data);
+      dispatch(ACTION.FLVLIVE.REST_BUFFER, data.buffer);
+    }
     if (type === 'error') {
       _doError(data);
     }
@@ -196,11 +201,36 @@ function toMux(
   }
 }
 
+function toMuxFlvChunks({ getState, dispatch }, buffer) {
+  let worker = getState(ACTION.MUX).join();
+  getState(ACTION.HAS_DETECT_FORMAT).map(detect => {
+    if (!detect) {
+      dispatch(ACTION.HAS_DETECT_FORMAT, true);
+      worker.postMessage({
+        type: 'selectDemuxer',
+        data: 'flv'
+      });
+    }
+  });
+
+  dispatch(ACTION.PROCESS, PROCESS.MUXING);
+  worker.postMessage(
+    {
+      type: 'push',
+      data: {
+        buffer: buffer.buffer
+      }
+    },
+    [buffer.buffer]
+  );
+}
+
 resetInitSegment = F.curry(resetInitSegment);
 setTimeOffset = F.curry(setTimeOffset);
 muxBootstrap = F.curry(muxBootstrap);
 _toMuxTs = F.curry(_toMuxTs);
 _toMuxFmp4 = F.curry(_toMuxFmp4);
 toMux = F.curry(toMux);
+toMuxFlvChunks = F.curry(toMuxFlvChunks);
 
-export { muxBootstrap, resetInitSegment, setTimeOffset, toMux };
+export { muxBootstrap, resetInitSegment, setTimeOffset, toMux, toMuxFlvChunks };

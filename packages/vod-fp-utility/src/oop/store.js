@@ -87,15 +87,17 @@ function createStore(initState, actions = {}) {
             state = s.join();
           }
         } else if (state[prop] !== undefined) {
-          state = {
-            ...state,
-            ...{
-              [prop]: payload
-            }
-          };
+          state[prop] = payload;
+          // state = {
+          //   ...state,
+          //   ...{
+          //     [prop]: payload
+          //   }
+          // };
         }
       } else {
         let parentProp = prop;
+
         currentState = state[prop];
         currentDerive = state.derive[prop];
         prop = props.slice(1)[0];
@@ -104,22 +106,24 @@ function createStore(initState, actions = {}) {
             currentState[prop] = payload;
           } else if (state[prop] !== undefined) {
             state[prop] = payload;
-          } else if (state[parentProp] !== undefined) {
-            state[parentProp] = prop;
           }
+          //  else if (state[parentProp] !== undefined) {
+          //   state[parentProp] = prop;
+          // }
         } else if (currentDerive[prop]) {
           // create the copy of currentState //shadow copy
           const newState = currentDerive[prop](
-            Maybe.of({ ...currentState }),
+            Maybe.of(currentState),
             payload,
             _store
           );
           if (newState) {
             newState.map(x => {
-              state[parentProp] = {
-                ...currentState,
-                ...x
-              };
+              state[parentProp] = x;
+              // state[parentProp] = {
+              //   ...currentState,
+              //   ...x
+              // };
             });
           }
         }

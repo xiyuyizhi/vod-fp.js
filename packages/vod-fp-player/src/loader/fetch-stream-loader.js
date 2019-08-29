@@ -12,7 +12,7 @@ function _readStream({ dispatch }, reader) {
         console.log('end of stream');
         return;
       }
-      dispatch(ACTION.FLVLIVE.NEW_BUFFER_ARRIVE, value);
+      dispatch(ACTION.FLVLIVE.WRITE_CHUNKS, value);
       return dump();
     });
   }

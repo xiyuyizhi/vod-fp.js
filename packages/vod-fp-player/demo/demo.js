@@ -1,8 +1,8 @@
 import { Logger } from 'vod-fp-utility';
 import Vod from '../src';
 
-Logger.use(['base', 'mux', 'player']);
-// Logger.use(['base', 'player']);
+// Logger.use(['base', 'mux', 'player']);
+Logger.use(['base', 'player']);
 
 console.log('%c player start', 'background: #222; color: #bada55');
 
@@ -20,7 +20,11 @@ if (location.search) {
 }
 
 function initPlayer(url) {
-  vod = new Vod({ maxBufferLength: 30, maxFlyBufferLength: 60, flvLive: true });
+  vod = new Vod({
+    maxBufferLength: 30,
+    maxFlyBufferLength: 60,
+    flvLive: url.indexOf('test.flv') === -1 ? false : true
+  });
   window.vod = vod;
   vod.attachMedia(document.querySelector('video'));
   vod.loadSource(url);

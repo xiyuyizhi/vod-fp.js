@@ -1,4 +1,4 @@
-import {EventBus} from 'vod-fp-utility';
+import { EventBus } from 'vod-fp-utility';
 import Mux from 'vod-fp-mux';
 
 export default class WorkerSimulate extends EventBus {
@@ -8,7 +8,7 @@ export default class WorkerSimulate extends EventBus {
   }
 
   postMessage(e) {
-    let {type, data} = e;
+    let { type, data } = e;
     let mux = this.mux;
     switch (type) {
       case 'selectDemuxer':
@@ -33,7 +33,7 @@ export default class WorkerSimulate extends EventBus {
   initMuxer(type) {
     let mux;
     if (type === 'flv') {
-      mux = new Mux.FlvToMp4()
+      mux = new Mux.FlvToMp4();
     }
     if (type === 'ts') {
       mux = new Mux.TsToMp4();
@@ -43,6 +43,14 @@ export default class WorkerSimulate extends EventBus {
       this.emit('message', {
         data: {
           type: 'data',
+          data
+        }
+      });
+    });
+    mux.on('restBufferInfo', data => {
+      this.emit('message', {
+        data: {
+          type: 'restBufferInfo',
           data
         }
       });
