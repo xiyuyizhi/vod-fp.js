@@ -18,7 +18,8 @@ const ACTION = {
   LIVE_FLUSH_INTERVAL_FACTOR: 'liveFlushIntervalFactor',
   LIVE_LATENCY_FACTOR: 'liveLatencyFactor',
   FLV_LIVE: 'flvLive',
-  FLV_MUX_WATER_MARK: 'flvMuxWaterMark'
+  FLV_MUX_WATER_MARK: 'flvMuxWaterMark',
+  FLV_LIVE_MAX_DELAY: 'flyLiveMaxDelay'
 };
 
 const state = {
@@ -43,7 +44,8 @@ const state = {
   liveFlushIntervalFactor: 0.7,
   liveLatencyFactor: 0.9,
   flvLive: false,
-  flvMuxWaterMark: 1024 * 250
+  flvMuxWaterMark: 1024 * 200,
+  flyLiveMaxDelay: 4
 };
 
 export default {

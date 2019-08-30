@@ -64,6 +64,22 @@ export default class Player extends React.Component {
           message.error(res.msg);
           return;
         }
+
+        let renderStream = url => {
+          return (
+            <p>
+              {url}
+              <Button
+                style={{ marginLeft: 10 }}
+                type="primary"
+                onClick={() => this.loadLive(url)}
+              >
+                load
+              </Button>
+            </p>
+          );
+        };
+
         Modal.info({
           title: '直播流地址',
           width: 480,
@@ -72,29 +88,15 @@ export default class Player extends React.Component {
             <div>
               <div>
                 <h4>ts 流</h4>
-                <p>
-                  {res.data.ts}
-                  <Button
-                    style={{ marginLeft: 10 }}
-                    type="primary"
-                    onClick={() => this.loadLive(res.data.ts)}
-                  >
-                    load
-                  </Button>
-                </p>
+                {renderStream(res.data.ts)}
               </div>
               <div>
                 <h4>http flv</h4>
-                <p>
-                  {res.data.flv}
-                  <Button
-                    style={{ marginLeft: 10 }}
-                    type="primary"
-                    onClick={() => this.loadLive(res.data.flv)}
-                  >
-                    load
-                  </Button>
-                </p>
+                {renderStream(res.data.flv)}
+              </div>
+              <div>
+                <h4>websocket</h4>
+                {renderStream(res.data.wss)}
               </div>
             </div>
           )

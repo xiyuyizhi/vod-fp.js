@@ -23,7 +23,8 @@ function initPlayer(url) {
   vod = new Vod({
     maxBufferLength: 30,
     maxFlyBufferLength: 60,
-    flvLive: url.indexOf('test.flv') === -1 ? false : true
+    flvLive:
+      url.indexOf('test.flv') !== -1 || /wss?\:\/\//.test(url) ? true : false
   });
   window.vod = vod;
   vod.attachMedia(document.querySelector('video'));

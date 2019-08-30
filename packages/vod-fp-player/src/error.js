@@ -3,6 +3,16 @@ export const SUPPORT_ERROR = {
     type: 'SUPPORT_ERROR',
     detail: 'NOT_SUPPORT_MSE',
     fatal: true
+  },
+  NOT_SUPPORT_WEBSOCKET: {
+    type: 'SUPPORT_ERROR',
+    detail: 'NOT_SUPPORT_WEBSOCKET',
+    fatal: true
+  },
+  NOT_SUPPORT_FETCH: {
+    type: 'SUPPORT_ERROR',
+    detail: 'NOT_SUPPORT_FETCH',
+    fatal: true
   }
 };
 
@@ -121,5 +131,13 @@ export const MEDIA_ERROR = {
   SOURCEBUFFER_ERROR: {
     type: 'MEDIA_ERROR',
     detail: 'SOURCEBUFFER_ERROR'
+  }
+};
+
+export const FLV_LIVE_ERROR = {
+  LOAD_ERROR: {
+    type: 'FLV_LIVE_ERROR',
+    detail: 'FLV_LIVE_LOAD_ERROR',
+    fatal: true
   }
 };

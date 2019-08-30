@@ -3,11 +3,17 @@ import { ERROR, withMessage } from '../error';
 
 let logger = new Logger('mux');
 export default class FlvTagStream extends PipeLine {
+  constructor() {
+    super();
+    this.nextNeedSkipTagSize = false;
+  }
+
   push(buffer) {
     if (buffer.type) return;
 
-    let offset = 0;
+    let offset = this.nextNeedSkipTagSize ? 4 : 0;
     let bfLen = buffer.byteLength;
+    this.nextNeedSkipTagSize = false;
     while (offset + 11 < bfLen) {
       let tagInfo = this._parseFlvTag(buffer, offset);
 
@@ -30,8 +36,13 @@ export default class FlvTagStream extends PipeLine {
       }
 
       this.emit('data', tagInfo);
-      offset += tagLength; // 11为 FlvTag 的header
-      offset += 4; // the current tag size
+      offset += tagLength;
+      if (offset + 4 > bfLen) {
+        logger.log(`the current four byte tg size cuted...`);
+        this.nextNeedSkipTagSize = true;
+      } else {
+        offset += 4; // the current tag size
+      }
     }
 
     this.emit('restBufferInfo', {

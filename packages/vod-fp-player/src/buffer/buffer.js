@@ -66,7 +66,7 @@ function _bindSourceBufferEvent({ connect, getState, dispatch }, type, sb) {
   return sb;
 }
 
-function _afterAppended({ getState, dispatch, connect }, combine) {
+function _afterAppended({ getState, getConfig, dispatch, connect }, combine) {
   dispatch(ACTION.PROCESS, PROCESS.BUFFER_APPENDED);
   dispatch(ACTION.BUFFER.AUDIO_APPENDED, false);
   dispatch(ACTION.BUFFER.VIDEO_APPENDED, false);
@@ -95,7 +95,9 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
     .ap(getState(ACTION.BUFFER.VIDEO_BUFFER_INFO))
     .ap(getState(ACTION.BUFFER.AUDIO_BUFFER_INFO));
 
-  if (getState(ACTION.PLAYLIST.FORMAT) === 'ts') {
+  let format = getState(ACTION.PLAYLIST.FORMAT);
+
+  if (format === 'ts') {
     if (!combine) {
       segBound = getState(ACTION.BUFFER.VIDEO_BUFFER_INFO).getOrElse(() => {
         return getState(ACTION.BUFFER.AUDIO_BUFFER_INFO).value();
@@ -108,6 +110,19 @@ function _afterAppended({ getState, dispatch, connect }, combine) {
     connect(checkManualSeek)(segBound.start);
     connect(checkSeekAfterBufferAppend)(segBound);
     dispatch(ACTION.PLAYLIST.UPDATE_SEGMENTS_BOUND, segBound);
+  }
+
+  if (format === 'flvLive') {
+    getState(ACTION.MEDIA.MEDIA_ELE).map(media => {
+      if (
+        !media.paused &&
+        segBound.startPTS / 90000 - media.currentTime >
+          getConfig(ACTION.CONFIG.FLV_LIVE_MAX_DELAY)
+      ) {
+        logger.warn('current time break away from live position,seek');
+        media.currentTime = segBound.startPTS / 90000;
+      }
+    });
   }
 
   //清除无用元素

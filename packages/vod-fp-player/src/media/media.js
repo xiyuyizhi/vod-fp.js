@@ -124,6 +124,14 @@ function destroyMediaSource({ getState, dispatch }) {
   });
 }
 
+function endOfMediaSource({ getState }) {
+  getState(ACTION.MEDIA.MEDIA_SOURCE).map(ms => {
+    if (ms.readyState === 'open') {
+      ms.endOfStream();
+    }
+  });
+}
+
 function updateMediaDuration({ getState }) {
   Maybe.of(
     F.curry((ms, duration) => {
@@ -167,5 +175,6 @@ export {
   createMediaSource,
   destroyMediaSource,
   updateMediaDuration,
-  checkManualSeek
+  checkManualSeek,
+  endOfMediaSource
 };

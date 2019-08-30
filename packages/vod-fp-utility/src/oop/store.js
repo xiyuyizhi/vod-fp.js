@@ -88,12 +88,6 @@ function createStore(initState, actions = {}) {
           }
         } else if (state[prop] !== undefined) {
           state[prop] = payload;
-          // state = {
-          //   ...state,
-          //   ...{
-          //     [prop]: payload
-          //   }
-          // };
         }
       } else {
         let parentProp = prop;
@@ -107,9 +101,6 @@ function createStore(initState, actions = {}) {
           } else if (state[prop] !== undefined) {
             state[prop] = payload;
           }
-          //  else if (state[parentProp] !== undefined) {
-          //   state[parentProp] = prop;
-          // }
         } else if (currentDerive[prop]) {
           // create the copy of currentState //shadow copy
           const newState = currentDerive[prop](
@@ -120,10 +111,6 @@ function createStore(initState, actions = {}) {
           if (newState) {
             newState.map(x => {
               state[parentProp] = x;
-              // state[parentProp] = {
-              //   ...currentState,
-              //   ...x
-              // };
             });
           }
         }

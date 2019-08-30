@@ -9,7 +9,8 @@ export default {
     READ_CHUNKS: 'readChunks',
     FLUSH_CHUNKS: 'flushChunks',
     REST_BUFFER: 'restBuffer',
-    SET_READ_WATER_MARK: 'setReadWaterMark'
+    SET_READ_WATER_MARK: 'setReadWaterMark',
+    END_OF_STREAM: 'endOfStream'
   },
   getState() {
     return {
