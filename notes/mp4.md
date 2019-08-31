@@ -1,4 +1,4 @@
-## mp4 篇
+## mp4
 
 > 介绍 MP4 之前需要先了解 ISO Base Media Format,规范见(iso 14496-12 即 MPEG-4 part 12),mp4 格式是在 iso bmff 基础上进行扩展,MP4 规范文档参见 (iso 14496 -14).
 
@@ -140,5 +140,3 @@ avc1 box
       config(由 audioObjectType、samplerateIndex、extensionSamplingIndex 组成的两字节 或四字节)
 
 ```
-
-ISO BMFF 中对 encrypted 的支持,见[drm 篇](./drm.md)

@@ -2,20 +2,6 @@
 
 DOING...
 
-## some notes
-
-- [函数式+状态管理探索前端开发](./notes/statemanage_fp.md)
-
-- 音视频记录
-
-  - [ts 篇](./notes/ts.md)
-
-  - [h264 篇](./notes/h264.md)
-
-  - [mp4 篇](./notes/mp4.md)
-
-  - [drm 篇](./notes/drm.md)
-
 ## features
 
 - [x] hls with ts format
@@ -29,6 +15,20 @@ DOING...
 - [x] hls ts live with abr
 
 - [ ] http-flv live
+
+## some notes
+
+- [函数式+状态管理探索前端开发](./notes/statemanage_fp.md)
+
+- 音视频记录
+
+  - [ts](./notes/ts.md)
+
+  - [h264](./notes/h264.md)
+
+  - [mp4](./notes/mp4.md)
+
+  - [drm](./notes/drm.md)
 
 ## base usage
 
