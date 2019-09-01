@@ -140,6 +140,7 @@ export default class FlvAudioTagStream extends PipeLine {
       samplingFrquecyIndex
     } = audioConfig;
     return {
+      id: 2,
       samples: [],
       config,
       type: 'audio',

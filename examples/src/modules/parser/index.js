@@ -1,8 +1,7 @@
 import Mux from 'vod-fp-mux';
-import {
-  Input, Button, Row, Col, Alert
-} from 'antd';
-import TsRender from './TsRender';
+import { Input, Button, Row, Col, Alert } from 'antd';
+import TsFlvRender from './TsFlvRender';
+import Mp4Render from './Mp4Render';
 import loader from 'utils/loader';
 import './index.less';
 
@@ -12,6 +11,14 @@ const ProbeList = [
   {
     type: 'ts',
     probe: Probe.tsProbe
+  },
+  {
+    type: 'flv',
+    probe: Probe.flvProbe
+  },
+  {
+    type: 'mp4',
+    probe: Probe.mp4Probe
   }
 ];
 
@@ -34,7 +41,7 @@ export default class Parser extends React.Component {
   loadSource = () => {
     if (!this.sourceUrl) return;
     this.setState({ loading: true });
-    loader(this.sourceUrl, { responseType: arrayBuffer })
+    loader(this.sourceUrl, { responseType: 'arrayBuffer' })
       .then(res => {
         this.setState({ error: '', loading: false });
         this._resolveBuffer(new Uint8Array(res));
@@ -56,7 +63,13 @@ export default class Parser extends React.Component {
   };
 
   _resolveBuffer(buffer) {
-    let probe = ProbeList.filter(x => x.probe(buffer) !== -1).map(x => x.type);
+    let probe = ProbeList.filter(x => {
+      let ret = x.probe(buffer);
+      if (/mp4/i.test(ret)) {
+        x.type = ret;
+      }
+      return ret !== -1 && ret;
+    }).map(x => x.type);
     if (probe.length) {
       this.setState({
         format: probe[0],
@@ -70,16 +83,14 @@ export default class Parser extends React.Component {
   }
 
   render() {
-    let {
-      format, buffer, key, error, loading
-    } = this.state;
+    let { format, buffer, key, error, loading } = this.state;
     return (
       <div>
         <Row>
           <Col span={6} />
           <Col span={12}>
             <h1>
-              online parse ts format
+              online parse ts、flv、mp4 format
               <a
                 style={{
                   fontSize: 16,
@@ -114,7 +125,16 @@ export default class Parser extends React.Component {
               />
             </div>
             <div className="format-show">
-              {format === 'ts' ? <TsRender buffer={buffer} key={key} /> : null}
+              {format === 'ts' || format === 'flv' ? (
+                <TsFlvRender buffer={buffer} key={key} format={format} />
+              ) : null}
+              {/mp4/i.test(format) ? (
+                <Mp4Render
+                  buffer={buffer}
+                  key={key}
+                  format={format}
+                ></Mp4Render>
+              ) : null}
               {error && <Alert message={error} type="error" />}
             </div>
           </Col>

@@ -147,7 +147,7 @@ export default class FlvVideoTagStream extends PipeLine {
       }
       let data = buffer.subarray(offset, offset + naluSize);
       let unit = {
-        type: unitType,
+        nalType: unitType,
         data: data
       };
       units.push(unit);
@@ -214,6 +214,7 @@ export default class FlvVideoTagStream extends PipeLine {
     let expGolombDecoder = new ExpGolomb(sps[0]);
     let config = expGolombDecoder.readSPS();
     return {
+      id: 1,
       nalUnitSizeLength,
       samples: [],
       inputTimeScale: 90000,

@@ -74,11 +74,11 @@ function _loadCheck(
           ) {
             logger.warn(
               `current segment load complete still need: ${fetchFinishDelay} s, \n rest buffer can play time: ${bufferStarvationDelay}, \n download speed: ${loadSpeed *
-              8} bps`
+                8} bps`
             );
             let bufferTension =
               bufferStarvationDelay /
-              getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) <
+                getConfig(ACTION.CONFIG.MAX_BUFFER_LENGTH) <
               BUFFER_TENSION_FACTOR;
             if (loaded / total > LOAD_CONTINUE_FACTOR && !bufferTension) {
               logger.log('the segment will load complete,continue...');
@@ -114,7 +114,7 @@ function _getNextAutoLevel({ getState, connect, getConfig }) {
           bufferInfo.bufferLength / media.playbackRate;
         let avgbw = estimator.getEstimate();
         let ajustedBw;
-        let maxLevel = levels.length - 1;
+        let maxLevel = levels.length;
         let minLevel = 1;
         for (let i = maxLevel; i >= minLevel; i--) {
           // there may have enough buffer
@@ -127,7 +127,7 @@ function _getNextAutoLevel({ getState, connect, getConfig }) {
           } else {
             ajustedBw = avgbw * SPEED_USAGE_SLOW_FACTOR;
           }
-          let biterate = +levels[i].bandwidth;
+          let biterate = +levels[i - 1].bandwidth;
           if (
             biterate < ajustedBw &&
             (bufferStarvationDelay === 0 ||

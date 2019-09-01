@@ -16,6 +16,10 @@ const STREAM_LIST = [
   {
     value: 'http://xiyuyizhi.xyz/flv/index.m3u8',
     label: 'hls flv stream'
+  },
+  {
+    value: 'http://xiyuyizhi.xyz/hls_master/master.m3u8',
+    label: 'hls master 木叶丸'
   }
 ];
 
