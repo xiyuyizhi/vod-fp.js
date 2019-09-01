@@ -106,7 +106,8 @@ function _collectDebugInfo({ getState, getConfig }) {
     audioCodec: (audioInfo && audioInfo.codec) || '--',
     samplerate: (audioInfo && audioInfo.samplerate) || '--',
     speed:
-      (buffer > maxBuffer && media.paused) || flyBuffer > maxFlyBuffer
+      (buffer > maxBuffer && media.paused) ||
+      Math.abs(flyBufferInfo.bufferEnd - media.duration) < 1
         ? '0KB/s'
         : speed > 1
         ? speed.toFixed(2) + 'MB/s'

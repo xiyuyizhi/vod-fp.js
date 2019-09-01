@@ -1,5 +1,5 @@
-import {F, Task} from 'vod-fp-utility';
-import {ACTION} from '../store';
+import { F, Task } from 'vod-fp-utility';
+import { ACTION } from '../store';
 import xhrLoader from './xhr-loader';
 import fetchLoader from './fetch-loader';
 
@@ -18,17 +18,7 @@ const DEFAULT_CONFIG = {
   }
 };
 
-const STREAM_DEFAULT_COFNIG = {
-  method: 'GET',
-  url: '',
-  header: {},
-  options: {}
-};
-
-function loader({
-  dispatch,
-  connect
-}, config) {
+function loader({ dispatch, connect }, config) {
   return Task.of((resolve, reject) => {
     Task.of((_resolve, _reject) => {
       config.params = config.params || DEFAULT_CONFIG.params;
@@ -37,7 +27,6 @@ function loader({
 
       if (window.fetch && window.AbortController) {
         let controller = new AbortController();
-        let signal = controller.signal;
         connect(fetchLoader)(config, controller, _resolve, _reject);
         abortable = controller;
       } else {
@@ -48,16 +37,18 @@ function loader({
         id: config.url,
         task: abortable
       });
-    }).map(x => {
-      dispatch(ACTION.REMOVE_ABORTABLE, config.url);
-      resolve(x);
-    }).error(e => {
-      dispatch(ACTION.REMOVE_ABORTABLE, config.url);
-      // when the current request cancel or error, to empty the loadinfo which used in
-      // abr timer。
-      dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, null);
-      reject(e);
-    });
+    })
+      .map(x => {
+        dispatch(ACTION.REMOVE_ABORTABLE, config.url);
+        resolve(x);
+      })
+      .error(e => {
+        dispatch(ACTION.REMOVE_ABORTABLE, config.url);
+        // when the current request cancel or error, to empty the loadinfo which used in
+        // abr timer。
+        dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, null);
+        reject(e);
+      });
   });
 }
 

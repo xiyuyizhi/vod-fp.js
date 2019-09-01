@@ -12,6 +12,8 @@ function websocketLoader({ dispatch }, url) {
   }
 
   let socket = new WebSocket(url);
+  let ts = 0;
+  dispatch(ACTION.FLVLIVE.ABORTABLE, socket);
 
   socket.addEventListener('open', () => {
     logger.log('websocket open');
@@ -30,6 +32,14 @@ function websocketLoader({ dispatch }, url) {
     let reader = new FileReader();
 
     reader.onload = () => {
+      let tsTick = performance.now() - ts;
+      if (tsTick > 0.5) {
+        dispatch(
+          ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
+          reader.result.byteLength / tsTick / 1000
+        );
+      }
+      ts = performance.now();
       dispatch(ACTION.FLVLIVE.WRITE_CHUNKS, new Uint8Array(reader.result));
     };
     reader.readAsArrayBuffer(e.data);

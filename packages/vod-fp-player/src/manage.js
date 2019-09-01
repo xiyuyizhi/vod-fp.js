@@ -10,7 +10,7 @@ import {
 } from './playlist/segment';
 import { flushBuffer, abortBuffer, bufferBootstrap } from './buffer/buffer';
 import { muxBootstrap } from './mux/mux';
-import { flvLiveBootstrap } from './flv/flv-live';
+import { flvLiveBootstrap, abortFlvLive } from './flv/flv-live';
 
 let logger = new Logger('player');
 
@@ -95,6 +95,7 @@ function destroy({ connect, dispatch }) {
   logger.log('destroy...');
   connect(abortLoadingSegment);
   connect(abortBuffer);
+  connect(abortFlvLive);
   connect(destroyMediaSource);
   dispatch(ACTION.MAIN_LOOP_HANDLE, 'destroy');
   dispatch(ACTION.PLAYLIST.REMOVE_FLUSH_TASK);

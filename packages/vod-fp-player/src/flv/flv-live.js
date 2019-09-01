@@ -41,6 +41,17 @@ function flvLiveBootstrap({ dispatch, getState, connect, subscribe }, url) {
   }
 }
 
+function abortFlvLive({ getState }) {
+  getState(ACTION.FLVLIVE.ABORTABLE).map(abortAble => {
+    if (abortAble.abort) {
+      abortAble.abort();
+    }
+    if (abortAble.close) {
+      abortAble.close();
+    }
+  });
+}
+
 flvLiveBootstrap = curry(flvLiveBootstrap);
 
-export { flvLiveBootstrap };
+export { flvLiveBootstrap, abortFlvLive };

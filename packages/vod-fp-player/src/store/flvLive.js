@@ -10,7 +10,8 @@ export default {
     FLUSH_CHUNKS: 'flushChunks',
     REST_BUFFER: 'restBuffer',
     SET_READ_WATER_MARK: 'setReadWaterMark',
-    END_OF_STREAM: 'endOfStream'
+    END_OF_STREAM: 'endOfStream',
+    ABORTABLE: 'abortAble'
   },
   getState() {
     return {
@@ -18,6 +19,7 @@ export default {
       readWaterMark: 0,
       innerWriteBuffer: null,
       writeOffset: 0,
+      abortAble: null,
       restBuffer: new Uint8Array(),
       derive: {
         init(state, _, { getConfig, ACTION }) {

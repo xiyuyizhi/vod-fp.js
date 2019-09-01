@@ -139,5 +139,10 @@ export const FLV_LIVE_ERROR = {
     type: 'FLV_LIVE_ERROR',
     detail: 'FLV_LIVE_LOAD_ERROR',
     fatal: true
+  },
+  EARLY_FINISH: {
+    type: 'FLV_LIVE_ERROR',
+    detail: 'FLV_LIVE_EARLY_FINISH_ERROR',
+    fatal: true
   }
 };

@@ -15,11 +15,13 @@ function _readerStream({ dispatch }, reader, headers) {
   let store = [];
   let tsStart;
   let lastTs;
+
   let caclSize = arr =>
     arr.reduce((all, c) => {
       all += c.byteLength;
       return all;
     }, 0);
+
   let dump = () => {
     if (!tsStart) {
       lastTs = tsStart = performance.now();
@@ -44,8 +46,7 @@ function _readerStream({ dispatch }, reader, headers) {
       }
       store.push(value);
       let tsTick = performance.now() - lastTs;
-      //单次时间 > 1ms 有效
-      if (tsTick >= 2) {
+      if (tsTick > 0.5) {
         dispatch(
           ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
           value.byteLength / tsTick / 1000
