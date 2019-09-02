@@ -68,7 +68,8 @@ export default class Parser extends React.Component {
       if (/mp4/i.test(ret)) {
         x.type = ret;
       }
-      return ret !== -1 && ret;
+      if (typeof ret === 'number' && ret !== -1) return true;
+      return ret;
     }).map(x => x.type);
     if (probe.length) {
       this.setState({
