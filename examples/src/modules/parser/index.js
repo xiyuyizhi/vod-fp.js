@@ -1,5 +1,7 @@
 import Mux from 'vod-fp-mux';
-import { Input, Button, Row, Col, Alert } from 'antd';
+import {
+  Input, Button, Row, Col, Alert
+} from 'antd';
 import TsFlvRender from './TsFlvRender';
 import Mp4Render from './Mp4Render';
 import loader from 'utils/loader';
@@ -68,7 +70,7 @@ export default class Parser extends React.Component {
       if (/mp4/i.test(ret)) {
         x.type = ret;
       }
-      if (typeof ret === 'number' && ret !== -1) return true;
+      if (typeof ret === 'number') return ret !== -1;
       return ret;
     }).map(x => x.type);
     if (probe.length) {
@@ -84,7 +86,9 @@ export default class Parser extends React.Component {
   }
 
   render() {
-    let { format, buffer, key, error, loading } = this.state;
+    let {
+      format, buffer, key, error, loading
+    } = this.state;
     return (
       <div>
         <Row>
