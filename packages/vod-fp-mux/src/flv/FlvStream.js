@@ -5,8 +5,16 @@ import { flvProbe } from '../utils/probe';
 let logger = new Logger('mux');
 
 export default class FlvStream extends PipeLine {
-  constructor() {
+  /**
+   *
+   * @param {*} options
+   * {
+   *  live?
+   * }
+   */
+  constructor(options) {
     super();
+    this.options = options;
     this.hasPraseFlvHeader = false;
     this.metadata = null;
   }
@@ -31,7 +39,9 @@ export default class FlvStream extends PipeLine {
         data: metadata
       });
       this.emit('data', buffer.subarray(9 + 4));
-      this.hasPraseFlvHeader = true;
+      if (this.options.live) {
+        this.hasPraseFlvHeader = true;
+      }
       return;
     }
 

@@ -47,7 +47,7 @@ export default class FlvToMp4 extends PipeLine {
 
   setUpPipeLine(options) {
     let es;
-    let entryStream = new FlvStream();
+    let entryStream = new FlvStream(options);
     let flvTagStream = new FlvTagStream();
     let flvAudioTagStream = new FlvAudioTagStream();
     let flvVideoTagStream = new FlvVideoTagStream();

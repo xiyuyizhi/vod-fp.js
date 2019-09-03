@@ -20,6 +20,14 @@ const STREAM_LIST = [
   {
     value: 'http://xiyuyizhi.xyz/hls_master/master.m3u8',
     label: 'hls master 木叶丸'
+  },
+  {
+    value: 'http://xiyuyizhi.xyz/no_audio/index.m3u8',
+    label: 'no audio stream'
+  },
+  {
+    value: 'http://xiyuyizhi.xyz/no_video/index.m3u8',
+    label: 'no video stream'
   }
 ];
 

@@ -30,10 +30,10 @@ export default class WorkerSimulate extends EventBus {
     }
   }
 
-  initMuxer(type) {
+  initMuxer({ type, live }) {
     let mux;
     if (type === 'flv') {
-      mux = new Mux.FlvToMp4();
+      mux = new Mux.FlvToMp4({ live });
     }
     if (type === 'ts') {
       mux = new Mux.TsToMp4();

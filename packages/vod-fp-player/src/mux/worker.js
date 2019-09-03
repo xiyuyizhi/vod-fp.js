@@ -3,9 +3,9 @@ import Mux from 'vod-fp-mux';
 export default () => {
   let mux;
 
-  function initMuxer(type) {
+  function initMuxer({ type, live }) {
     if (type === 'flv') {
-      mux = new Mux.FlvToMp4();
+      mux = new Mux.FlvToMp4({ live });
     }
     if (type === 'ts') {
       mux = new Mux.TsToMp4();

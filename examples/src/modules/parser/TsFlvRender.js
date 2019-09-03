@@ -85,8 +85,8 @@ export default class TsFlvRender extends React.Component {
         <li>profileIdc:{profileIdc}</li>
         <li>levelIdc:{levelIdc}</li>
         <li>pixelRatio:{pixelRatio.toString()}</li>
-        <li>pps:{pps.toString()}</li>
-        <li>sps:{sps.toString()}</li>
+        <li>pps:{pps && pps.toString()}</li>
+        <li>sps:{sps && sps.toString()}</li>
         <li>samples count:{samples.length}</li>
         <li>
           <Button

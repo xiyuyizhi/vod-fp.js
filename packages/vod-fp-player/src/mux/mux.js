@@ -56,6 +56,9 @@ function muxBootstrap({ dispatch, connect, getConfig }) {
       }
       if (data.type === 'audio') {
         dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
+        if (!data.combine) {
+          dispatch(ACTION.PROCESS, PROCESS.MUXED);
+        }
       }
     }
     if (type === 'restBufferInfo') {
@@ -104,7 +107,10 @@ function _toMuxTs(
       let flv = isFlv(new Uint8Array(buffer, 0, 4));
       worker.postMessage({
         type: 'selectDemuxer',
-        data: flv ? 'flv' : 'ts'
+        data: {
+          type: flv ? 'flv' : 'ts',
+          live: false
+        }
       });
     }
   });
@@ -208,7 +214,10 @@ function toMuxFlvChunks({ getState, dispatch }, buffer) {
       dispatch(ACTION.HAS_DETECT_FORMAT, true);
       worker.postMessage({
         type: 'selectDemuxer',
-        data: 'flv'
+        data: {
+          type: 'flv',
+          live: true
+        }
       });
     }
   });
