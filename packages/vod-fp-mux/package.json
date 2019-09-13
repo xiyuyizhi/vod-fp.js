@@ -1,6 +1,6 @@
 {
   "name": "vod-fp-mux",
-  "version": "1.0.0",
+  "version": "1.2.3",
   "description": "",
   "main": "lib/vod-fp-mux.min.js",
   "scripts": {
@@ -17,10 +17,10 @@
   ],
   "dependencies": {
     "aes-js": "^3.1.2",
-    "vod-fp-utility": "^1.0.0"
+    "vod-fp-utility": "^1.2.3"
   },
   "devDependencies": {
-    "vod-fp-player": "^1.0.0"
+    "vod-fp-player": "^1.2.3"
   },
   "author": "xiyuyizhi",
   "license": "ISC",
