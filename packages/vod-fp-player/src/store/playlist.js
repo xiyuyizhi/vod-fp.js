@@ -312,6 +312,13 @@ export default {
                   x.end = parseFloat((x.start + x.duration).toFixed(6));
                 }
               });
+              getState(ACTION.PLAYLIST.IS_LIVE).map(() => {
+                let pres = segments.filter(x => x.id <= currentId);
+                for (let i = pres.length - 1; i > 0; i--) {
+                  pres[i - 1].end = pres[i].start;
+                  pres[i - 1].start = pres[i - 1].end - pres[i - 1].duration;
+                }
+              });
             })
           )
             .ap(this.segments(state))

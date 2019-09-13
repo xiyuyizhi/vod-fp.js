@@ -15,7 +15,7 @@ import {
 import { ACTION, PROCESS } from '../store';
 import m3u8Parser from '../utils/m3u8-parser';
 import loader from '../loader/loader';
-import { _mergePlaylist } from './m3u8-live';
+import { mergePlaylist } from './m3u8-live';
 import { getNextABRLoadLevel } from '../abr/abr';
 import { LOADER_ERROR, PLAYLIST_ERROR, M3U8_PARSE_ERROR } from '../error';
 import { loadInitMP4 } from './segment';
@@ -82,7 +82,7 @@ function _updateLevelAndMediaAndKey({ connect }, level) {
       compose(
         map(connect(_updateMedia)(level)),
         map(trace('log: load media detail,')),
-        chain(connect(_loadResource)('MEDIA')),
+        chain(connect(loadResource)('MEDIA')),
         map(prop('uri')),
         trace('log: find matched media,')
       )(media)
@@ -96,7 +96,7 @@ function _updateLevelAndMediaAndKey({ connect }, level) {
         map(connect(_checkloadDecryptKey)),
         map(connect(_updateLevel)(l)),
         map(trace('log: load level detail,')),
-        chain(connect(_loadResource)('LEVEL')),
+        chain(connect(loadResource)('LEVEL')),
         map(prop('url')),
         trace('log: current Level,')
       )(l)
@@ -116,7 +116,7 @@ function _checkloadDecryptKey({ getState, connect }, level) {
       compose(
         map(connect(_updateKey)(level.join().levelId)),
         map(trace('log: load key detail,')),
-        chain(connect(_loadResource)('KEY')),
+        chain(connect(loadResource)('KEY')),
         map(prop('uri')),
         trace('log: find matched key info,'),
         map(prop('key')),
@@ -131,7 +131,7 @@ function _checkloadDecryptKey({ getState, connect }, level) {
 }
 
 //  (string,type) --> Task  type:MANIFEST | LEVEL | MEDIA |KEY
-function _loadResource({ connect, getConfig }, type, url) {
+function loadResource({ connect, getConfig }, type, url) {
   let maxRetryCount = getConfig(ACTION.CONFIG.MAX_LEVEL_RETRY_COUNT);
   let toLoad = (retryCount, resolve, reject) => {
     let params = type === 'KEY' ? { responseType: 'arraybuffer' } : null;
@@ -199,7 +199,7 @@ function _checkLevelOrMaster({ dispatch, connect }, playlist) {
 function loadPlaylist({ id, dispatch, subscribe, getState, connect }, url) {
   dispatch(ACTION.PROCESS, PROCESS.PLAYLIST_LOADING);
   return Task.of((resolve, reject) => {
-    connect(_loadResource)('MANIFEST', url)
+    connect(loadResource)('MANIFEST', url)
       .map(connect(_checkLevelOrMaster))
       .map(x => {
         dispatch(ACTION.PROCESS, PROCESS.IDLE);
@@ -244,11 +244,9 @@ function _mergePlaylistWithLastLevel({ getState }, currenLevelId, lastLevelId) {
   let lastLevel = getState(ACTION.PLAYLIST.FIND_LEVEL, lastLevelId);
 
   Maybe.of(
-    curry((currentDetail, lastDetail) => {
+    curry((currentDetail, lastDetail, media) => {
       logger.log(
-        `need sync segment bound with last level [${currentDetail.startSN} , ${
-          currentDetail.endSN
-        }] , [${lastDetail.startSN} , ${lastDetail.endSN}]`
+        `the first time load the level ${currenLevelId}, need sync segment bound with last level ${lastLevelId}, [${currentDetail.startSN} , ${currentDetail.endSN}] , [${lastDetail.startSN} , ${lastDetail.endSN}]`
       );
       let segs = currentDetail.segments;
       let lastSegs = lastDetail.segments;
@@ -264,12 +262,17 @@ function _mergePlaylistWithLastLevel({ getState }, currenLevelId, lastLevelId) {
           seg.start = last.end;
           seg.end = seg.start + seg.duration;
           last = seg;
+        } else {
+          seg.start = media.duration;
+          seg.end = seg.start + seg.duration;
+          last = seg;
         }
       }
     })
   )
     .ap(currenLevel.map(prop('detail')))
-    .ap(lastLevel.map(prop('detail')));
+    .ap(lastLevel.map(prop('detail')))
+    .ap(getState(ACTION.MEDIA.MEDIA_ELE));
 }
 
 // use in abr condition,when level changed
@@ -292,17 +295,18 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
         subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
           Maybe.of(
             curry((_, levelUrl) => {
+              // the first time load the nextAutoLevel or just update details
               nextLevelHasDetail
                 .map(() => {
                   // fetch the newest details
-                  connect(_loadResource)('LEVEL', levelUrl).map(detail => {
+                  connect(loadResource)('LEVEL', levelUrl).map(detail => {
                     logger.log('sync level detail when level changed in live');
-                    connect(_mergePlaylist)(nextAutoLevel, detail);
+                    connect(mergePlaylist)(nextAutoLevel, detail);
                   });
                   return true;
                 })
                 .getOrElse(() => {
-                  connect(_mergePlaylistWithLastLevel)(
+                  connect(mergePlaylistWithLastLevel)(
                     nextAutoLevel,
                     currenLevel
                   );
@@ -337,7 +341,7 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
 
 _checkloadDecryptKey = curry(_checkloadDecryptKey);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
-_loadResource = curry(_loadResource);
+loadResource = curry(loadResource);
 _updateLevelAndMediaAndKey = curry(_updateLevelAndMediaAndKey);
 _updateLevel = curry(_updateLevel);
 _updateMedia = curry(_updateMedia);
@@ -349,7 +353,7 @@ changePlaylistLevel = curry(changePlaylistLevel);
 inSureNextLoadLevelReady = curry(inSureNextLoadLevelReady);
 
 export {
-  _loadResource,
+  loadResource,
   loadPlaylist,
   changePlaylistLevel,
   inSureNextLoadLevelReady

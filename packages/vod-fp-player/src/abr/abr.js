@@ -12,7 +12,7 @@ const LOAD_ABORT_BUFFER_REFERENCE_FACTOR = 0.2;
 const LOAD_CHECK_REAL_DO_FACTOR = 0.5;
 const LOAD_CONTINUE_FACTOR = 0.8;
 const SPEED_USAGE_FACTOR = 0.7;
-const SPEED_USAGE_SLOW_FACTOR = 0.35;
+const SPEED_USAGE_SLOW_FACTOR = 0.45;
 const LOW_BUFFER_FACTOR = 0.3;
 
 function _selectForceLevel(
@@ -105,6 +105,7 @@ function _loadCheck(
 }
 
 function _getNextAutoLevel({ getState, connect, getConfig }) {
+  let isLive = getState(ACTION.PLAYLIST.IS_LIVE).value();
   return Maybe.of(
     curry(
       (estimator, bufferInfo, media, levels, segDuration, currentLevelId) => {
@@ -120,8 +121,9 @@ function _getNextAutoLevel({ getState, connect, getConfig }) {
           // there may have enough buffer
           // or the compared level(currentLevelId) bigger than the current level
           if (
-            bufferStarvationDelay / maxBufferLength > LOW_BUFFER_FACTOR ||
-            i < currentLevelId
+            !isLive &&
+            (bufferStarvationDelay / maxBufferLength > LOW_BUFFER_FACTOR ||
+              i < currentLevelId)
           ) {
             ajustedBw = avgbw * SPEED_USAGE_FACTOR;
           } else {
@@ -168,11 +170,16 @@ function abrProcess({ subOnce, dispatch, connect }, segment) {
   });
 }
 
-function abrBootstrap({ subscribe, dispatch, getConfig }) {
+function abrBootstrap({ subscribe, getState, dispatch, getConfig }) {
+  let isLive = getState(ACTION.PLAYLIST.IS_LIVE).value();
   // init estimator
   let bwEstimator = new EwmaBandWidthEstimator(
-    getConfig(ACTION.CONFIG.ABR_EWMA_SLOW_VOD),
-    getConfig(ACTION.CONFIG.ABR_EWMA_FAST_VOD),
+    isLive
+      ? getConfig(ACTION.CONFIG.ABR_EWMA_SLOW_LIVE)
+      : getConfig(ACTION.CONFIG.ABR_EWMA_SLOW_VOD),
+    isLive
+      ? getConfig(ACTION.CONFIG.ABR_EWMA_FAST_LIVE)
+      : getConfig(ACTION.CONFIG.ABR_EWMA_FAST_VOD),
     getConfig(ACTION.CONFIG.ABR_EWMA_DEFAULT_ESTIMATE)
   );
   dispatch(ACTION.ABR.ESTIMATER, bwEstimator);

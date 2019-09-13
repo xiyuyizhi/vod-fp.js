@@ -1,22 +1,10 @@
 import { F, Logger, Task, Maybe, Tick } from 'vod-fp-utility';
 import { ACTION, PROCESS } from '../store';
-import { _loadResource } from './playlist';
+import { loadResource } from './playlist';
 import { updateMediaDuration } from '../media/media';
 import { getBufferInfo } from '../buffer/buffer-helper';
 const { curry, prop } = F;
 let logger = new Logger('player');
-
-function _traverseLevelsFindSNMatched(getState, sn) {
-  return getState(ACTION.PLAYLIST.LEVELS).map(levels => {
-    for (let level of levels) {
-      let matched =
-        level.detail && level.detail.segments.find(x => x.id === sn);
-      if (matched) {
-        return matched;
-      }
-    }
-  });
-}
 
 /**
  *  [0,1,1] -> [0,1,0]
@@ -49,7 +37,7 @@ function _convertCC(segments) {
  * @param {*} levelId the current used level
  * @param {*} newDetails
  */
-function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
+function mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
   let noNews = false;
 
   getState(ACTION.PLAYLIST.FIND_LEVEL, levelId).map(level => {
@@ -57,71 +45,51 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
     let oldStartSN = detail.startSN;
     let oldEndSN = detail.endSN;
     let oldSegments = detail.segments;
-    let segments = _convertCC(newDetails.segments);
+    let newSegments = _convertCC(newDetails.segments);
     let { startSN, endSN } = newDetails;
     let delta = startSN - oldStartSN;
     let lastSegment;
-    let lastCC;
-    logger.log(
-      `merge level details with levelId ${levelId},[${oldStartSN},${oldEndSN}] -> [${startSN},${endSN}]`
-    );
+    let lastCC = 0;
+
     noNews = oldStartSN === startSN && oldEndSN === endSN;
 
-    let newStartSN = startSN;
-    for (let i = 0; i <= endSN - startSN; i++) {
-      if (oldSegments[i + delta]) {
-        lastSegment = oldSegments[i + delta];
-      } else {
-        let newSeg = segments[i];
-        if (!lastSegment) {
-          lastSegment = _traverseLevelsFindSNMatched(
-            getState,
-            startSN + i
-          ).value();
-          if (lastSegment) {
-            newSeg.start = lastSegment.start;
-          } else {
-            let lastLevelStartSN = getState(ACTION.PLAYLIST.FIND_LAST_LEVEL)
-              .map(prop('detail'))
-              .map(prop('startSN'))
-              .getOrElse(startSN);
-            let deltaCompareLastLevel = startSN - lastLevelStartSN;
-            if (
-              deltaCompareLastLevel < 0 &&
-              deltaCompareLastLevel > -2 &&
-              i != endSN - startSN
-            ) {
-              logger.warn(
-                `can‘t find a matched segment for ${startSN +
-                  i}, startSN < lastLevel.startSN,continue loop`
-              );
-              newStartSN = startSN + i + 1;
-              continue;
-            }
-            logger.warn(
-              `can‘t find a matched segment for ${startSN +
-                i},use total duration as sync start , ${detail.duration}`
-            );
-            newSeg.start = detail.duration;
-            lastSegment = oldSegments[oldSegments.length - 1];
-          }
-        } else {
-          newSeg.start = lastSegment.end;
-        }
-        if (!lastCC && lastSegment) {
-          lastCC = lastSegment.cc || 0;
-        }
-        if (newSeg.cc) {
-          // convertCC 转换后,0 表示和前一个分片cc相同、 !0 为新cc
-          lastCC++;
-        }
-        // update segement key props
-        newSeg.end = newSeg.start + newSeg.duration;
-        //resolve discontinuity
-        newSeg.cc = lastCC;
-        newSeg.levelId = levelId;
+    logger.log(
+      `merge level ${newDetails.levelId} details with levelId ${levelId},[${oldStartSN},${oldEndSN}] -> [${startSN},${endSN}]`
+    );
+
+    let overlap =
+      (startSN >= oldStartSN && startSN <= oldEndSN) ||
+      (oldStartSN >= startSN && oldStartSN <= endSN);
+
+    if (!overlap) {
+      getState(ACTION.PLAYLIST.FIND_LAST_LEVEL)
+        .map(prop('detail'))
+        .map(prop('segments'))
+        .map(olds => {
+          oldSegments = olds;
+          logger.log(`use last level ${olds.levelId} to sync new details`);
+        });
+    }
+
+    let result = _mergeDetails(oldSegments, newSegments);
+    logger.warn(
+      `new levels index=${result.newIndex} match old levels index=${result.oldIndex}`
+    );
+
+    for (let i = 0; i < newSegments.length; i++) {
+      let newSeg = newSegments[i];
+      if (newSeg.cc) {
+        lastCC++;
+      }
+      newSeg.cc = lastCC;
+      newSeg.levelId = levelId;
+      newSeg.lowestLevel = levelId === 1;
+      if (i > result.newIndex) {
+        newSeg.start = newSeg.origStart = newSegments[i - 1].end;
+        newSeg.end = newSeg.origEnd = newSeg.start + newSeg.duration;
+      }
+      if (oldSegments.map(x => x.id).indexOf(newSeg.id) === -1) {
         oldSegments.push(newSeg);
-        lastSegment = newSeg;
       }
     }
 
@@ -151,6 +119,45 @@ function _mergePlaylist({ getState, dispatch, connect }, levelId, newDetails) {
   return noNews;
 }
 
+function _mergeDetails(oldSegments, newSegments) {
+  let s;
+  let oldIds = oldSegments.map(x => x.id);
+  let newIds = newSegments.map(x => x.id);
+  let deltas = newIds
+    .map((id, index) => {
+      return oldIds
+        .map((oldId, oldIndex) => {
+          return {
+            newIndex: index,
+            oldIndex,
+            delta: id - oldId
+          };
+        })
+        .filter(x => x.delta === 0);
+    })
+    .filter(x => x.length);
+
+  if (deltas.length && deltas[0].length) {
+    let matched = deltas[0][0];
+    s = newSegments[matched.newIndex];
+    s.start = oldSegments[matched.oldIndex].start;
+    s.end = s.start + s.duration;
+    return matched;
+  }
+
+  let oldNb = oldSegments.length - 1;
+  s = newSegments[0];
+  s.start = oldSegments[oldNb].start;
+  s.end = s.start + s.duration;
+  logger.warn(
+    `no overlap between two level,assume they are aligned,set segment.id = ${s.id} start`
+  );
+  return {
+    newIndex: 0,
+    oldIndex: oldNb
+  };
+}
+
 function bootStrapFlushPlaylist({ getState, dispatch, getConfig, connect }) {
   let flushTask;
   let factor = getConfig(ACTION.CONFIG.LIVE_FLUSH_INTERVAL_FACTOR);
@@ -162,10 +169,10 @@ function bootStrapFlushPlaylist({ getState, dispatch, getConfig, connect }) {
     Maybe.of(
       curry((levelUrl, currentLevelId) => {
         let tsStart = performance.now();
-        connect(_loadResource)('LEVEL', levelUrl)
+        connect(loadResource)('LEVEL', levelUrl)
           .map(details => {
             let segsNb = details.segments.length;
-            let noNews = connect(_mergePlaylist)(currentLevelId, details);
+            let noNews = connect(mergePlaylist)(currentLevelId, details);
             interval = details.targetduration * 1000 || interval;
 
             if (!details.live) {
@@ -183,6 +190,7 @@ function bootStrapFlushPlaylist({ getState, dispatch, getConfig, connect }) {
           .error(e => {
             if (e.fatal()) {
               flushTask.destroy();
+              dispatch(ACTION.ERROR, e);
             }
           });
       })
@@ -259,13 +267,13 @@ function checkSeekAfterBufferAppend({ getState }, segBound) {
     .ap(getState(ACTION.MEDIA.MEDIA_ELE));
 }
 
-_mergePlaylist = curry(_mergePlaylist);
+mergePlaylist = curry(mergePlaylist);
 bootStrapFlushPlaylist = curry(bootStrapFlushPlaylist);
 checkSyncLivePosition = curry(checkSyncLivePosition);
 checkSeekAfterBufferAppend = curry(checkSeekAfterBufferAppend);
 
 export {
-  _mergePlaylist,
+  mergePlaylist,
   bootStrapFlushPlaylist,
   checkSyncLivePosition,
   checkSeekAfterBufferAppend
