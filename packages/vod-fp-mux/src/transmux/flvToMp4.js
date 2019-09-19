@@ -78,6 +78,8 @@ export default class FlvToMp4 extends PipeLine {
 
     es = this.entryStream.pipe(flvTagStream);
 
+    es.pipe(flvMetaDataStream);
+
     es.pipe(flvAudioTagStream)
       .pipe(remuxStream)
       .pipe(audioFragmentStream);

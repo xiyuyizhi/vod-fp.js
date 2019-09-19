@@ -14,6 +14,8 @@ export default class FlvTagStream extends PipeLine {
     let offset = this.nextNeedSkipTagSize ? 4 : 0;
     let bfLen = buffer.byteLength;
     this.nextNeedSkipTagSize = false;
+    let tracks = [];
+
     while (offset + 11 < bfLen) {
       let tagInfo = this._parseFlvTag(buffer, offset);
 
@@ -35,7 +37,16 @@ export default class FlvTagStream extends PipeLine {
         break;
       }
 
+      if (tagInfo.tagType === 8) {
+        tracks[0] = true;
+      }
+
+      if (tagInfo.tagType === 9) {
+        tracks[1] = true;
+      }
+
       this.emit('data', tagInfo);
+
       offset += tagLength;
       if (offset + 4 > bfLen) {
         logger.log(`the current four byte tg size cuted...`);
@@ -43,6 +54,14 @@ export default class FlvTagStream extends PipeLine {
       } else {
         offset += 4; // the current tag size
       }
+    }
+
+    if (tracks.filter(x => x).length === 2) {
+      //for conditon:parse flv header find there only one track,but there are multi tracks real
+      this.emit('data', {
+        type: 'metadata',
+        data: { video: 1, audio: 1 }
+      });
     }
 
     this.emit('restBufferInfo', {

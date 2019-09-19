@@ -1,4 +1,4 @@
-const ACTION = {
+const CONFIG = {
   MAX_BUFFER_LENGTH: 'maxBufferLength',
   MAX_FLY_BUFFER_LENGTH: 'maxFlyBufferLength',
   TICK_INTERVAL: 'tickInterval',
@@ -53,9 +53,11 @@ const state = {
   flyLiveMaxDelay: 4
 };
 
+export { CONFIG };
+
 export default {
   module: 'CONFIG',
-  ACTION,
+  ACTION: { ...CONFIG },
   getState() {
     return state;
   }

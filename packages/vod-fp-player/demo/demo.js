@@ -18,7 +18,7 @@ if (location.search) {
   url = location.search;
   url = url.replace(/(\?.*url=)/, '');
 }
-
+window.Vod = Vod;
 function initPlayer(url) {
   vod = new Vod({
     maxBufferLength: 30,

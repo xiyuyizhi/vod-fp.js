@@ -37,17 +37,21 @@ npm install vod-fp-player --save
 
 import Vod from "vod-fp-player"
 
+```
+
+```
 const vod = new Vod({
-  maxBufferLength:60
+  Vod.Configs.MAX_BUFFER_LENGTH:60,
+  Vod.Configs.MAX_FLY_BUFFER_LENGTH:30,
+  Vod.Configs.FLV_LIVE:false, // flv live
 })
 
 vod.attachMedia(document.querySelector('video'))
 
-vod.loadSource('m3u8 url')
-
-vod.changeLevel(levelId)
-
-vod.destroy()
+vod.loadSource('xxxx.m3u8')
+vod.loadSource('xxxx.master.m3u8')
+vod.loadSource('http live flv')
+vod.loadSource('wss://xxxxx.flv')
 
 vod.on(Vod.Events.ERROR,e => {
   // do someting when error occur
@@ -58,9 +62,10 @@ vod.on(Vod.Events.MANIFEST_LOADED,playlist => {
 
 })
 
-vod.on(Vod.Events.DURATION_CHANGE,duration => {
+vod.on(Vod.Events.LEVEL_CHANGED,levelId => {
 
 })
+
 
 .
 .
@@ -70,8 +75,8 @@ vod.on(Vod.Events.DURATION_CHANGE,duration => {
 
 ## usage details
 
-- vod-fp-utility
+- [vod-fp-utility](./packages/vod-fp-player/README.md)
 
-- vod-fp-mux
+- [vod-fp-mux](./packages/vod-fp-mux/README.md)
 
-- vod-fp-player
+- [vod-fp-utility](./packages/vod-fp-utility/README.md)

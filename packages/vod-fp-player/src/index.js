@@ -1,6 +1,7 @@
 import { EventBus } from 'vod-fp-utility';
 import Events from './events';
 import { createStore, getInitState, ACTION } from './store';
+import { CONFIG } from './store/config';
 import { manageHls, manageFlvLive, changeLevel, destroy } from './manage';
 import { debuger, clearDebuger } from './plugin/debuger';
 
@@ -18,6 +19,10 @@ export default class Vod extends EventBus {
 
   static get Events() {
     return Events;
+  }
+
+  static get Configs() {
+    return CONFIG;
   }
 
   attachMedia(media) {

@@ -293,6 +293,8 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
         ).map(prop('detail'));
 
         subOnce(ACTION.EVENTS.LEVEL_CHANGED, () => {
+          dispatch(ACTION.EVENTS.LEVEL_CHANGED, nextAutoLevel);
+
           Maybe.of(
             curry((_, levelUrl) => {
               // the first time load the nextAutoLevel or just update details
@@ -341,13 +343,13 @@ function inSureNextLoadLevelReady({ connect, dispatch, getState, subOnce }) {
 
 _checkloadDecryptKey = curry(_checkloadDecryptKey);
 _checkLevelOrMaster = curry(_checkLevelOrMaster);
-loadResource = curry(loadResource);
 _updateLevelAndMediaAndKey = curry(_updateLevelAndMediaAndKey);
 _updateLevel = curry(_updateLevel);
 _updateMedia = curry(_updateMedia);
 _updateKey = curry(_updateKey);
 _checkHasMatchedMedia = curry(_checkHasMatchedMedia);
 _mergePlaylistWithLastLevel = curry(_mergePlaylistWithLastLevel);
+loadResource = curry(loadResource);
 loadPlaylist = curry(loadPlaylist);
 changePlaylistLevel = curry(changePlaylistLevel);
 inSureNextLoadLevelReady = curry(inSureNextLoadLevelReady);
