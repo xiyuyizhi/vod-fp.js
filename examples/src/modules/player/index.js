@@ -10,23 +10,23 @@ const STREAM_LIST = [
     label: 'fmp4 with multi tracks'
   },
   {
-    value: 'http://xiyuyizhi.xyz/ts/index.m3u8',
+    value: 'http://asserts.xiyuyizhi.xyz:6660/ts/index.m3u8',
     label: 'hls ts stream'
   },
   {
-    value: 'http://xiyuyizhi.xyz/flv/index.m3u8',
+    value: 'http://asserts.xiyuyizhi.xyz:6660/flv/index.m3u8',
     label: 'hls flv stream'
   },
   {
-    value: 'http://xiyuyizhi.xyz/hls_master/master.m3u8',
+    value: 'http://asserts.xiyuyizhi.xyz:6660/hls_master/master.m3u8',
     label: 'hls master 木叶丸'
   },
   {
-    value: 'http://xiyuyizhi.xyz/no_audio/index.m3u8',
+    value: 'http://asserts.xiyuyizhi.xyz:6660/no_audio/index.m3u8',
     label: 'no audio stream'
   },
   {
-    value: 'http://xiyuyizhi.xyz/no_video/index.m3u8',
+    value: 'http://asserts.xiyuyizhi.xyz:6660/no_video/index.m3u8',
     label: 'no video stream'
   }
 ];
