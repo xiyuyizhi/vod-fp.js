@@ -1,0 +1,66 @@
+import { useState } from 'react';
+import { Modal, Button, message } from 'antd';
+import loader from 'utils/loader';
+
+export default function LiveSelect(props) {
+  const fetchLiveStream = () => {
+    loader('http://api.xiyuyizhi.xyz/startLive', { responseType: 'json' })
+      .then(res => {
+        if (res.code) {
+          message.error(res.msg);
+          return;
+        }
+
+        let renderStream = url => {
+          return (
+            <p>
+              {url}
+              <Button
+                style={{ marginLeft: 10 }}
+                type="primary"
+                onClick={() => {
+                  Modal.destroyAll();
+                  props.loadSource(url);
+                }}
+              >
+                load
+              </Button>
+            </p>
+          );
+        };
+
+        Modal.info({
+          title: '直播流地址',
+          width: 480,
+          maskClosable: true,
+          content: (
+            <div>
+              <div>
+                <h4>ts 流</h4>
+                {renderStream(res.data.ts)}
+              </div>
+              <div>
+                <h4>http flv</h4>
+                {renderStream(res.data.flv)}
+              </div>
+              <div>
+                <h4>websocket</h4>
+                {renderStream(res.data.wss)}
+              </div>
+            </div>
+          )
+        });
+      })
+      .catch(e => {
+        message.error(e.message);
+      });
+  };
+
+  return (
+    <div className="item-line">
+      <Button type="primary" onClick={fetchLiveStream}>
+        生成直播测试流
+      </Button>
+    </div>
+  );
+}

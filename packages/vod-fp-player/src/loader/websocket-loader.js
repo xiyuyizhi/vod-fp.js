@@ -33,7 +33,7 @@ function websocketLoader({ dispatch }, url) {
 
     reader.onload = () => {
       let tsTick = performance.now() - ts;
-      if (tsTick > 0.5) {
+      if (tsTick > 1) {
         dispatch(
           ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
           reader.result.byteLength / tsTick / 1000

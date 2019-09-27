@@ -18,7 +18,7 @@ DOING...
 
 ## some notes
 
-- [函数式+状态管理探索前端开发](./notes/statemanage_fp.md)
+- [函数式+状态管理探索前端开发]
 
 - 音视频记录
 

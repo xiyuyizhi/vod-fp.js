@@ -26,7 +26,7 @@ function _readStream({ dispatch }, reader, headers) {
 
       let tsTick = performance.now() - ts;
 
-      if (tsTick > 0.5) {
+      if (tsTick > 1) {
         dispatch(
           ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
           value.byteLength / tsTick / 1000

@@ -119,13 +119,12 @@ function _toMuxTs(
     worker.postMessage({ type: 'resetInitSegment' });
     worker.postMessage({ type: 'setTimeOffset', data: segment.start });
   }
-  if (
-    lastSegment &&
-    (lastSegment.levelId !== segment.levelId || lastSegment.cc !== segment.cc)
-  ) {
-    worker.postMessage({ type: 'resetInitSegment' });
+  if (lastSegment && lastSegment.cc !== segment.cc) {
     worker.postMessage({ type: 'setDisContinuity' });
     worker.postMessage({ type: 'setTimeOffset', data: segment.start });
+  }
+  if (lastSegment && lastSegment.levelId !== segment.levelId) {
+    worker.postMessage({ type: 'resetInitSegment' });
   }
   if (lastSegment && Math.abs(segment.id - lastSegment.id) !== 1) {
     worker.postMessage({ type: 'setTimeOffset', data: segment.start });
