@@ -137,27 +137,55 @@ function _afterAppended({ getState, getConfig, dispatch, connect }, combine) {
 // (Maybe,string,string)  -> Maybe
 function _createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
   logger.log('create source buffer with mime: ', mime);
-  return mediaSource.chain(ms => {
-    let _create = Success.of(ms)
-      .map(ms => ms.addSourceBuffer(mime))
-      .map(connect(_bindSourceBufferEvent)(type))
-      .map(sb => {
-        if (type === 'video') {
-          dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, sb);
-        }
-        if (type === 'audio') {
-          dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, sb);
-        }
-        return sb;
-      })
-      .error(e => {
-        dispatch(
-          ACTION.ERROR,
-          e.merge(CusError.of(MEDIA_ERROR.ADD_SOURCEBUFFER_ERROR))
-        );
-      });
-    return eitherToMaybe(_create);
-  });
+
+  let _dispatchSb = sb => {
+    if (type === 'video') {
+      dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, sb);
+    }
+    if (type === 'audio') {
+      dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, sb);
+    }
+    return sb;
+  };
+
+  let _doCreate = compose(
+    join,
+    eitherToMaybe,
+    error(e => {
+      dispatch(
+        ACTION.ERROR,
+        e.merge(CusError.of(MEDIA_ERROR.ADD_SOURCEBUFFER_ERROR))
+      );
+    }),
+    map(_dispatchSb),
+    map(connect(_bindSourceBufferEvent)(type)),
+    map(ms => ms.addSourceBuffer(mime)),
+    maybeToEither
+  );
+
+  return doCreate(mediaSource);
+
+  // return mediaSource.chain(ms => {
+  //   let _sb = Success.of(ms)
+  //     .map(ms => ms.addSourceBuffer(mime))
+  //     .map(connect(_bindSourceBufferEvent)(type))
+  //     .map(sb => {
+  //       if (type === 'video') {
+  //         dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, sb);
+  //       }
+  //       if (type === 'audio') {
+  //         dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, sb);
+  //       }
+  //       return sb;
+  //     })
+  //     .error(e => {
+  //       dispatch(
+  //         ACTION.ERROR,
+  //         e.merge(CusError.of(MEDIA_ERROR.ADD_SOURCEBUFFER_ERROR))
+  //       );
+  //     });
+  //   return eitherToMaybe(_sb);
+  // });
 }
 
 function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
@@ -252,7 +280,7 @@ function flushBuffer({ getState, dispatch }, start, end) {
       if (vsb && vsb.updating) return;
       clearInterval(timer);
       resolve();
-    }, 2);
+    }, 10);
   });
 }
 

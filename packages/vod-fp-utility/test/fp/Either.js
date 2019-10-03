@@ -3,10 +3,12 @@ import { F } from '../../src/index.js';
 import { curry } from '../../src/fp/core';
 
 const chai = require('chai');
+const spies = require('chai-spies');
+chai.use(spies);
 chai.should();
 const { map, prop, compose, join, liftA2 } = F;
 
-describe('Fp: test Either', () => {
+describe.only('Fp: test Either', () => {
   function isAgePermit(age) {
     if (age >= 18) {
       return Success.of(age);
@@ -29,6 +31,15 @@ describe('Fp: test Either', () => {
     )(Success.of(1))
       .toString()
       .should.be.equal('Success(2)');
+
+    let successSpy = chai.spy();
+    let errorSpy = chai.spy();
+    Success.of(1)
+      .map(x => x + a)
+      .map(successSpy)
+      .error(errorSpy);
+    errorSpy.should.be.called();
+    successSpy.should.be.not.called();
   });
 
   it('#Fail', () => {

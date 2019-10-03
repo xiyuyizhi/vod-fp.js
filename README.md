@@ -16,6 +16,8 @@ DOING...
 
 - [x] http-flv live
 
+- [x] websocket flv live
+
 ## some notes
 
 - [函数式+状态管理探索前端开发]
@@ -75,7 +77,7 @@ vod.on(Vod.Events.LEVEL_CHANGED,levelId => {
 
 ## usage details
 
-- [vod-fp-utility](./packages/vod-fp-player/README.md)
+- [vod-fp-player](./packages/vod-fp-player/README.md)
 
 - [vod-fp-mux](./packages/vod-fp-mux/README.md)
 

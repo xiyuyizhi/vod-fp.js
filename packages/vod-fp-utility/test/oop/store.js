@@ -151,6 +151,10 @@ describe('OOp: test store', function() {
   it('createStore with module', () => {
     const module1 = {
       module: 'PLAYLIST',
+      ACTION: {
+        CURRENT_LEVEL: 'currentLevel',
+        LEVELS: 'levels'
+      },
       getState() {
         return {
           levels: [],
@@ -176,10 +180,6 @@ describe('OOp: test store', function() {
             }
           }
         };
-      },
-      ACTION: {
-        CURRENT_LEVEL: 'currentLevel',
-        LEVELS: 'levels'
       }
     };
     const a = combineActions(module1);
