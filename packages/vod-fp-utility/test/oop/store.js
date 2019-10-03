@@ -13,7 +13,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe.only('OOp: test store', function() {
+describe('OOp: test store', function() {
   let spy;
 
   beforeEach(() => {
@@ -66,11 +66,17 @@ describe.only('OOp: test store', function() {
 
   it('combineStates', () => {
     const state1 = {
-      levels: []
+      getState() {
+        return { levels: [] };
+      }
     };
     const state2 = {
-      mediaEle: null,
-      mediaSource: null
+      getState() {
+        return {
+          mediaEle: null,
+          mediaSource: null
+        };
+      }
     };
     const result = combineStates(state1, state2);
     result.should.have.property('derive');
@@ -80,21 +86,25 @@ describe.only('OOp: test store', function() {
   it('combineStates with module', () => {
     const module1 = {
       module: 'PLAYLIST',
-      state: {
-        m3u8Url: '',
-        levels: [],
-        currentLevel: -1,
-        derive: {
-          currentLevel: () => {}
-        }
+      getState() {
+        return {
+          m3u8Url: '',
+          levels: [],
+          currentLevel: -1,
+          derive: {
+            currentLevel: () => {}
+          }
+        };
       }
     };
 
     const module2 = {
       module: 'MEDIA',
-      state: {
-        mediaEle: null,
-        mediaSource: null
+      getState() {
+        return {
+          mediaEle: null,
+          mediaSource: null
+        };
       }
     };
     const result = combineStates(module1, module2);
@@ -141,29 +151,31 @@ describe.only('OOp: test store', function() {
   it('createStore with module', () => {
     const module1 = {
       module: 'PLAYLIST',
-      state: {
-        levels: [],
-        currentLevel: -1,
-        derive: {
-          levels(state, payload) {
-            if (!payload) {
-              return map(prop('levels'))(state);
+      getState() {
+        return {
+          levels: [],
+          currentLevel: -1,
+          derive: {
+            levels(state, payload) {
+              if (!payload) {
+                return map(prop('levels'))(state);
+              }
+              return state.map(x => {
+                x.levels = payload;
+                return x;
+              });
+            },
+            currentLevel(state, payload) {
+              if (!payload) {
+                return map(prop('currentLevel'))(state);
+              }
+              return state.map(x => {
+                x.currentLevel = payload;
+                return x;
+              });
             }
-            return state.map(x => {
-              x.levels = payload;
-              return x;
-            });
-          },
-          currentLevel(state, payload) {
-            if (!payload) {
-              return map(prop('currentLevel'))(state);
-            }
-            return state.map(x => {
-              x.currentLevel = payload;
-              return x;
-            });
           }
-        }
+        };
       },
       ACTION: {
         CURRENT_LEVEL: 'currentLevel',

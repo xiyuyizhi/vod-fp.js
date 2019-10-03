@@ -11,12 +11,17 @@ const curry = fn => {
   };
 };
 
+const compose2 = (x, y) => z => y(x(z));
+
 const compose = (...fns) => {
   const fnReversed = fns.reverse();
   const filterd = fnReversed.filter(fn => typeof fn !== 'function');
   if (filterd.length) {
     logger.error(filterd.join(',') + ' not function ');
     return;
+  }
+  if (fns.length === 2) {
+    return compose2(...fnReversed);
   }
   return args => {
     return fnReversed.reduce((ret, fn) => fn(ret), args);
@@ -54,6 +59,7 @@ const ifElse = curry((condition, fn1, fn2, arg) => {
 
 const prop = curry((a, b) => b[a]);
 const join = curry(a => a.join());
+const value = curry(a => a.value());
 const chain = curry((f, m) => m.map(f).join());
 const error = curry((f, m) => m.error(f));
 const liftA2 = curry((g, a, b) => a.map(g).ap(b));
@@ -84,6 +90,7 @@ export {
   splitOnce,
   splitMap,
   join,
+  value,
   chain,
   error,
   liftA2,

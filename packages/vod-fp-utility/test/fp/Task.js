@@ -52,6 +52,7 @@ describe('Fp: test Task', function() {
       .error(err => {
         err.should.be.equal(1);
         spy.should.not.be.called();
+        done();
       })
       .map(spy)
       .map(() => {
@@ -123,7 +124,6 @@ describe('Fp: test Task', function() {
       .map(spy)
       .error(err => {
         spy.should.not.be.called();
-        err.message.should.be.equal('a is not defined');
         done();
       });
   });
@@ -248,8 +248,10 @@ describe('Fp: test Task', function() {
         v.should.be.equal(5);
       });
 
+    let put = curry((a, b) => [a, b]);
+
     // 两个ap 中的task 谁先resolve没关系
-    Task.resolve(add) // [3,1]
+    Task.resolve(put) // [3,1]
       .ap(
         Task.of(resolve => {
           setTimeout(() => {
@@ -259,10 +261,11 @@ describe('Fp: test Task', function() {
       )
       .ap(Task.of(resolve => resolve(1))) // 优先完成依然是add的第二个参数
       .map(v => {
-        v.should.be.equal(4);
+        v[0].should.be.equal(3);
+        v[1].should.be.equal(1);
       });
 
-    Task.resolve(add) //[3,1]
+    Task.resolve(put) //[3,1]
       .ap(Task.of(resolve => resolve(3)))
       .ap(
         Task.of(resolve => {
@@ -272,12 +275,10 @@ describe('Fp: test Task', function() {
         })
       )
       .map(v => {
-        v.should.be.equal(4);
+        v[0].should.be.equal(3);
+        v[1].should.be.equal(1);
+        done();
       });
-
-    setTimeout(() => {
-      done();
-    }, 800);
   });
 
   it('Task.ap throw error on map', done => {
@@ -300,10 +301,10 @@ describe('Fp: test Task', function() {
       .ap(Task.of(resolve => resolve(3)))
       .map(v => {
         v.should.be.equal(6);
-        console.log(a);
       })
       .error(v => {
-        v.message.should.be.equal('a is not defined');
+        let flag = v.value().message.indexOf('a is not defined') !== -1;
+        flag.should.be.equal(true);
       });
     setTimeout(done, 400);
   });

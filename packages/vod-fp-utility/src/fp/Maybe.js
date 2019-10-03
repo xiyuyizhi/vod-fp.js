@@ -75,16 +75,16 @@ class Just extends Maybe {
 
 const maybeToEither = maybe => {
   if (maybe.constructor === Just) {
-    return maybe.chain(x => Success.of(x));
+    return maybe.chain(Success.of);
   }
   return Fail.of();
 };
 
-const emptyToResolve = empty => {
-  if (empty.constructor === Empty) {
+const emptyToResolve = maybe => {
+  if (maybe.constructor === Empty) {
     return Task.resolve();
   }
-  return empty;
+  return maybe;
 };
 
 const maybe = curry((f1, f2, e) => {

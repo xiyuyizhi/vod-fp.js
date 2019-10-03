@@ -79,7 +79,8 @@ class Task {
         if (result instanceof Fail) {
           if (this._errorCall.length) {
             let errorHandle = this._errorCall.shift();
-            result = Fail.of(errorHandle(result.value()));
+            let ret = errorHandle(result.value());
+            result = ret instanceof Task ? ret : Fail.of(ret);
             continue;
           }
         }
