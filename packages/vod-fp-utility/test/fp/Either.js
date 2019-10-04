@@ -8,7 +8,7 @@ chai.use(spies);
 chai.should();
 const { map, prop, compose, join, liftA2 } = F;
 
-describe.only('Fp: test Either', () => {
+describe('Fp: test Either', () => {
   function isAgePermit(age) {
     if (age >= 18) {
       return Success.of(age);

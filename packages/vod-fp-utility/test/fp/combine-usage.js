@@ -203,7 +203,7 @@ describe('Fp: combine usage', () => {
 
     let loadErrorFlag = 'loadSourceError';
     let parseM3u8ErrorFlag = 'parseM3u8Error';
-    let parseM3u8SuccessFlag = 'parseM3u8Success';
+    let parsedM3u8Data = 'parsedM3u8Data';
 
     let getState = key => Maybe.of(store).map(prop(key));
     let setState = (key, v) => (store[key] = v);
@@ -243,9 +243,9 @@ describe('Fp: combine usage', () => {
     let changePlaylist = flag => {
       return maybe(
         () => loadSource(flag),
-        () => {
+        levels => {
           changeSuccessSpy();
-          return Success.of();
+          return Success.of(levels);
         },
         getState('levels')
       );
@@ -266,15 +266,16 @@ describe('Fp: combine usage', () => {
     }, 350);
 
     setTimeout(() => {
-      changePlaylist(parseM3u8SuccessFlag).map(x => {
-        x.should.be.equal(parseM3u8SuccessFlag);
+      changePlaylist(parsedM3u8Data).map(x => {
+        x.should.be.equal(parsedM3u8Data);
         loadSuccessSpy.should.be.called.once;
         changeSuccessSpy.should.not.be.called();
       });
     }, 700);
 
     setTimeout(() => {
-      changePlaylist(parseM3u8SuccessFlag).map(x => {
+      changePlaylist(parsedM3u8Data).map(x => {
+        x.should.be.equal(parsedM3u8Data);
         loadSuccessSpy.should.be.called.once;
         changeSuccessSpy.should.be.called();
         done();
