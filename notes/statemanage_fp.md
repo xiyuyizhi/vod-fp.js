@@ -366,4 +366,4 @@ it('# test transform Task -> Either -> Task', done => {
 
 [程序员的范畴轮](https://github.com/hmemcpy/milewski-ctfp-pdf)
 
-[vod-fp.js](https://github.com/xiyuyizhi/vod-fp.js)
+[vod-fp-utility](https://github.com/xiyuyizhi/vod-fp.js/tree/master/packages/vod-fp-utility)

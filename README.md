@@ -1,7 +1,5 @@
 # vod-fp.js
 
-DOING...
-
 ## features
 
 - [x] hls with ts format
@@ -20,7 +18,7 @@ DOING...
 
 ## some notes
 
-- [函数式+状态管理探索前端开发]
+- [函数式+状态管理探索前端开发](./notes/statemanage_fp.md)
 
 - 音视频记录
 
@@ -34,45 +32,26 @@ DOING...
 
 ## base usage
 
-```
+```javascript
 npm install vod-fp-player --save
 
 import Vod from "vod-fp-player"
 
 ```
 
-```
+```javascript
 const vod = new Vod({
   Vod.Configs.MAX_BUFFER_LENGTH:60,
   Vod.Configs.MAX_FLY_BUFFER_LENGTH:30,
-  Vod.Configs.FLV_LIVE:false, // flv live
 })
 
 vod.attachMedia(document.querySelector('video'))
 
 vod.loadSource('xxxx.m3u8')
-vod.loadSource('xxxx.master.m3u8')
-vod.loadSource('http live flv')
-vod.loadSource('wss://xxxxx.flv')
 
 vod.on(Vod.Events.ERROR,e => {
   // do someting when error occur
 })
-
-vod.on(Vod.Events.MANIFEST_LOADED,playlist => {
-  // get the structured m3u8 playlist
-
-})
-
-vod.on(Vod.Events.LEVEL_CHANGED,levelId => {
-
-})
-
-
-.
-.
-.
-
 ```
 
 ## usage details
@@ -82,3 +61,25 @@ vod.on(Vod.Events.LEVEL_CHANGED,levelId => {
 - [vod-fp-mux](./packages/vod-fp-mux/README.md)
 
 - [vod-fp-utility](./packages/vod-fp-utility/README.md)
+
+## development
+
+```javascript
+git clone git@github.com:xiyuyizhi/vod-fp.js.git
+
+npm install lerna -g
+
+lerna bootstrap
+
+npm run build:mux
+
+npm run build:util
+
+npm run build:player
+
+npm run build:demo
+
+npm run dev
+
+npm run demo
+```

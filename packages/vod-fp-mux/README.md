@@ -5,7 +5,10 @@
 [online usage](https://demo.xiyuyizhi.xyz/onlineTool)
 
 ```javascript
+
+npm install vod-fp-mux --save
 import Mux from 'vod-fp-mux';
+
 ```
 
 ## ts to mp4

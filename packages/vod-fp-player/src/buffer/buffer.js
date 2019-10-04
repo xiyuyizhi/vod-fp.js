@@ -16,7 +16,7 @@ import { MEDIA_ERROR } from '../error';
 import { removeSegmentFromStore } from '../playlist/segment';
 import { getBufferInfo } from './buffer-helper';
 import { checkSeekAfterBufferAppend } from '../playlist/m3u8-live';
-const { map, compose, curry, join, chain, prop, trace } = F;
+const { map, compose, curry, join, chain, prop, trace, error } = F;
 
 let logger = new Logger('player');
 
@@ -163,29 +163,7 @@ function _createSourceBuffer({ dispatch, connect }, mediaSource, type, mime) {
     maybeToEither
   );
 
-  return doCreate(mediaSource);
-
-  // return mediaSource.chain(ms => {
-  //   let _sb = Success.of(ms)
-  //     .map(ms => ms.addSourceBuffer(mime))
-  //     .map(connect(_bindSourceBufferEvent)(type))
-  //     .map(sb => {
-  //       if (type === 'video') {
-  //         dispatch(ACTION.BUFFER.VIDEO_SOURCEBUFFER, sb);
-  //       }
-  //       if (type === 'audio') {
-  //         dispatch(ACTION.BUFFER.AUDIO_SOURCEBUFFER, sb);
-  //       }
-  //       return sb;
-  //     })
-  //     .error(e => {
-  //       dispatch(
-  //         ACTION.ERROR,
-  //         e.merge(CusError.of(MEDIA_ERROR.ADD_SOURCEBUFFER_ERROR))
-  //       );
-  //     });
-  //   return eitherToMaybe(_sb);
-  // });
+  return _doCreate(mediaSource);
 }
 
 function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
@@ -217,7 +195,7 @@ function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
           mediaSource,
           'video',
           `video/mp4; codecs="${info.videoInfo.codec}"`
-        ).value();
+        );
       });
       //保证音视频分别提取后,video audio sb 创建成功后、开始append
       subOnce(PROCESS.MUXED, () => doAppend(Maybe.of(sb), info));
@@ -232,7 +210,7 @@ function bufferBootstrap({ getState, subscribe, dispatch, connect, subOnce }) {
           mediaSource,
           'audio',
           `video/mp4; codecs="${info.audioInfo.codec}"`
-        ).value();
+        );
       });
       subOnce(PROCESS.MUXED, () => doAppend(Maybe.of(sb), info));
     });

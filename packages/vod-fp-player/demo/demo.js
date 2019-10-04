@@ -18,6 +18,11 @@ if (location.search) {
   url = location.search;
   url = url.replace(/(\?.*url=)/, '');
 }
+
+if (!url) {
+  throw new Error('need url,http://xxxxxx?url=abc');
+}
+
 window.Vod = Vod;
 function initPlayer(url) {
   vod = new Vod({

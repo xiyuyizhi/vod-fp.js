@@ -4,11 +4,17 @@
 
 > 提供基本的、科里化的工具函数,基本的 Maybe、Either、Task 等 monads
 
+```javascript
+npm run test
+```
+
 ### Maybe
 
 [详细使用参见 unit test](./test/fp/Maybe.js)
 
-```
+```javascript
+npm install vod-fp-ulitity --save
+
 import { Maybe,Just,Empty,maybe,maybeToEither } from "vod-fp-utility"
 
 ```
