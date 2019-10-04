@@ -1,7 +1,7 @@
 import Mux from 'vod-fp-mux';
 import { Card, Row, Col, Button, Alert, Modal } from 'antd';
 
-Array.prototype.toString = function() {
+Array.prototype.toString = function () {
   return `[${this.join(',')}]`;
 };
 
@@ -18,7 +18,7 @@ export default class TsFlvRender extends React.Component {
       this.stringify = new Mux.TsStringify();
     }
     if (this.props.format === 'flv') {
-      this.stringify = new Mux.FlvStringify();
+      this.stringify = new Mux.FlvStringify({ live: false });
     }
     this.bindEvent();
   }
@@ -162,11 +162,11 @@ export default class TsFlvRender extends React.Component {
               </span>
             </div>
           ) : (
-            <div key={key} className="sample">
-              pts:{sample.pts + '   '}
-              dts:{sample.dts}
-            </div>
-          );
+              <div key={key} className="sample">
+                pts:{sample.pts + '   '}
+                dts:{sample.dts}
+              </div>
+            );
         })}
       </div>
     );

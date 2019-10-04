@@ -9,7 +9,6 @@ export default class Mp4Render extends React.Component {
     super(props);
     let mp4Tree = Mux.Mp4Stringify(props.buffer);
     mp4Tree = this._convertMp4Stucture(mp4Tree);
-    console.log(mp4Tree);
     this.state = {
       mp4Tree
     };

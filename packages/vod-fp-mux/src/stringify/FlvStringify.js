@@ -1,5 +1,11 @@
-import {PipeLine} from 'vod-fp-utility';
-import {FlvStream, FlvTagStream, FlvVideoTagStream, FlvAudioTagStream, FlvDataTagStream} from '../flv';
+import { PipeLine } from 'vod-fp-utility';
+import {
+  FlvStream,
+  FlvTagStream,
+  FlvVideoTagStream,
+  FlvAudioTagStream,
+  FlvDataTagStream
+} from '../flv';
 
 export default class FlvToMp4 extends PipeLine {
   constructor(options) {
@@ -9,9 +15,7 @@ export default class FlvToMp4 extends PipeLine {
 
   push(buffer) {
     try {
-      this
-        .entryStream
-        .push(buffer);
+      this.entryStream.push(buffer);
     } catch (e) {
       this.emit('error', e);
     }
@@ -19,9 +23,7 @@ export default class FlvToMp4 extends PipeLine {
 
   flush() {
     try {
-      this
-        .entryStream
-        .flush();
+      this.entryStream.flush();
     } catch (e) {
       this.emit('error', e);
     }
@@ -37,31 +39,31 @@ export default class FlvToMp4 extends PipeLine {
 
   setUpPipeLine(options) {
     let es;
-    let entryStream = new FlvStream();
+    let entryStream = new FlvStream(options);
     let flvTagStream = new FlvTagStream();
     let flvAudioTagStream = new FlvAudioTagStream();
     let flvVideoTagStream = new FlvVideoTagStream();
     let flvDataTagStream = new FlvDataTagStream();
-    this.bindEvent([
-      entryStream, flvTagStream, flvAudioTagStream, flvVideoTagStream, flvDataTagStream
-    ], 'error');
+    this.bindEvent(
+      [
+        entryStream,
+        flvTagStream,
+        flvAudioTagStream,
+        flvVideoTagStream,
+        flvDataTagStream
+      ],
+      'error'
+    );
 
     this.entryStream = entryStream;
 
-    es = this
-      .entryStream
-      .pipe(flvTagStream)
+    es = this.entryStream.pipe(flvTagStream);
 
-    es.pipe(flvAudioTagStream)
-    es.pipe(flvVideoTagStream)
-    es.pipe(flvDataTagStream)
+    es.pipe(flvAudioTagStream);
+    es.pipe(flvVideoTagStream);
+    es.pipe(flvDataTagStream);
 
-    this.bindEvent([
-      flvAudioTagStream, flvVideoTagStream
-    ], 'data');
-    this.bindEvent([
-      flvAudioTagStream, flvVideoTagStream
-    ], 'done');
-
+    this.bindEvent([flvAudioTagStream, flvVideoTagStream], 'data');
+    this.bindEvent([flvAudioTagStream, flvVideoTagStream], 'done');
   }
 }
