@@ -1,59 +1,53 @@
-import { useState } from 'react';
-import { Modal, Button, message } from 'antd';
+import {useState} from 'react';
+import {Modal, Button, message} from 'antd';
 import loader from 'utils/loader';
 
 export default function LiveSelect(props) {
   const fetchLiveStream = () => {
-    loader('http://api.xiyuyizhi.xyz/startLive', { responseType: 'json' })
-      .then(res => {
-        if (res.code) {
-          message.error(res.msg);
-          return;
-        }
+    loader('http://api.xiyuyizhi.xyz:7660/startLive', {responseType: 'json'}).then(res => {
+      if (res.code) {
+        message.error(res.msg);
+        return;
+      }
 
-        let renderStream = url => {
-          return (
-            <p>
-              {url}
-              <Button
-                style={{ marginLeft: 10 }}
-                type="primary"
-                onClick={() => {
-                  Modal.destroyAll();
-                  props.loadSource(url);
-                }}
-              >
-                load
-              </Button>
-            </p>
-          );
-        };
+      let renderStream = url => {
+        return (
+          <p>
+            {url}
+            <Button
+              style={{
+              marginLeft: 10
+            }}
+              type="primary"
+              onClick={() => {
+              Modal.destroyAll();
+              props.loadSource(url);
+            }}>
+              load
+            </Button>
+          </p>
+        );
+      };
 
-        Modal.info({
-          title: '直播流地址',
-          width: 480,
-          maskClosable: true,
-          content: (
+      Modal.info({title: '直播流地址', width: 480, maskClosable: true, content: (
+          <div>
             <div>
-              <div>
-                <h4>ts 流</h4>
-                {renderStream(res.data.ts)}
-              </div>
-              <div>
-                <h4>http flv</h4>
-                {renderStream(res.data.flv)}
-              </div>
-              <div>
-                <h4>websocket</h4>
-                {renderStream(res.data.wss)}
-              </div>
+              <h4>ts 流</h4>
+              {renderStream('http://live.xiyuyizhi.xyz:7660/live/test/index.m3u8')}
             </div>
-          )
-        });
-      })
-      .catch(e => {
-        message.error(e.message);
-      });
+            <div>
+              <h4>http flv</h4>
+              {renderStream('http://live.xiyuyizhi.xyz:7660/live/test.flv')}
+            </div>
+            <div>
+              <h4>websocket</h4>
+              {renderStream('ws://live.xiyuyizhi.xyz:7660/live/test.flv')}
+            </div>
+          </div>
+        )});
+    }).catch(e => {
+      message.error(e.message);
+    });
   };
 
   return (
