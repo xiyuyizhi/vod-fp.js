@@ -106,7 +106,7 @@ Maybe: 专注处理空值监测,可以很好的处理 a.b.c 的问题
 
 Either: 专注处理异常
 
-Task: 异步处理,类似 Promise
+Task: 异步处理,类似 Promise, [参见实现](https://github.com/xiyuyizhi/vod-fp.js/blob/master/packages/vod-fp-utility/src/fp/Task.js),[单元测试](https://github.com/xiyuyizhi/vod-fp.js/blob/master/packages/vod-fp-utility/test/fp/Task.js)
 
 IO: 专注对副作用的处理
 

@@ -64,6 +64,8 @@ vod.on(Vod.Events.ERROR,e => {
 
 ## development
 
+[media asserts](https://github.com/xiyuyizhi/live-stream-test)
+
 ```javascript
 git clone git@github.com:xiyuyizhi/vod-fp.js.git
 
