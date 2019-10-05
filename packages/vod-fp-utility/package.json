@@ -1,6 +1,6 @@
 {
   "name": "vod-fp-utility",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "",
   "main": "lib/vod-fp-utility.min.js",
   "scripts": {

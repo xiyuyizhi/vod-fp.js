@@ -1,6 +1,6 @@
 {
   "name": "vod-fp-player",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "",
   "main": "lib/vod-fp-player.min.js",
   "scripts": {
@@ -11,8 +11,8 @@
     "url": "git+ssh://git@github.com/xiyuyizhi/vod-fp.js.git"
   },
   "dependencies": {
-    "vod-fp-mux": "^1.2.3",
-    "vod-fp-utility": "^1.2.3"
+    "vod-fp-mux": "^1.2.4",
+    "vod-fp-utility": "^1.2.4"
   },
   "author": "xiyuyizhi",
   "license": "ISC",
