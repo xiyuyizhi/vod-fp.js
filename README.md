@@ -16,6 +16,8 @@
 
 - [x] websocket flv live
 
+- [ ] h265
+
 ## some notes
 
 - [函数式+状态管理探索前端开发](./notes/statemanage_fp.md)
