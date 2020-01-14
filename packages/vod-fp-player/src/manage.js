@@ -3,7 +3,7 @@ import { ACTION, PROCESS } from './store';
 import { createMediaSource, destroyMediaSource } from './media/media';
 import { loadPlaylist, changePlaylistLevel } from './playlist/playlist';
 import { loadInitMP4 } from './playlist/segment';
-import { bootstrap } from './tick/tick';
+import { bootstrap } from './boot/boot';
 import {
   abortLoadingSegment,
   findSegmentOfCurrentPosition

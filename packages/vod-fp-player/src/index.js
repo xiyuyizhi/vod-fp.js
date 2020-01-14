@@ -42,20 +42,21 @@ export default class Vod extends EventBus {
   }
 
   setUp() {
-    if (this.media && this.url) {
-      const { subscribe, connect, getConfig } = this.store;
-      Object.keys(ACTION.EVENTS).forEach(eveName => {
-        subscribe(ACTION.EVENTS[eveName], data => {
-          this.emit(Events[eveName], data.join());
-        });
-      });
+    if (!this.media || !this.url) return;
 
-      if (getConfig(ACTION.CONFIG.FLV_LIVE)) {
-        connect(manageFlvLive)(this.media, this.url);
-      } else {
-        connect(manageHls)(this.media, this.url);
-      }
+    const { subscribe, connect, getConfig } = this.store;
+
+    Object.keys(ACTION.EVENTS).forEach(eveName => {
+      subscribe(ACTION.EVENTS[eveName], data => {
+        this.emit(Events[eveName], data.join());
+      });
+    });
+
+    if (getConfig(ACTION.CONFIG.FLV_LIVE)) {
+      connect(manageFlvLive)(this.media, this.url);
+      return;
     }
+    connect(manageHls)(this.media, this.url);
   }
 
   useDebug(container) {
