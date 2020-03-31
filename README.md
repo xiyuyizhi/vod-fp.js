@@ -32,6 +32,16 @@
 
 ## base usage
 
+#### used in browser direct
+
+```javascript
+
+<script src="https://cdn.jsdelivr.net/npm/vod-fp-player@latest/lib/vod-fp-player.min.js"></script>
+
+```
+
+#### used as module
+
 ```javascript
 npm install vod-fp-player --save
 
@@ -41,16 +51,23 @@ import Vod from "vod-fp-player"
 
 ```javascript
 const vod = new Vod({
-  Vod.Configs.MAX_BUFFER_LENGTH:60,
-  Vod.Configs.MAX_FLY_BUFFER_LENGTH:30,
+            [Vod.Configs.MAX_BUFFER_LENGTH]: 60,
+            [Vod.Configs.MAX_FLY_BUFFER_LENGTH]: 30,
+        })
+const media = document.querySelector('video');
+
+media.addEventListener("loadedmetadata", () => {
+    media.play().catch(e => {
+        // not allowed auto play
+    })
 })
 
-vod.attachMedia(document.querySelector('video'))
+vod.attachMedia(media)
 
-vod.loadSource('xxxx.m3u8')
+vod.loadSource('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')
 
-vod.on(Vod.Events.ERROR,e => {
-  // do someting when error occur
+vod.on(Vod.Events.ERROR, e => {
+    // do someting when error occur
 })
 ```
 
