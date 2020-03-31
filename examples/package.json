@@ -22,7 +22,7 @@
   },
   "scripts": {
     "start": "handy-service serve",
-    "build": "handy-service build"
+    "build": "PUBLIC_URL=https://cdn.jsdelivr.net/gh/xiyuyizhi/vod-fp.js@master/docs/ handy-service build"
   },
   "presets": {
     "preset": "manual",
