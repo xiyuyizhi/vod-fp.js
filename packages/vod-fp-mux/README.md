@@ -5,6 +5,9 @@
 [online usage](https://demo.xiyuyizhi.xyz/onlineTool)
 
 ```javascript
+<script src="https://cdn.jsdelivr.net/npm/vod-fp-mux@latest/lib/vod-fp-mux.min.js"></script>
+
+or
 
 npm install vod-fp-mux --save
 import Mux from 'vod-fp-mux';
