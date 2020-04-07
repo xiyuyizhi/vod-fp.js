@@ -18,7 +18,7 @@ const VIDEO_CODEC_PATH = [
   'stbl',
   'stsd',
   'avc1',
-  'avcC'
+  'avcC',
 ];
 const VIDEO_TKHD_PATH = ['moov', 'trak', 'tkhd'];
 const AUDIO_MVHD_PATH = [
@@ -28,7 +28,7 @@ const AUDIO_MVHD_PATH = [
   'minf',
   'stbl',
   'stsd',
-  'mp4a'
+  'mp4a',
 ];
 
 function muxBootstrap({ dispatch, connect, getConfig }) {
@@ -38,7 +38,7 @@ function muxBootstrap({ dispatch, connect, getConfig }) {
   } else {
     worker = new WorkerSimulate();
   }
-  let _doError = error => {
+  let _doError = (error) => {
     connect(removeSegmentFromStore);
     dispatch(
       ACTION.ERROR,
@@ -47,30 +47,43 @@ function muxBootstrap({ dispatch, connect, getConfig }) {
       )
     );
   };
-  worker.addEventListener('message', e => {
+  let comingTrack = 0;
+  worker.addEventListener('message', (e) => {
     let { type, data } = e.data;
+
     if (type === 'data') {
-      if (data.type === 'video') {
-        dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, data);
+      switch (data.type) {
+        case 'video':
+          comingTrack++;
+          if (data.combine && comingTrack == 1) {
+            dispatch(ACTION.PROCESS, PROCESS.IDLE);
+          } else {
+            dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, data);
+          }
+          break;
+        case 'audio':
+          comingTrack++;
+          dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
+          break;
+      }
+
+      if (!data.combine || comingTrack == 2) {
+        comingTrack = 0;
         dispatch(ACTION.PROCESS, PROCESS.MUXED);
       }
-      if (data.type === 'audio') {
-        dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, data);
-        if (!data.combine) {
-          dispatch(ACTION.PROCESS, PROCESS.MUXED);
-        }
-      }
     }
+
     if (type === 'restBufferInfo') {
       //for flv live
       logger.log('chunks parsed,rest buffer info', data);
       dispatch(ACTION.FLVLIVE.REST_BUFFER, data.buffer);
     }
+
     if (type === 'error') {
       _doError(data);
     }
   });
-  worker.addEventListener('error', e => {
+  worker.addEventListener('error', (e) => {
     _doError(new Error(e.message));
     if (worker.objectURL) {
       global.URL.revokeObjectURL(worker.objectURL);
@@ -80,13 +93,13 @@ function muxBootstrap({ dispatch, connect, getConfig }) {
 }
 
 function resetInitSegment({ getState }) {
-  getState(ACTION.MUX).map(worker => {
+  getState(ACTION.MUX).map((worker) => {
     worker.postMessage({ type: 'resetInitSegment' });
   });
 }
 
 function setTimeOffset({ getState }, offset) {
-  getState(ACTION.MUX).map(worker => {
+  getState(ACTION.MUX).map((worker) => {
     worker.postMessage({ type: 'setTimeOffset', data: offset });
   });
 }
@@ -101,7 +114,7 @@ function _toMuxTs(
   let worker = getState(ACTION.MUX).join();
   let lastSegment = getState(ACTION.LAST_MUXED_SEGMENT).value();
 
-  getState(ACTION.HAS_DETECT_FORMAT).map(detect => {
+  getState(ACTION.HAS_DETECT_FORMAT).map((detect) => {
     if (!detect) {
       dispatch(ACTION.HAS_DETECT_FORMAT, true);
       let flv = isFlv(new Uint8Array(buffer, 0, 4));
@@ -109,8 +122,8 @@ function _toMuxTs(
         type: 'selectDemuxer',
         data: {
           type: flv ? 'flv' : 'ts',
-          live: false
-        }
+          live: false,
+        },
       });
     }
   });
@@ -138,8 +151,8 @@ function _toMuxTs(
       data: {
         buffer,
         sequeueNum,
-        keyInfo
-      }
+        keyInfo,
+      },
     },
     [buffer]
   );
@@ -152,10 +165,10 @@ function _toMuxFmp4({ dispatch }, buffer, initMp4) {
   let audioInfo;
   if (initMp4) {
     videoInfo = {
-      codec: 'avc1.42c015'
+      codec: 'avc1.42c015',
     };
     audioInfo = {
-      codec: 'mp4a.40.2'
+      codec: 'mp4a.40.2',
     };
     let vParsed = Mp4Stringify(videoBuffer.buffer);
     let aParsed = Mp4Stringify(audioBuffer.buffer);
@@ -179,12 +192,12 @@ function _toMuxFmp4({ dispatch }, buffer, initMp4) {
   dispatch(ACTION.BUFFER.VIDEO_BUFFER_INFO, {
     buffer: videoBuffer.buffer,
     videoInfo,
-    combine: true
+    combine: true,
   });
   dispatch(ACTION.BUFFER.AUDIO_BUFFER_INFO, {
     buffer: audioBuffer.buffer,
     audioInfo,
-    combine: true
+    combine: true,
   });
   dispatch(ACTION.PROCESS, PROCESS.MUXED);
 }
@@ -208,15 +221,15 @@ function toMux(
 
 function toMuxFlvChunks({ getState, dispatch }, buffer) {
   let worker = getState(ACTION.MUX).join();
-  getState(ACTION.HAS_DETECT_FORMAT).map(detect => {
+  getState(ACTION.HAS_DETECT_FORMAT).map((detect) => {
     if (!detect) {
       dispatch(ACTION.HAS_DETECT_FORMAT, true);
       worker.postMessage({
         type: 'selectDemuxer',
         data: {
           type: 'flv',
-          live: true
-        }
+          live: true,
+        },
       });
     }
   });
@@ -226,8 +239,8 @@ function toMuxFlvChunks({ getState, dispatch }, buffer) {
     {
       type: 'push',
       data: {
-        buffer: buffer.buffer
-      }
+        buffer: buffer.buffer,
+      },
     },
     [buffer.buffer]
   );

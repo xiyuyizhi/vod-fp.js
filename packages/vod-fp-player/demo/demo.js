@@ -6,7 +6,7 @@ Logger.use(['base', 'player']);
 
 console.log('%c player start', 'background: #222; color: #bada55');
 
-document.addEventListener('keyup', e => {
+document.addEventListener('keyup', (e) => {
   if (e.keyCode === 38) {
     document.querySelector('video').currentTime += 2;
   }
@@ -30,16 +30,16 @@ function initPlayer(url) {
     maxFlyBufferLength: 60,
     // workerEnable: false,
     flvLive:
-      url.indexOf('test.flv') !== -1 || /wss?\:\/\//.test(url) ? true : false
+      url.indexOf('.flv') !== -1 || /wss?\:\/\//.test(url) ? true : false,
   });
   window.vod = vod;
   vod.attachMedia(document.querySelector('video'));
   vod.loadSource(url);
   vod.useDebug(document.querySelector('#player'));
-  vod.on(Vod.Events.ERROR, e => {
+  vod.on(Vod.Events.ERROR, (e) => {
     console.log(e);
   });
-  vod.on(Vod.Events.MANIFEST_LOADED, pl => {
+  vod.on(Vod.Events.MANIFEST_LOADED, (pl) => {
     // 创建清晰度选项
     const { levels } = pl;
     if (levels.length > 1) {
@@ -48,24 +48,24 @@ function initPlayer(url) {
       select.className = 'resolutionList';
       select.style.display = 'block';
       selectHtml = levels
-        .filter(x => x.resolution || x.streamtype)
+        .filter((x) => x.resolution || x.streamtype)
         .map(
           ({ levelId, streamtype, resolution }) =>
             `<option value='${levelId}'>${resolution || streamtype}</option>`
         )
         .join('\n');
       select.innerHTML = selectHtml;
-      select.addEventListener('change', e => {
+      select.addEventListener('change', (e) => {
         vod.changeLevel(e.target.value);
       });
       document.body.appendChild(select);
     }
   });
 
-  vod.on(Vod.Events.LEVEL_CHANGED, levelId => {
+  vod.on(Vod.Events.LEVEL_CHANGED, (levelId) => {
     console.log('level changed to ', levelId);
   });
-  vod.on(Vod.Events.LEVEL_CHANGED_ERROR, levelId => {
+  vod.on(Vod.Events.LEVEL_CHANGED_ERROR, (levelId) => {
     console.log('level changed error ', levelId);
   });
 }

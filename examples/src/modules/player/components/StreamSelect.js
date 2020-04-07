@@ -32,7 +32,7 @@ const STREAM_LIST = [
 export default function StreamSelect(props) {
   const [selected, setStream] = useState(STREAM_LIST[0].value);
 
-  const selectStream = value => {
+  const selectStream = (value) => {
     setStream(value);
     props.loadSource(value);
   };
@@ -41,7 +41,7 @@ export default function StreamSelect(props) {
     <div className="item-line">
       <span className="select-stream">select stream :</span>
       <Select value={selected} onChange={selectStream}>
-        {STREAM_LIST.map(item => (
+        {STREAM_LIST.map((item) => (
           <Select.Option value={item.value} key={item.label}>
             {item.label}
           </Select.Option>

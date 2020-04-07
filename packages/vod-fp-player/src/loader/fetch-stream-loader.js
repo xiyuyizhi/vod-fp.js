@@ -48,29 +48,29 @@ function fetchStreamLoader({ dispatch, connect }, url) {
   }
   let controller = new AbortController();
   fetch(url, {
-    signal: controller.signal
+    signal: controller.signal,
   })
-    .then(res => {
-      if (res.ok && (res.status >= 200 && res.status < 300)) {
+    .then((res) => {
+      if (res.ok && res.status >= 200 && res.status < 300) {
         dispatch(ACTION.FLVLIVE.ABORTABLE, controller);
         return res;
       }
-      reject(
+      dispatch(
         CusError.of({
           ...FLV_LIVE_ERROR.LOAD_ERROR,
           code: res.status,
-          message: res.statusText
+          message: res.statusText,
         })
       );
     })
-    .then(res => connect(_readStream)(res.body.getReader(), res.headers))
-    .catch(e => {
+    .then((res) => connect(_readStream)(res.body.getReader(), res.headers))
+    .catch((e) => {
       dispatch(
         ACTION.ERROR,
         CusError.of({
           ...FLV_LIVE_ERROR.LOAD_ERROR,
           code: e.code,
-          message: e.message || e
+          message: e.message || e,
         })
       );
     });

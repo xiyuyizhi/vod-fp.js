@@ -3,6 +3,8 @@ import routes, { Player } from './routes';
 
 import './index.less';
 
+document.cookie = 'debug=base,player';
+
 ReactDOM.render(
   <Router>
     <Switch>

@@ -39,7 +39,7 @@ export default function Player() {
   const [error, setError] = useState(null);
   const mediaEle = useRef(null);
 
-  const sourceChanged = url => {
+  const sourceChanged = (url) => {
     if (url === streamUrl) {
       // no changed,reload
       _loadNewStream();
@@ -57,15 +57,19 @@ export default function Player() {
   };
 
   const _startPlayer = () => {
+    let media = mediaEle.current;
+    media.addEventListener('loadmetadata', () => {
+      media.play();
+    });
     vod = new Vod({
       maxBufferLength: 60,
       maxFlyBufferLength: 60,
-      flvLive: streamUrl.indexOf('test.flv') !== -1
+      flvLive: streamUrl.indexOf('.flv') !== -1
     });
     vod.loadSource(streamUrl);
-    vod.attachMedia(mediaEle.current);
+    vod.attachMedia(media);
     vod.useDebug(document.querySelector('#player'));
-    vod.on(Vod.Events.ERROR, e => {
+    vod.on(Vod.Events.ERROR, (e) => {
       setError(e);
     });
   };

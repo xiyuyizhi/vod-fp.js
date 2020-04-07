@@ -10,12 +10,12 @@ const DEFAULT_CONFIG = {
   useStream: false,
   headers: {},
   options: {
-    mode: 'cors'
+    mode: 'cors',
   },
   params: {
     responseType: 'text',
-    timeout: 0
-  }
+    timeout: 0,
+  },
 };
 
 function loader({ dispatch, connect }, config) {
@@ -24,7 +24,6 @@ function loader({ dispatch, connect }, config) {
       config.params = config.params || DEFAULT_CONFIG.params;
       config = Object.assign({}, DEFAULT_CONFIG, config);
       let abortable;
-
       if (window.fetch && window.AbortController) {
         let controller = new AbortController();
         connect(fetchLoader)(config, controller, _resolve, _reject);
@@ -35,14 +34,14 @@ function loader({ dispatch, connect }, config) {
 
       dispatch(ACTION.ABORTABLE, {
         id: config.url,
-        task: abortable
+        task: abortable,
       });
     })
-      .map(x => {
+      .map((x) => {
         dispatch(ACTION.REMOVE_ABORTABLE, config.url);
         resolve(x);
       })
-      .error(e => {
+      .error((e) => {
         dispatch(ACTION.REMOVE_ABORTABLE, config.url);
         // when the current request cancel or error, to empty the loadinfo which used in
         // abr timer。

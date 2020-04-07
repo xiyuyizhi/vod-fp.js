@@ -8,7 +8,7 @@ const FETCH_BODY = {
   text: 'text',
   arraybuffer: 'arrayBuffer',
   json: 'json',
-  blob: 'blob'
+  blob: 'blob',
 };
 
 function _readerStream({ dispatch }, reader, headers) {
@@ -16,7 +16,7 @@ function _readerStream({ dispatch }, reader, headers) {
   let tsStart;
   let lastTs;
 
-  let caclSize = arr =>
+  let caclSize = (arr) =>
     arr.reduce((all, c) => {
       all += c.byteLength;
       return all;
@@ -31,7 +31,7 @@ function _readerStream({ dispatch }, reader, headers) {
         let totalLength = caclSize(store);
         let uint8Array = new Uint8Array(totalLength);
         let offset = 0;
-        store.forEach(bf => {
+        store.forEach((bf) => {
           uint8Array.set(bf, offset);
           offset += bf.byteLength;
         });
@@ -40,8 +40,8 @@ function _readerStream({ dispatch }, reader, headers) {
           buffer: uint8Array.buffer,
           info: {
             tsLoad: performance.now() - tsStart,
-            size: totalLength
-          }
+            size: totalLength,
+          },
         };
       }
       store.push(value);
@@ -54,7 +54,7 @@ function _readerStream({ dispatch }, reader, headers) {
         dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, {
           loaded: caclSize(store),
           total: +headers.get('Content-Length'),
-          tsRequest: performance.now() - tsStart
+          tsRequest: performance.now() - tsStart,
         });
       }
       lastTs = performance.now();
@@ -88,31 +88,31 @@ function fetchLoader(
     headers,
     signal: controller.signal,
     body,
-    ...options
+    ...options,
   })
-    .then(res => {
-      if (res.ok && (res.status >= 200 && res.status < 300)) {
+    .then((res) => {
+      if (res.ok && res.status >= 200 && res.status < 300) {
         return res;
       }
       reject(
         CusError.of({
           ...LOADER_ERROR.LOAD_ERROR,
           code: res.status,
-          message: res.statusText
+          message: res.statusText,
         })
       );
     })
-    .then(res => {
+    .then((res) => {
       if (config.useStream) {
         return connect(_readerStream)(res.body.getReader(), res.headers);
       }
       return res[FETCH_BODY[params.responseType]]();
     })
-    .then(res => {
+    .then((res) => {
       clearTimeout(cancelTimer);
       resolve(res);
     })
-    .catch(e => {
+    .catch((e) => {
       clearTimeout(cancelTimer);
       if (e instanceof DOMException) {
         console.warn('ABORT');

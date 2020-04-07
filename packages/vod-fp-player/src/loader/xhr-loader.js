@@ -16,15 +16,15 @@ function createXhr() {
 
 function xhrLoader({ dispatch }, config, resolve, reject) {
   let xhr = createXhr();
-  Object.keys(config.headers).forEach(key => {
+  Object.keys(config.headers).forEach((key) => {
     xhr.setRequestHeader(key, config.headers[key]);
   });
 
-  Object.keys(config.options).forEach(key => {
+  Object.keys(config.options).forEach((key) => {
     xhr[key] = config.options[key];
   });
-
-  Object.keys(config.params).forEach(key => {
+  Object.keys(config.params).forEach((key) => {
+    console.log(key, config.params[key]);
     xhr[key] = config.params[key];
   });
 
@@ -33,7 +33,7 @@ function xhrLoader({ dispatch }, config, resolve, reject) {
 
   if (isBuffer) {
     let tsStart = performance.now();
-    xhr.addEventListener('progress', e => {
+    xhr.addEventListener('progress', (e) => {
       dispatch(
         ACTION.LOADINFO.COLLECT_DOWNLOAD_SPEED,
         e.loaded / (performance.now() - tsStart) / 1000
@@ -41,7 +41,7 @@ function xhrLoader({ dispatch }, config, resolve, reject) {
       dispatch(ACTION.LOADINFO.CURRENT_SEG_DONWLOAD_INFO, {
         loaded: e.loaded,
         total: e.total,
-        tsRequest: performance.now() - tsStart
+        tsRequest: performance.now() - tsStart,
       });
     });
   }
@@ -55,8 +55,8 @@ function xhrLoader({ dispatch }, config, resolve, reject) {
             buffer: xhr.response,
             info: {
               tsLoad: byteLength,
-              size: byteLength
-            }
+              size: byteLength,
+            },
           });
         } else {
           resolve(xhr.response);
@@ -68,7 +68,7 @@ function xhrLoader({ dispatch }, config, resolve, reject) {
           CusError.of({
             ...LOADER_ERROR.LOAD_ERROR,
             code: xhr.status,
-            message: xhr.statusText
+            message: xhr.statusText,
           })
         );
       }
@@ -80,7 +80,7 @@ function xhrLoader({ dispatch }, config, resolve, reject) {
     reject(CusError.of(LOADER_ERROR.ABORT));
   });
 
-  xhr.addEventListener('error', e => {
+  xhr.addEventListener('error', (e) => {
     reject(CusError.of(LOADER_ERROR.LOAD_ERROR));
   });
 

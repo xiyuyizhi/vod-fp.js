@@ -6,6 +6,7 @@ const CONFIG = {
   MAX_BUFFER_GAP_TOLERANCE: 'maxBufferGapTolerance',
   END_STREAM_TOLERANCE: 'endStreamTolerance',
   MANUAL_SEEK: 'manualSeek',
+  PL_MAX_TIMEOUT: 'plMaxTimeout',
   SEGMENT_MAX_TIMEOUT: 'segmentMaxTimeout',
   MAX_LEVEL_RETRY_COUNT: 'maxLevelRetryCount',
   REQUEST_RETRY_COUNT: 'requestRetryCount',
@@ -22,20 +23,21 @@ const CONFIG = {
   LIVE_LATENCY_FACTOR: 'liveLatencyFactor',
   FLV_LIVE: 'flvLive',
   FLV_MUX_WATER_MARK: 'flvMuxWaterMark',
-  FLV_LIVE_MAX_DELAY: 'flyLiveMaxDelay'
+  FLV_LIVE_MAX_DELAY: 'flyLiveMaxDelay',
 };
 
 const state = {
   maxBufferLength: 60,
   maxFlyBufferLength: 100,
   tickInterval: 200,
+  plMaxTimeout: 10 * 1000,
   segmentMaxTimeout: 20 * 1000,
   manualSeek: 0.16,
   maxFragLookUpTolerance: 0.2,
   maxBufferGapTolerance: 0.4,
   endStreamTolerance: 0.2,
-  maxLevelRetryCount: 3,
-  requestRetryCount: 3,
+  maxLevelRetryCount: 1,
+  requestRetryCount: 1,
   requestRetryDelay: 1500,
   workerEnable: true,
   // abr about
@@ -50,7 +52,7 @@ const state = {
   liveLatencyFactor: 0.9,
   flvLive: false,
   flvMuxWaterMark: 1024 * 200,
-  flyLiveMaxDelay: 4
+  flyLiveMaxDelay: 4,
 };
 
 export { CONFIG };
@@ -60,5 +62,5 @@ export default {
   ACTION: { ...CONFIG },
   getState() {
     return state;
-  }
+  },
 };
