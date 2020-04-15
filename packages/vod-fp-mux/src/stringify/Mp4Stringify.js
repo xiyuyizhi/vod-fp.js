@@ -78,12 +78,12 @@ function extractBox(start, length, buffer) {
   return {
     length: box.byteLength,
     type: getBoxType(box, 4),
-    payload: box.subarray(8)
+    payload: box.subarray(8),
   };
 }
 
 function extractBoxsList(boxList) {
-  boxList.forEach(box => {
+  boxList.forEach((box) => {
     switch (box.type) {
       case 'ftyp':
       case 'styp':
@@ -156,7 +156,7 @@ function extractBoxsList(boxList) {
 function parseFtypBox(payload, length) {
   let bf = new BytesForward(payload);
   const ftypBox = {
-    compatible: []
+    compatible: [],
   };
   ftypBox.major = getBoxType(payload, 0);
   bf.forward(4);
@@ -270,7 +270,7 @@ function parseHdlr(payload) {
       string name
    */
   return {
-    handlerType: getBoxType(payload, 8)
+    handlerType: getBoxType(payload, 8),
   };
 }
 
@@ -321,7 +321,7 @@ function parseTrun(payload) {
    * 】
    */
   let res = {
-    samples: []
+    samples: [],
   };
   let bf = new BytesForward(payload);
   res.version = bf.read8bitsValue();
@@ -333,7 +333,7 @@ function parseTrun(payload) {
     sampleDuration,
     sampleSize,
     sampleFlas,
-    sampleCto
+    sampleCto,
   } = parseTfFlags(res.flags);
   bf.forward(3);
   res.sampleCount = bf.read32bitsValue();
@@ -380,7 +380,7 @@ function parseTfFlags(flags) {
     sampleDuration: recordFlag & 0x01,
     sampleSize: (recordFlag & 0x02) >> 1,
     sampleFlas: (recordFlag & 0x04) >> 2,
-    sampleCto: (recordFlag & 0x08) >> 3
+    sampleCto: (recordFlag & 0x08) >> 3,
   };
 }
 function parseSampleFlag(payload, offset) {
@@ -401,7 +401,7 @@ function parseSampleFlag(payload, offset) {
     hasRedundancy: (payload[offset + 1] & 0x30) >> 4,
     padding: (payload[offset + 1] & 0x0e) >> 1,
     nonSync: payload[offset + 1] & 0x01,
-    degradationPriority: (payload[offset + 2] << 8) | payload[offset + 3]
+    degradationPriority: (payload[offset + 2] << 8) | payload[offset + 3],
   };
 }
 
@@ -438,7 +438,7 @@ function parseAvc1(payload) {
 function parseAvcC(payload) {
   const ret = {
     sps: [],
-    pps: []
+    pps: [],
   };
   let bf = new BytesForward(payload);
   ret.configVersion = payload[0];
@@ -474,7 +474,7 @@ function parseMp4a(payload) {
   return {
     channelcount: payload[17],
     samplerate: (payload[24] << 8) | payload[25],
-    codecConfigLength: payload[28 + 4 + 4 + 25] // ests:length+type+25
+    codecConfigLength: payload[28 + 4 + 4 + 25], // ests:length+type+25
   };
 }
 
@@ -494,22 +494,33 @@ function parsePssh(payload) {
   const version = payload[0];
   let bf = new BytesForward(payload);
   bf.forward(4);
-  ret.systemId = bf.readBytes(16);
+  ret.systemId = bytesToHex(bf.readBytes(16));
   bf.forward(16);
   if (version > 0) {
     const kidCount = bf.read32bitsValue();
     ret.kids = [];
     let i = 0;
+    bf.forward(4);
     while (i < kidCount) {
-      ret.kids.push(bf.readBytes(16));
+      ret.kids.push(bytesToHex(bf.readBytes(16)));
       bf.forward(16);
+      i++;
     }
   }
   const dataSize = bf.read32bitsValue();
   bf.forward(4);
   ret.dataSize = dataSize;
   ret.data = bf.readBytes(dataSize);
+  ret.dataStr = bytesToStr(ret.data);
   return ret;
+}
+
+function bytesToHex(arr) {
+  return arr.map((x) => x.toString(16)).join('');
+}
+
+function bytesToStr(arr) {
+  return arr.map((x) => String.fromCharCode(x)).join('');
 }
 
 export default parseMp4;
