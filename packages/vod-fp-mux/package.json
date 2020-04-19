@@ -1,6 +1,6 @@
 {
   "name": "vod-fp-mux",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "",
   "main": "lib/vod-fp-mux.min.js",
   "scripts": {

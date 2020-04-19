@@ -511,7 +511,7 @@ function parsePssh(payload) {
   bf.forward(4);
   ret.dataSize = dataSize;
   ret.data = bf.readBytes(dataSize);
-  ret.dataStr = bytesToStr(ret.data);
+  ret.dataToBase64 = btoa(bytesToStr(ret.data));
   return ret;
 }
 

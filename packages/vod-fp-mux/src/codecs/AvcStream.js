@@ -1,7 +1,7 @@
-import {PipeLine, Logger} from 'vod-fp-utility';
+import { PipeLine, Logger } from 'vod-fp-utility';
 import ExpGolomb from '../utils/exp-golomb';
-import {geneVideoCodecStr} from "../utils/index"
-import {getDefaultAVCTrack} from '../default';
+import { geneVideoCodecStr } from '../utils/index';
+import { getDefaultAVCTrack } from '../default';
 
 let logger = new Logger('mux');
 
@@ -57,9 +57,8 @@ export default class AvcStream extends PipeLine {
       logger.log('应该是一个坏掉的pes,丢弃掉');
       badNals = true;
     }
-    let spsFound = false;
     let createAVCSample = function (key, pts, dts, debug) {
-      return {key: key, pts: pts, dts: dts, units: []};
+      return { key: key, pts: pts, dts: dts, units: [] };
     };
 
     /**
@@ -75,7 +74,7 @@ export default class AvcStream extends PipeLine {
      *
      */
 
-    nalUnits.forEach(unit => {
+    nalUnits.forEach((unit) => {
       switch (unit.nalType) {
         case 9:
           if (this.avcSample) {
@@ -91,6 +90,7 @@ export default class AvcStream extends PipeLine {
           }
           this.avcSample.frame = true;
           this.avcSample.key = true;
+          this.avcSample.type = 'I';
           this.avcTrack.key = true;
           break;
         case 1:
@@ -101,16 +101,32 @@ export default class AvcStream extends PipeLine {
           this.avcSample.frame = true;
           // 判断是否为关键帧 only check slice type to detect KF in case SPS found in same packet
           // (any keyframe is preceded by SPS ...)
-          if (spsFound && unit.data.length > 4) {
+          if (unit.data.length > 4) {
             let sliceType = new ExpGolomb(unit.data).readSliceType();
-            if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
-              logger.warn('I about slice');
+            if (
+              sliceType === 2 ||
+              sliceType === 4 ||
+              sliceType === 7 ||
+              sliceType === 9
+            ) {
               this.avcSample.key = true;
+              this.avcSample.type = 'I';
+            }
+
+            if (
+              sliceType === 0 ||
+              sliceType === 3 ||
+              sliceType === 5 ||
+              sliceType === 8
+            ) {
+              this.avcSample.type = 'P';
+            }
+            if (sliceType == 1 || sliceType == 6) {
+              this.avcSample.type = 'B';
             }
           }
           break;
         case 7:
-          spsFound = true;
           this.parseSPS(unit);
           break;
         case 8:
@@ -119,9 +135,13 @@ export default class AvcStream extends PipeLine {
           }
           break;
         default:
-          // logger.warn(`unknow ${unit.nalType}`);
+        // logger.warn(`unknow ${unit.nalType}`);
       }
-      if (!badNals && this.avcSample && [1, 5, 6, 7, 8].indexOf(unit.nalType) !== -1) {
+      if (
+        !badNals &&
+        this.avcSample &&
+        [1, 5, 6, 7, 8].indexOf(unit.nalType) !== -1
+      ) {
         let units = this.avcSample.units;
         units.push(unit);
       }
@@ -133,7 +153,9 @@ export default class AvcStream extends PipeLine {
       const units = this.avcSample.units;
       if (units.length) {
         const saved = units[units.length - 1].data;
-        const newUnit = new Uint8Array(saved.byteLength + this.restNaluBuffer.byteLength);
+        const newUnit = new Uint8Array(
+          saved.byteLength + this.restNaluBuffer.byteLength
+        );
         newUnit.set(saved, 0);
         newUnit.set(this.restNaluBuffer, saved.byteLength);
         units[units.length - 1].data = newUnit;
@@ -159,25 +181,28 @@ export default class AvcStream extends PipeLine {
     let lastUnitStart = 0;
     let units = [];
     let nalStartInPesStart = true;
-    let getNalUStartIndex = i => {
-      let codePrefix3 = (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
-      let codePrefix4 = (buffer[i] << 24) | (buffer[i + 1] << 16) | (buffer[i + 2] << 8) | buffer[i + 3];
+    let getNalUStartIndex = (i) => {
+      let codePrefix3 =
+        (buffer[i] << 16) | (buffer[i + 1] << 8) | buffer[i + 2];
+      let codePrefix4 =
+        (buffer[i] << 24) |
+        (buffer[i + 1] << 16) |
+        (buffer[i + 2] << 8) |
+        buffer[i + 3];
       if (codePrefix4 === 0x00000001 || codePrefix3 === 0x000001) {
         return {
           index: i,
-          is3Or4: codePrefix4 === 1
-            ? 4
-            : 3
+          is3Or4: codePrefix4 === 1 ? 4 : 3,
         };
       }
-      return {index: -1};
+      return { index: -1 };
     };
 
     if (getNalUStartIndex(0).index === -1) {
       nalStartInPesStart = false;
     }
     while (i <= len - 4) {
-      let {index, is3Or4} = getNalUStartIndex(i);
+      let { index, is3Or4 } = getNalUStartIndex(i);
       if (index !== -1) {
         // 去除 pes中nal unit不是开始于第一字节的那部分数据 [把这部分数据添加到上一个采样的最后一个nal unit 中]
         if (index !== 0 && nalStartInPesStart) {
@@ -185,7 +210,7 @@ export default class AvcStream extends PipeLine {
           units.push({
             data: nalUnit,
             nalIdc: (nalUnit[0] & 0x60) >> 5,
-            nalType: nalUnit[0] & 0x1f
+            nalType: nalUnit[0] & 0x1f,
           });
         }
         if (!nalStartInPesStart) {
@@ -203,23 +228,26 @@ export default class AvcStream extends PipeLine {
       units.push({
         data: last,
         nalIdc: (last[0] & 0x60) >> 5,
-        nalType: last[0] & 0x1f
+        nalType: last[0] & 0x1f,
       });
     }
     if (units.length === 0) {
       // 这个pes中不存在Nal unit,则可能上一个pes的Nal unit还没结束
-      logger.log('%c pes中不存在 Nal  unit', 'background: #000; color: #ffffff');
+      logger.log(
+        '%c pes中不存在 Nal  unit',
+        'background: #000; color: #ffffff'
+      );
     }
     return units;
   }
 
   pushAvcSample(sample) {
     if (sample && sample.units.length && sample.frame) {
-      if (sample.key === true || (this.avcTrack.sps && this.avcTrack.samples.length)) {
-        this
-          .avcTrack
-          .samples
-          .push(sample);
+      if (
+        sample.key === true ||
+        (this.avcTrack.sps && this.avcTrack.samples.length)
+      ) {
+        this.avcTrack.samples.push(sample);
       }
     }
   }

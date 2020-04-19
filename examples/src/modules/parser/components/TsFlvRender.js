@@ -1,5 +1,7 @@
 import Mux from 'vod-fp-mux';
-import { Card, Row, Col, Button, Alert, Modal } from 'antd';
+import {
+  Card, Row, Col, Button, Alert, Modal
+} from 'antd';
 
 Array.prototype.toString = function () {
   return `[${this.join(',')}]`;
@@ -24,15 +26,15 @@ export default class TsFlvRender extends React.Component {
   }
 
   bindEvent() {
-    this.stringify.on('data', d => {
+    this.stringify.on('data', (d) => {
       if (!d) return;
-      this.setState(preState => {
+      this.setState((preState) => {
         return {
           tracks: preState.tracks.concat(d)
         };
       });
     });
-    this.stringify.on('error', e => {
+    this.stringify.on('error', (e) => {
       this.setState({ error: e });
     });
   }
@@ -44,7 +46,7 @@ export default class TsFlvRender extends React.Component {
 
   loadSamples(id) {
     this.setState({ id });
-    let track = this.state.tracks.filter(x => x.id === id);
+    let track = this.state.tracks.filter((x) => x.id === id);
     if (track.length) {
       track = track[0];
       this.setState({ currentSamples: track.samples, id: id });
@@ -144,7 +146,7 @@ export default class TsFlvRender extends React.Component {
     return (
       <div>
         <h2>{id === 1 ? '视频采样数据' : id === 2 ? '音频采样数据' : null}</h2>
-        {samples.map(sample => {
+        {samples.map((sample) => {
           let key = sample.pts + ':' + sample.dts;
           return sample.key !== undefined ? (
             <div key={key} className="sample">
@@ -157,29 +159,32 @@ export default class TsFlvRender extends React.Component {
                 }}
               >
                 {`units: [ ${sample.units
-                  .map(x => `nalType: ${x.nalType}`)
+                  .map((x) => `nalType: ${x.nalType}`)
                   .join(' , ')} ]`}
               </span>
+              {sample.type ? `${sample.type}帧` : null}
             </div>
           ) : (
-              <div key={key} className="sample">
-                pts:{sample.pts + '   '}
-                dts:{sample.dts}
-              </div>
-            );
+            <div key={key} className="sample">
+              pts:{sample.pts + '   '}
+              dts:{sample.dts}
+            </div>
+          );
         })}
       </div>
     );
   }
 
   render() {
-    let { tracks, error, currentSamples, id } = this.state;
+    let {
+      tracks, error, currentSamples, id
+    } = this.state;
     return (
       <Row>
         <Col span={24}>
           <h1>format: {this.props.format}</h1>
         </Col>
-        {tracks.map(track => {
+        {tracks.map((track) => {
           return (
             <Col span={12} key={track.type}>
               {this._renderTrack(track)}
