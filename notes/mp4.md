@@ -12,7 +12,7 @@
 
 **bmff 及其衍生 格式**
 
-![](./img/mp4_1.png)
+![](./_img/mp4_1.png)
 
 ### BOX
 
@@ -40,13 +40,13 @@ type 指定box 类型,ftyp  moov mdat 等
 
 **box 一览**
 
-![](./img/mp4_2.png)
+![](./_img/mp4_2.png)
 
-![](./img/mp4_3.png)
+![](./_img/mp4_3.png)
 
-![](./img/mp4_4.png)
+![](./_img/mp4_4.png)
 
-![](./img/mp4_5.png)
+![](./_img/mp4_5.png)
 
 - moov
 
@@ -64,7 +64,7 @@ metadata box,提供了 音视频编解码器、采样、音视频元数据等信
 
 Sample Table Box: 包含时间和数据的索引信息，容器 box
 
-![](./img/mp4_6.png)
+![](./_img/mp4_6.png)
 
 > 对于支持 range 请求的 server,通过浏览器直接播放 mp4 时,我们可以 seek,seek 时,浏览器自动发 206 请求,并且请求 header 中携带 Range 参数,指定 seek 点的数据在整个文件的偏移,浏览器是如何做到这一点的呢? 就是通过 mp4 的 stbl 下的 stsc stco 等 从 timeline 对应时间找到采样,在找到具体采样数据在 file 中位置,做到 time/space 映射。
 
@@ -110,7 +110,7 @@ unsigned int(16) sample_degradation_priority;
 
 ```
 
-![](./img/mp4_7.png)
+![](./_img/mp4_7.png)
 
 **h264 aac box**
 

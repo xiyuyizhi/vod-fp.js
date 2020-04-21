@@ -30,7 +30,7 @@
 
 整体流程图:
 
-![](./img/drm_1.png)
+![](./_img/drm_1.png)
 
 DRM System,例如 widevine、fairplay、playReady(不同浏览器平台支持不同的 DRM System. chrome -> widevine safari-> fariplay playReady-> ie11+) 主要包括两方面内容:
 
@@ -40,11 +40,11 @@ DRM System,例如 widevine、fairplay、playReady(不同浏览器平台支持不
 
 **iso bmff 中 用于 drm encryption 相关的 box**
 
-![](./img/drm_2.png)
+![](./_img/drm_2.png)
 
 **四种加密方案**
 
-![](./img/drm_4.png)
+![](./_img/drm_4.png)
 
 ## 相关链接
 
