@@ -16,7 +16,11 @@
 
 ### BOX
 
-box 基本结构: [4 字节 size][4 字节 type][size - 8 字节 payload]
+> mp4 格式表示存在两种 box,BOX 和 FullBox,Box 用来表示容器 box,包含着子 box，FullBox 可以看做叶子 box，表示一块具体数据，其下无子 box
+
+Box 基本结构: [4 字节 size][4 字节 type][size - 8 字节 payload]
+
+`多字节字段按大端序计算`
 
 ```
 aligned(8) class Box (unsigned int(32) boxtype, optional unsigned int(8)[16]extended_type) {
@@ -36,6 +40,8 @@ aligned(8) class Box (unsigned int(32) boxtype, optional unsigned int(8)[16]exte
 如果size === 0, 表示这个box是整个文件中的最后一个 box,剩下的字节全部属于这个box，一般就是 mdat box
 type 指定box 类型,ftyp  moov mdat 等
 
+FullBox基本结构: [4 字节size ][4 字节 type][1 字节 version,1或0][3 字节 flags][payload]
+
 ```
 
 **box 一览**
@@ -48,69 +54,103 @@ type 指定box 类型,ftyp  moov mdat 等
 
 ![](./_img/mp4_5.png)
 
-- moov
+### 主要 box
 
-metadata box,提供了 音视频编解码器、采样、音视频元数据等信息,十分重要, 在通过 MSE 操作 buffer 时,moov 的数据要首先 append, 对 fragment mp4，这部分信息保存在 init.mp4 中
+> 重要 一级 box, moov、moof、mdat
 
-- trak 路径: moov -> trak
+moov: 存放音视频的 metadata 信息,其下 box 描述 `视频的音视频轨道`、`采用的编解码器`、`采样的解码时间、采样数据size、采样数据在整个文件的偏移信息`等一系列重要信息
 
-音轨、视轨、字幕 相关元信息
+moof: fragment mp4 分片的 metadata 信息,主要描述分片中采样的信息
 
-- tkhd 路径: trak -> tkhd
+mdat: 音视频采样元数据
 
-可解析出视频宽高信息
+#### 完整 mp4 中的采样描述相关 box
 
-- stbl 路径: moov -> trak -> mdia -> minf -> stbl
+> 对于支持 range 请求的 server,通过浏览器直接播放 mp4 时,我们可以 seek,seek 时,浏览器自动发 206 请求,并且请求 header 中携带 Range 参数,指定 seek 点的数据在整个文件的偏移。主要依赖 stbl box 下一系列采样描述 box,从 timeline 对应时间找到采样描述,做到 time/space 映射。
 
-Sample Table Box: 包含时间和数据的索引信息，容器 box
+**stsd、stts、stss、stdp、stsc、stsz、stco、ctts 分析**
 
-![](./_img/mp4_6.png)
+[online mp4 parser tool](http://demo.xiyuyizhi.xyz/onlineTool)
 
-> 对于支持 range 请求的 server,通过浏览器直接播放 mp4 时,我们可以 seek,seek 时,浏览器自动发 206 请求,并且请求 header 中携带 Range 参数,指定 seek 点的数据在整个文件的偏移,浏览器是如何做到这一点的呢? 就是通过 mp4 的 stbl 下的 stsc stco 等 从 timeline 对应时间找到采样,在找到具体采样数据在 file 中位置,做到 time/space 映射。
+- stsd 描述 track 的编解码器信息
 
-- stsd 路径 stbl -> stsd
+  ![](./_img/m1.png)
 
-Sample Description Box: 包含音视频编码器信息,例如 `对 h264 编码视频的 avc1 box,对 aac 编码音频的 mp4a box`
+- stts
 
-**fragment mp4**
+  > 描述采样的解码时间信息 DT(n+1) = DT(n) + STTS(n),DT(0) = 0,与 ctts box 结合描述 帧的`解码、展示时间`
 
-fragment mp4 即分片的 mp4,每个 fmp4 包含自己单独的采样信息(moof box)和采样数据,moov box 存放在单独的 init.mp4 中 (一般 moov 中`重点包括各track包含的media信息的解码器信息,stsd`,其他采样信息存在在各 fmp4 的 moof 中)
+  ![](./_img/m2.png)
 
-- moof
+  如图所示,一个 mp4 的 duration:239000 , timescale:24000 (1s = 24000(时间单位)), mp4 的时长 = 239000 / 24000 = 9.95(s)
 
-```
+  stts box 描述采样之间解码时间差 1000(时间单位),即 STTS(n) = 1000, 239000 = 239 \* 10000
 
-moof
-  mfhd // 包含sequence number 代表此fmp4在整个列表(例如 hls m3u8列表)的索引
-  traf
-    tfhd  // 提供采样的默认信息
-    tfdt  // `包含重要的baseMediaDecodeTime属性` 代表当前fmp4分片应该在timeline什么位置开始播放
-    trun  // 重要的, 包含此分片所有采样元信息
+  | 帧       | 第一帧 | 2    | 3    | 4    | ....     | 239    |
+  | -------- | :----: | ---- | ---- | ---- | -------- | ------ |
+  | 解码时间 |  1000  | 2000 | 3000 | 4000 | ......   | 239000 |
+  | 展示时间 |   --   | --   | --   | --   | ........ | ----   |
 
-```
+- ctts
 
-采样的具体信息:
+  > 对于不存在 B 帧的视频,解码时间 == 展示时间,由于 B 帧依赖其前后 I/P,所以 P 帧 dts < pts
 
-1. size: 采样数据大小
-2. duration: 采样播放时间
-3. compositionTimeOffset: 合成时间,采样从被解码到播放的时间差
-4. sample_flags 字段: 采样间的依赖关系
+  > CT(n) = DT(n) + CTTS(n)
 
-sample_flags:
+  ![](./_img/m3.png)
 
-```
-bit(4) reserved=0;
-unsigned int(2) is_leading;
-unsigned int(2) sample_depends_on;
-unsigned int(2) sample_is_depended_on;
-unsigned int(2) sample_has_redundancy;
-bit(3) sample_padding_value;
-bit(1) sample_is_non_sync_sample;
-unsigned int(16) sample_degradation_priority;
+  如图所示,ctts 描述帧解码时间和展示时间之间的偏移,`CTTS(n)不完全相同`,sampleCount 表示连续的几个帧的偏移值
 
-```
+  完善上面图表:
 
-![](./_img/mp4_7.png)
+  | 帧       | 第一帧 | 2    | 3    | 4    | ....     | 239    |
+  | -------- | :----: | ---- | ---- | ---- | -------- | ------ |
+  | 解码时间 |  1000  | 2000 | 3000 | 4000 | ......   | 239000 |
+  | offset   |  1000  | 3000 | 0    | 0    | ......   | 1000   |
+  | 展示时间 |  2000  | 5000 | 3000 | 4000 | ........ | 240000 |
+  | 帧类型   |   I    | P    | B    | B    | ........ | P      |
+
+- stts
+
+  > 描述关键帧 index
+
+  ![](./_img/m4.png)
+
+  第 1、25...帧为关键帧
+
+- sdtp
+
+  > 采样之间的依赖关系
+
+  ![](./_img/m6.png)
+
+  ![](./_img/mp4_7.png)
+
+- stsc
+
+  > 采样数据在 mp4 是按 chunk 划分的,一个 chunk 包含多个采样,stsc 描述 chunk 和采样的对应关系,`一共有几个chunk？一个chunk中包含几个采样?` stco 描述这些 chunk 在整个文件的位置 offset。stsz 描述 一个采样的数据大小.
+
+  ![](./_img/m5.png)
+
+  如图所示:
+
+  stsc 表示两种 chunk 信息,第一种 chunk 每个 chunk 包含 10 个采样、chunk 下标从 1 开始，第二种 chunk 包含 9 个采样、chunk 下标从 24 开始。一共 24 个 chunk，前 23 个 chunk 每个包含 10 个采样.最终 10 \* 23 + 9 = 239 采样
+
+  stco 包含 24 个 chunk 的位置偏移信息
+
+  stsz 包含 239 个采样 每个的大小
+
+> 所以对于 mp4 seek,通过 stts、ctts 可以得到指定位置是哪个采样,通过 stsc、stco、stsz 可以得到采样在文件中的位置
+
+#### fragment mp4
+
+> fragment mp4 的 moovbox,相对 mp4 内容少一些,不包含 stbl 中一些采样的描述信息,采样描述信息在分片的 moof 中指定
+
+![](./_img/m7.png)
+
+fmp4 中 trun box 描述采样的 duration、size、展示时间偏移等信息
+
+![](./_img/m8.png)
 
 **h264 aac box**
 

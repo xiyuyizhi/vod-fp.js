@@ -1,13 +1,29 @@
 import Mux from 'vod-fp-mux';
-import { Tree, Row, Col } from 'antd';
+import {
+  Tree, Row, Col, Icon, Tooltip
+} from 'antd';
 import { array } from 'prop-types';
 
 const { TreeNode } = Tree;
+
+const Title = ({ type, typeDes }) => {
+  return (
+    <span>
+      {type}{' '}
+      {typeDes ? (
+        <Tooltip title={typeDes}>
+          <Icon type="question-circle" />
+        </Tooltip>
+      ) : null}
+    </span>
+  );
+};
 
 export default class Mp4Render extends React.Component {
   constructor(props) {
     super(props);
     let mp4Tree = Mux.Mp4Stringify(props.buffer);
+    window.d = mp4Tree;
     mp4Tree = this._convertMp4Stucture(mp4Tree);
     this.state = {
       mp4Tree
@@ -15,7 +31,7 @@ export default class Mp4Render extends React.Component {
   }
 
   _convertMp4Stucture(list) {
-    list.forEach(box => {
+    list.forEach((box) => {
       if (box.data && Array.isArray(box.data)) {
         box.childs = this._convertMp4Stucture(box.data);
         delete box.data;
@@ -34,7 +50,7 @@ export default class Mp4Render extends React.Component {
   _renderArrayPropOfObject(arr, parentKey) {
     arr = arr.map((item, index) => {
       let props = {};
-      Object.keys(item).forEach(key => {
+      Object.keys(item).forEach((key) => {
         if (typeof item[key] === 'object') {
           props = Object.assign({}, item, item[key]);
           delete props[key];
@@ -63,7 +79,10 @@ export default class Mp4Render extends React.Component {
 
   _renderChildsWithProps(box, parentKey) {
     return (
-      <TreeNode title={box.type} key={parentKey}>
+      <TreeNode
+        title={<Title type={box.type} typeDes={box.typeDes}></Title>}
+        key={parentKey}
+      >
         {this._renderProps(box.props, parentKey + '-' + 1)}
         {this._renderChilds(box.childs, parentKey + '-' + 2)}
       </TreeNode>
@@ -75,7 +94,10 @@ export default class Mp4Render extends React.Component {
       let key = parentKey + '-' + i;
       if (!box.childs) {
         return (
-          <TreeNode title={box.type} key={key}>
+          <TreeNode
+            title={<Title type={box.type} typeDes={box.typeDes}></Title>}
+            key={key}
+          >
             {this._renderProps(box.props, key)}
           </TreeNode>
         );

@@ -3,9 +3,9 @@ function getBoxType(buffer, start) {
     buffer[start],
     buffer[start + 1],
     buffer[start + 2],
-    buffer[start + 3]
+    buffer[start + 3],
   ]
-    .map(x => String.fromCharCode(x))
+    .map((x) => String.fromCharCode(x))
     .join('');
 }
 
@@ -66,6 +66,16 @@ class BytesForward {
       _buffer[_offset + 1] * (1 << 16) +
       _buffer[_offset + 2] * (1 << 8) +
       _buffer[_offset + 3]
+    );
+  }
+
+  read32bitsValueSigned() {
+    const { _offset, _buffer } = this;
+    return (
+      (_buffer[_offset] << 24) |
+      (_buffer[_offset + 1] << 16) |
+      (_buffer[offset + 2] << 8) |
+      _buffer[offset + 3]
     );
   }
 }

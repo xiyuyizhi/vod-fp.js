@@ -28,11 +28,16 @@ export default class TsFlvRender extends React.Component {
   bindEvent() {
     this.stringify.on('data', (d) => {
       if (!d) return;
-      this.setState((preState) => {
-        return {
-          tracks: preState.tracks.concat(d)
-        };
-      });
+      this.setState(
+        (preState) => {
+          return {
+            tracks: preState.tracks.concat(d)
+          };
+        },
+        () => {
+          window.d = this.state.tracks;
+        }
+      );
     });
     this.stringify.on('error', (e) => {
       this.setState({ error: e });

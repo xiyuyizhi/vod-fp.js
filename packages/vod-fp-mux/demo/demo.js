@@ -1,15 +1,15 @@
-import {Logger} from 'vod-fp-utility';
+import { Logger } from 'vod-fp-utility';
 import Vod from 'vod-fp-player';
 import Mp4Stringify from '../src/stringify/Mp4Stringify';
-import FlvStream from "../src/transmux/FlvToMp4"
+import FlvStream from '../src/transmux/FlvToMp4';
 
-Logger.use(['mux', 'player']);
+document.cookie = 'debug=mux';
 
 let logger = new Logger('mux');
 let flvStream = new FlvStream();
 
-flvStream.on('error', e => console.log(e))
-flvStream.on('data', e => console.log(e))
+flvStream.on('error', (e) => console.log(e));
+flvStream.on('data', (e) => console.log(e));
 
 const vod = new Vod();
 vod.attachMedia(document.querySelector('video'));
@@ -49,27 +49,28 @@ if (localMp4) {
 const localFlv = localStorage.getItem('flv');
 if (localFlv) {
   logger.log(flvStream.push(convertStrToBuffer(localFlv)));
-  flvStream.flush()
+  flvStream.flush();
 }
 
 let todo = {
   flv: (str, buffer) => {
     localStorage.setItem('flv', str);
     logger.log(flvStream.push(buffer));
-    flvStream.flush()
+    flvStream.flush();
   },
   mp4: (str, buffer) => {
     if (str) {
       localStorage.setItem('mp4', str);
     }
+    console.log(buffer);
     logger.log(Mp4Stringify(buffer));
-  }
+  },
 };
 
 let changeHandler = (type, e) => {
   const file = e.target.files[0];
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = (e) => {
     const buffer = e.target.result;
     let bfStr;
     if (buffer.byteLength < 1024 * 1024) {

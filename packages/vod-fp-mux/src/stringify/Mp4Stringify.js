@@ -29,6 +29,10 @@
  * moof
  *    mfhd
  *    traf
+ *        tfhd
+ *        tfdt
+ *        trun
+ *        sdtp
  * mdat
  */
 
@@ -38,6 +42,42 @@ import { BytesForward, getBoxType } from '../utils/BytesForward';
 let logger = new Logger('mux');
 
 const MAX_UINT32_COUNT = Math.pow(2, 32);
+
+const BOX_TYPE_DESC = {
+  ftyp: 'file type and compatibility',
+  moov: 'container for all metadata',
+  mvhd: 'movie header,overall declarations',
+  trak: 'container for an individual track or stream',
+  tkhd: 'track header,overall information about the track',
+  tref: 'track reference container',
+  mdia: 'container for the media information in a track',
+  mdhd: 'media header,oervall information about the media',
+  hdlr: 'declares the media type',
+  minf: 'media information container',
+  vmhd: 'video media header',
+  smhd: 'sound media header',
+  dinf: 'data information box',
+  stbl: 'sample table box',
+  stsd: 'sample descriptions(codec types, etc)',
+  stts: 'decoding time to sample',
+  ctts: 'compostion time to sample',
+  cslg: 'compostion to decode timeline mapping',
+  stsc: 'sample to chunk',
+  stsz: 'sample size',
+  stco: 'chunk offset',
+  stss: 'sync sample table',
+  sdtp: 'independent abd disposable samples',
+  sbgp: 'sample to group',
+  mvex: 'movid extends box',
+  moof: 'movie fragment',
+  mfhd: 'movie fragment header',
+  traf: 'track fragment',
+  tfhd: 'track fragment header',
+  trun: 'track fragment run',
+  tfdt: 'track fragment decode time',
+  mdat: 'media data',
+  meta: 'metadata',
+};
 
 /**
  *  ISO base media file format
@@ -63,7 +103,9 @@ function splitBox(buffer, offset = 0) {
       buffer[offset + 1] * (1 << 16) +
       buffer[offset + 2] * (1 << 8) +
       buffer[offset + 3];
-    if (len === 0) {
+
+    if (len < 9) {
+      offset += len;
       continue;
     }
     let box = extractBox(offset, offset + len, buffer);
@@ -75,14 +117,17 @@ function splitBox(buffer, offset = 0) {
 
 function extractBox(start, length, buffer) {
   const box = buffer.subarray(start, length);
+  const type = getBoxType(box, 4);
   return {
     length: box.byteLength,
-    type: getBoxType(box, 4),
+    type,
     payload: box.subarray(8),
+    typeDes: BOX_TYPE_DESC[type] || '',
   };
 }
 
 function extractBoxsList(boxList) {
+  let sampleCount = 0;
   boxList.forEach((box) => {
     switch (box.type) {
       case 'ftyp':
@@ -101,6 +146,9 @@ function extractBoxsList(boxList) {
       case 'moof':
       case 'traf':
       case 'stbl':
+        //The sample table contains all the time and data indexing of the media samples in a track. Using the tables
+        //here, it is possible to locate samples in time, determine their type (e.g. I-frame or not), and determine their
+        //size, container, and offset into that container
         box.data = splitBox(box.payload);
         extractBoxsList(box.data);
         break;
@@ -108,8 +156,18 @@ function extractBoxsList(boxList) {
         box.data = splitBox(box.payload, 8);
         extractBoxsList(box.data);
         break;
+      case 'meta':
+        box.data = splitBox(box.payload, 4);
+        extractBoxsList(box.data);
+        break;
       case 'tkhd':
         box.data = parseTrckHeader(box.payload);
+        break;
+      case 'mehd':
+        box.data = parseMehd(box.payload);
+        break;
+      case 'mdhd':
+        box.data = parseMdhd(box.payload);
         break;
       case 'mdhd':
         box.data = parseMdhd(box.payload);
@@ -122,6 +180,7 @@ function extractBoxsList(boxList) {
         break;
       case 'trun':
         box.data = parseTrun(box.payload);
+        sampleCount = box.data.samples.length;
         break;
       case 'tfdt':
         box.data = parseTfdt(box.payload);
@@ -138,6 +197,39 @@ function extractBoxsList(boxList) {
         break;
       case 'btrt':
         box.data = parseBtrt(box.payload);
+        break;
+      case 'stts':
+        box.data = parseStts(box.payload);
+        if (box.data.entries.length) {
+          sampleCount = box.data.entries[0].sampleCount;
+        }
+        break;
+      case 'ctts':
+        box.data = parseCtts(box.payload);
+        break;
+      case 'cslg':
+        box.data = parseCslg(box.payload);
+        break;
+      case 'stss':
+        box.data = parseStss(box.payload);
+        break;
+      case 'stsz':
+        box.data = parseStsz(box.payload);
+        break;
+      case 'stsc':
+        box.data = parseStsc(box.payload);
+        break;
+      case 'stco':
+        box.data = parseStco(box.payload);
+        break;
+      case 'sdtp':
+        box.data = parseSdtp(box.payload, sampleCount);
+        break;
+      case 'mfhd':
+        box.data = parseMfhd(box.payload);
+        break;
+      case 'tfhd':
+        box.data = parseTfhd(box.payload);
         break;
       case 'pssh':
         box.data = parsePssh(box.payload);
@@ -178,8 +270,8 @@ function parseMvhd(payload) {
   /**
    *  mvhd FullBox
    *  |----------mvhd---------------|
-   *  |--length---version--flags--createtime--modifytime--timescale--duration--rate--volume--xxxxx--next_track_ID--|
-   *  |----4--------1-------3--------4------------4-----------4---------4--------4------2-------xx--------4--------|
+   *  |version--flags--createtime--modifytime--timescale--duration--rate--volume--xxxxx--next_track_ID--|
+   *  |1-------3--------4------------4-----------4---------4--------4------2-------xx--------4--------|
    */
   let bf = new BytesForward(payload);
   let mvhdInfo = {};
@@ -487,6 +579,224 @@ function parseBtrt(payload) {
   let avgBitrate = bf.read32bitsValue();
   bf = null;
   return { bufferSizeDB, maxBitrate, avgBitrate };
+}
+
+function parseMeta(payload) {}
+
+function parseStts(payload) {
+  //  The Decoding Time to Sample Box contains decode time delta's: DT(n+1) = DT(n) + STTS(n) where STTS(n)
+  //  is the (uncompressed) table entry for sample n
+  //  The DT axis has a zero origin;
+  let bf = new BytesForward(payload);
+  bf.forward(4); // skip version flags
+  let entryCount = bf.read32bitsValue();
+  let entries = [];
+  bf.forward(4);
+  for (let i = 0; i < entryCount; i++) {
+    let sampleCount = bf.read32bitsValue();
+    bf.forward(4);
+    let sampleDelta = bf.read32bitsValue();
+    bf.forward(4);
+    entries.push({
+      sampleCount,
+      sampleDelta,
+    });
+  }
+  return { entries };
+}
+function parseCtts(payload) {
+  let bf = new BytesForward(payload);
+  bf.forward(4); // skip version flags
+  let entryCount = bf.read32bitsValue();
+  let entries = [];
+  bf.forward(4);
+  for (let i = 0; i < entryCount; i++) {
+    let sampleCount = bf.read32bitsValue();
+    bf.forward(4);
+    let sampleOffset = bf.read32bitsValue();
+    bf.forward(4);
+    entries.push({
+      sampleCount,
+      sampleOffset,
+    });
+  }
+  return { entries };
+}
+function parseCslg(payload) {
+  let bf = new BytesForward(payload);
+  let compositionToDTSShift = 0;
+  let leastDecodeToDisplayDelta = 0;
+  let greatestDecodeToDisplayDelta = 0;
+  let compositionStartTime = 0;
+  let compositionEndTime = 0;
+
+  bf.forward(4);
+  compositionToDTSShift = bf.read32bitsValueSigned();
+
+  bf.forward(4);
+  leastDecodeToDisplayDelta = bf.read32bitsValueSigned();
+
+  bf.forward(4);
+  greatestDecodeToDisplayDelta = bf.read32bitsValueSigned();
+
+  bf.forward(4);
+  compositionStartTime = bf.read32bitsValueSigned();
+
+  bf.forward(4);
+  compositionEndTime = bf.read32bitsValueSigned();
+  return {
+    compositionToDTSShift,
+    leastDecodeToDisplayDelta,
+    greatestDecodeToDisplayDelta,
+    compositionStartTime,
+    compositionEndTime,
+  };
+}
+function parseStss(payload) {
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+  let entries = [];
+  let entryCount = bf.read32bitsValue();
+  bf.forward(4);
+
+  for (let i = 0; i < entryCount; i++) {
+    let samNum = bf.read32bitsValue();
+    entries.push(samNum);
+    bf.forward(4);
+  }
+
+  return { entries };
+}
+
+function parseStsz(payload) {
+  // sample size box
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+  let sampleSize;
+  let sampleCount;
+  let entries = [];
+
+  sampleSize = bf.read32bitsValue();
+  bf.forward(4);
+  sampleCount = bf.read32bitsValue();
+  bf.forward(4);
+
+  if (sampleSize === 0) {
+    for (let i = 0; i < sampleCount; i++) {
+      let size = bf.read32bitsValue();
+      entries.push(size);
+      bf.forward(4);
+    }
+  } else {
+    console.warn('parse stsz, sample size not equal 0');
+  }
+
+  return { entries };
+}
+function parseStsc(payload) {
+  // sample chunk box
+  // Samples within the media data are grouped into chunks. Chunks can be of different sizes, and the samples
+  // within a chunk can have different sizes.
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+
+  let entries = [];
+  let entryCount = bf.read32bitsValue();
+  bf.forward(4);
+
+  for (let i = 0; i < entryCount; i++) {
+    let firstChunk = bf.read32bitsValue();
+    bf.forward(4);
+    let samplesPreChunk = bf.read32bitsValue();
+    bf.forward(4);
+    let sampleDesIndex = bf.read32bitsValue();
+    bf.forward(4);
+
+    entries.push({
+      firstChunk,
+      samplesPreChunk,
+      sampleDesIndex,
+    });
+  }
+
+  return { entries };
+}
+
+function parseStco(payload) {
+  // chunk offset box
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+
+  let entryCount = bf.read32bitsValue();
+  let entries = [];
+
+  bf.forward(4);
+
+  for (let i = 0; i < entryCount; i++) {
+    let offset = bf.read32bitsValue();
+    entries.push(offset);
+    bf.forward(4);
+  }
+
+  return { entries };
+}
+
+function parseMehd(payload) {
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+  let fragDuration;
+  if (payload[0] == 1) {
+    let upper = bf.read32bitsValue();
+    bf.forward(4);
+    let lower = bf.read32bitsValue();
+    fragDuration = upper * (1 << 30) * 2 + lower;
+  } else {
+    fragDuration = bf.read32bitsValue();
+  }
+  return { fragDuration };
+}
+
+function parseMfhd(payload) {
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+  let seqNumber = bf.read32bitsValue();
+  return { seqNumber };
+}
+
+function parseTfhd(payload) {
+  let bf = new BytesForward(payload);
+  bf.forward(1);
+  let flags = bf.readBytes(3);
+  bf.forward(3);
+  let trackId = bf.read32bitsValue();
+  return { trackId, flags };
+}
+
+function parseSdtp(payload, sampleCount) {
+  let bf = new BytesForward(payload);
+  bf.forward(4);
+  let entries = [];
+  let isLeading;
+  let dependsOn;
+  let isDenpendedOn;
+  let hasRedundancy;
+
+  for (let i = 0; i < sampleCount; i++) {
+    let c = bf.read8bitsValue();
+    isLeading = (c & 0xc0) >> 6;
+    dependsOn = (c & 0x30) >> 4;
+    isDenpendedOn = (c & 0x0c) >> 2;
+    hasRedundancy = c & 0x03;
+    entries.push({
+      isLeading,
+      dependsOn,
+      isDenpendedOn,
+      hasRedundancy,
+    });
+    bf.forward(1);
+  }
+
+  return { entries };
 }
 
 function parsePssh(payload) {
