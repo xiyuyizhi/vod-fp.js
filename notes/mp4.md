@@ -12,7 +12,7 @@
 
 **bmff 及其衍生 格式**
 
-![](./_img/mp4_1.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/mp4_1.png)
 
 ### BOX
 
@@ -46,13 +46,13 @@ FullBox基本结构: [4 字节size ][4 字节 type][1 字节 version,1或0][3 �
 
 **box 一览**
 
-![](./_img/mp4_2.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/mp4_2.png)
 
-![](./_img/mp4_3.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/mp4_3.png)
 
-![](./_img/mp4_4.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/mp4_4.png)
 
-![](./_img/mp4_5.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/mp4_5.png)
 
 ### 主要 box
 
@@ -74,13 +74,13 @@ mdat: 音视频采样元数据
 
 - stsd 描述 track 的编解码器信息
 
-  ![](./_img/m1.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m1.png)
 
 - stts
 
   > 描述采样的解码时间信息 DT(n+1) = DT(n) + STTS(n),DT(0) = 0,与 ctts box 结合描述 帧的`解码、展示时间`
 
-  ![](./_img/m2.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m2.png)
 
   如图所示,一个 mp4 的 duration:239000 , timescale:24000 (1s = 24000(时间单位)), mp4 的时长 = 239000 / 24000 = 9.95(s)
 
@@ -97,7 +97,7 @@ mdat: 音视频采样元数据
 
   > CT(n) = DT(n) + CTTS(n)
 
-  ![](./_img/m3.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m3.png)
 
   如图所示,ctts 描述帧解码时间和展示时间之间的偏移,`CTTS(n)不完全相同`,sampleCount 表示连续的几个帧的偏移值
 
@@ -114,7 +114,7 @@ mdat: 音视频采样元数据
 
   > 描述关键帧 index
 
-  ![](./_img/m4.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m4.png)
 
   第 1、25...帧为关键帧
 
@@ -122,15 +122,15 @@ mdat: 音视频采样元数据
 
   > 采样之间的依赖关系
 
-  ![](./_img/m6.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m6.png)
 
-  ![](./_img/mp4_7.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/mp4_7.png)
 
 - stsc
 
   > 采样数据在 mp4 是按 chunk 划分的,一个 chunk 包含多个采样,stsc 描述 chunk 和采样的对应关系,`一共有几个chunk？一个chunk中包含几个采样?` stco 描述这些 chunk 在整个文件的位置 offset。stsz 描述 一个采样的数据大小.
 
-  ![](./_img/m5.png)
+  ![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m5.png)
 
   如图所示:
 
@@ -146,11 +146,11 @@ mdat: 音视频采样元数据
 
 > fragment mp4 的 moovbox,相对 mp4 内容少一些,不包含 stbl 中一些采样的描述信息,采样描述信息在分片的 moof 中指定
 
-![](./_img/m7.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m7.png)
 
 fmp4 中 trun box 描述采样的 duration、size、展示时间偏移等信息
 
-![](./_img/m8.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/m8.png)
 
 **h264 aac box**
 

@@ -6,7 +6,7 @@ import {
   head,
   trace,
   curry,
-  liftA2
+  liftA2,
 } from '../../src/fp/core';
 import { Success, Fail, either } from '../../src/fp/Either';
 import { Maybe } from '../../src/fp/Maybe';
@@ -15,7 +15,7 @@ const spies = require('chai-spies');
 chai.use(spies);
 chai.should();
 
-describe('Fp: test Task', function() {
+describe('Fp: test Task', function () {
   this.timeout(2000);
   const add = curry((a, b) => a + b);
   let spy;
@@ -28,8 +28,8 @@ describe('Fp: test Task', function() {
     spy = null;
   });
 
-  it('Task.map call', done => {
-    Task.of(resolve => resolve(1))
+  it('Task.map call', (done) => {
+    Task.of((resolve) => resolve(1))
       .map(spy)
       .map(() => {
         spy.should.be.called();
@@ -37,19 +37,19 @@ describe('Fp: test Task', function() {
       });
   });
 
-  it('Task resolve value', done => {
-    Task.of(resolve => resolve(1))
-      .map(result => {
+  it('Task resolve value', (done) => {
+    Task.of((resolve) => resolve(1))
+      .map((result) => {
         result.should.be.equal(1);
         done();
       })
       .error(() => {});
   });
 
-  it('Task reject error', done => {
+  it('Task reject error', (done) => {
     Task.of((resolve, reject) => reject(1))
       .map(spy)
-      .error(err => {
+      .error((err) => {
         err.should.be.equal(1);
         spy.should.not.be.called();
         done();
@@ -61,88 +61,83 @@ describe('Fp: test Task', function() {
       });
   });
 
-  it('Task.resolve()', done => {
-    Task.resolve(1).map(result => {
+  it('Task.resolve()', (done) => {
+    Task.resolve(1).map((result) => {
       result.should.be.equal(1);
       done();
     });
   });
 
-  it('Task.reject()', done => {
-    Task.reject(1).error(err => {
+  it('Task.reject()', (done) => {
+    Task.reject(1).error((err) => {
       err.should.be.equal(1);
       done();
     });
   });
 
-  it('Task resolve Another Task in map', done => {
-    Task.of(resolve => resolve(1))
-      .map(result => {
-        return Task.of(resolve => resolve(result + 1));
+  it('Task resolve Another Task in map', (done) => {
+    Task.of((resolve) => resolve(1))
+      .map((result) => {
+        return Task.of((resolve) => resolve(result + 1));
       })
-      .map(result => {
+      .map((result) => {
         result.should.be.equal(2);
         done();
       });
   });
-  it('Task resolve another async Task in map', done => {
-    Task.of(resolve => resolve(1))
-      .map(result => {
-        return Task.of(resolve => {
+  it('Task resolve another async Task in map', (done) => {
+    Task.of((resolve) => resolve(1))
+      .map((result) => {
+        return Task.of((resolve) => {
           setTimeout(() => {
             resolve(result + 1);
           }, 100);
         });
       })
-      .map(result => {
+      .map((result) => {
         result.should.be.equal(2);
         done();
       });
   });
 
-  it('map return another task with map chaind', done => {
-    Task.of(resolve => resolve('a'))
-      .map(ret => {
-        return new Task(resolve => {
+  it('map return another task with map chaind', (done) => {
+    Task.of((resolve) => resolve('a'))
+      .map((ret) => {
+        return new Task((resolve) => {
           setTimeout(() => {
             resolve(ret + 'b');
           }, 100);
-        }).map(ret => ret + 'c');
+        }).map((ret) => ret + 'c');
       })
-      .map(ret => ret + 'd')
-      .map(ret => {
+      .map((ret) => ret + 'd')
+      .map((ret) => {
         ret.should.be.equal('abcd');
         done();
       });
   });
 
-  it('throw Error on Task.map', done => {
-    Task.of(resolve => resolve(1))
-      .map(result => {
+  it('throw Error on Task.map', (done) => {
+    Task.of((resolve) => resolve(1))
+      .map((result) => {
         result += a;
       })
       .map(spy)
-      .error(err => {
+      .error((err) => {
         spy.should.not.be.called();
         done();
       });
   });
 
-  it('map,compose with Task', done => {
+  it('map,compose with Task', (done) => {
     function add1(v) {
       return v + 1;
     }
-    map(
-      compose(
-        spy,
-        add1
-      )
-    )(Task.of(resolve => resolve(1)));
+    map(compose(spy, add1))(Task.of((resolve) => resolve(1)));
     setTimeout(() => {
       spy.should.be.called();
     }, 100);
 
-    const read = Task.of(resolve =>
+    const read = Task.of((resolve) =>
       setTimeout(() => {
         resolve('123');
       }, 300)
@@ -151,32 +146,30 @@ describe('Fp: test Task', function() {
     read
       .map(split(' '))
       .map(head)
-      .map(result => {
+      .map((result) => {
         result.should.be.equal('123');
         done();
       });
   });
 
-  it('ignore compose function when Task return Fail', done => {
+  it('ignore compose function when Task return Fail', (done) => {
     function addThrowError(v) {
       return v + a;
     }
-    compose(
-      map(spy),
-      map(addThrowError)
-    )(Task.of(resolve => resolve(1)));
+    compose(map(spy), map(addThrowError))(Task.of((resolve) => resolve(1)));
     setTimeout(() => {
       spy.should.not.be.called();
       done();
     }, 100);
   });
 
-  it('Task.cannel()', done => {
-    const t = Task.of(resolve =>
+  it('Task.cannel()', (done) => {
+    const t = Task.of((resolve) =>
       setTimeout(() => {
         resolve();
       }, 500)
-    ).map(spy);
+    );
+    t.map(spy);
     setTimeout(() => t.cancel(), 100);
     setTimeout(() => {
       spy.should.not.be.called();
@@ -184,9 +177,9 @@ describe('Fp: test Task', function() {
     }, 1000);
   });
 
-  it('cancel call all pending task in map', done => {
-    const t = Task.of(resolve => setTimeout(() => resolve(), 500)).map(() => {
-      return Task.of(resolve => {
+  it('cancel call all pending task in map', (done) => {
+    const t = Task.of((resolve) => setTimeout(() => resolve(), 500)).map(() => {
+      return Task.of((resolve) => {
         setTimeout(() => resolve(), 800);
       }).map(spy);
     });
@@ -201,11 +194,11 @@ describe('Fp: test Task', function() {
     }, 1000);
   });
 
-  it('either with Task', done => {
+  it('either with Task', (done) => {
     const task = Task.of((resolve, reject) => resolve(1));
     compose(
       map(either(spy, () => {})),
-      map(value => {
+      map((value) => {
         if (value > 5) {
           return Success.of(value);
         }
@@ -219,32 +212,32 @@ describe('Fp: test Task', function() {
     }, 100);
   });
 
-  it('Task.chain()', done => {
-    Task.of(resolve => resolve(1))
-      .chain(v => Task.of(resolve => resolve(v + 3)))
-      .map(v => {
+  it('Task.chain()', (done) => {
+    Task.of((resolve) => resolve(1))
+      .chain((v) => Task.of((resolve) => resolve(v + 3)))
+      .map((v) => {
         v.should.be.equal(4);
       });
 
-    Task.of(resolve => resolve(1))
-      .chain(v => Task.reject(2))
-      .error(v => {
+    Task.of((resolve) => resolve(1))
+      .chain((v) => Task.reject(2))
+      .error((v) => {
         v.should.be.equal(2);
       });
     setTimeout(done, 200);
   });
 
-  it('Task.ap()', done => {
-    Task.resolve(x => x + 3)
+  it('Task.ap()', (done) => {
+    Task.resolve((x) => x + 3)
       .ap(Task.resolve(2))
-      .map(v => {
+      .map((v) => {
         v.should.be.equal(5);
       });
 
     Task.resolve(add)
       .ap(Task.of(2))
       .ap(Task.of(3))
-      .map(v => {
+      .map((v) => {
         v.should.be.equal(5);
       });
 
@@ -253,39 +246,39 @@ describe('Fp: test Task', function() {
     // 两个ap 中的task 谁先resolve没关系
     Task.resolve(put) // [3,1]
       .ap(
-        Task.of(resolve => {
+        Task.of((resolve) => {
           setTimeout(() => {
             resolve(3);
           }, 100);
         })
       )
-      .ap(Task.of(resolve => resolve(1))) // 优先完成依然是add的第二个参数
-      .map(v => {
+      .ap(Task.of((resolve) => resolve(1))) // 优先完成依然是add的第二个参数
+      .map((v) => {
         v[0].should.be.equal(3);
         v[1].should.be.equal(1);
       });
 
     Task.resolve(put) //[3,1]
-      .ap(Task.of(resolve => resolve(3)))
+      .ap(Task.of((resolve) => resolve(3)))
       .ap(
-        Task.of(resolve => {
+        Task.of((resolve) => {
           setTimeout(() => {
             resolve(1);
           }, 250);
         })
       )
-      .map(v => {
+      .map((v) => {
         v[0].should.be.equal(3);
         v[1].should.be.equal(1);
         done();
       });
   });
 
-  it('Task.ap throw error on map', done => {
+  it('Task.ap throw error on map', (done) => {
     const addThree = curry((a, b, c) => a + b + c);
     Task.resolve(addThree)
       .ap(
-        Task.of(resolve =>
+        Task.of((resolve) =>
           setTimeout(() => {
             resolve(1);
           }, 300)
@@ -298,18 +291,18 @@ describe('Fp: test Task', function() {
           }, 100)
         )
       )
-      .ap(Task.of(resolve => resolve(3)))
-      .map(v => {
+      .ap(Task.of((resolve) => resolve(3)))
+      .map((v) => {
         v.should.be.equal(6);
       })
-      .error(v => {
+      .error((v) => {
         let flag = v.value().message.indexOf('a is not defined') !== -1;
         flag.should.be.equal(true);
       });
     setTimeout(done, 400);
   });
 
-  it('Task.ap with Fail', done => {
+  it('Task.ap with Fail', (done) => {
     const anotherSpy1 = chai.spy();
     const anotherSpy2 = chai.spy();
     const anotherSpy3 = chai.spy();
@@ -320,7 +313,7 @@ describe('Fp: test Task', function() {
     const anotherSpy8 = chai.spy();
 
     Task.resolve(add)
-      .ap(Task.of(resolve => setTimeout(resolve, 50)))
+      .ap(Task.of((resolve) => setTimeout(resolve, 50)))
       .ap(Task.reject('error1'))
       .map(anotherSpy1)
       .error(anotherSpy2);
@@ -339,7 +332,7 @@ describe('Fp: test Task', function() {
 
     Task.resolve(add)
       .ap(Task.reject('error3'))
-      .ap(Task.of(resolve => setTimeout(resolve, 50)))
+      .ap(Task.of((resolve) => setTimeout(resolve, 50)))
       .map(anotherSpy5)
       .error(anotherSpy6);
 
@@ -368,22 +361,19 @@ describe('Fp: test Task', function() {
     }, 300);
   });
 
-  it('Task with liftA2', done => {
+  it('Task with liftA2', (done) => {
     liftA2(
       add,
-      Task.of(resolve => setTimeout(() => resolve(10), 300)),
-      Task.of(resolve => {
+      Task.of((resolve) => setTimeout(() => resolve(10), 300)),
+      Task.of((resolve) => {
         setTimeout(() => resolve(20), 150);
       })
-    ).map(v => {
+    ).map((v) => {
       v.should.be.equal(v);
       done();
     });
-    const tOfM = compose(
-      Task.of,
-      Maybe.of
-    );
-    liftA2(liftA2(add), tOfM('w'), tOfM(' w')).map(v => {
+    const tOfM = compose(Task.of, Maybe.of);
+    liftA2(liftA2(add), tOfM('w'), tOfM(' w')).map((v) => {
       v.value().should.be.equal('w w');
     });
   });

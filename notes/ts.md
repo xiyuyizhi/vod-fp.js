@@ -23,7 +23,7 @@
 
 ts 流格式整体结构类似网络协议的数据包,一层包一层，每一层有 header,有 payload,最里面承载着原始流(音视频编码)数据
 
-![](./_img/ts1.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/ts1.png)
 
 `最外层,ts流可分割成 连续的 长度为188字节的 ts packet,每个packet 以 0x47(71) 开始,Ox47也叫同步字节`
 
@@ -70,9 +70,9 @@ pes 就是用来承载音视频原始数据的,对于视频编码数据,一般�
 
 由前 6 字节的 pes header + 3 字节的 pes extendsion + PES header data length + payload 组成
 
-![](./_img/ts2.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/ts2.png)
 
-![](./_img/ts3.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/ts3.png)
 
 在 pes header 中有两个至关重要的项, **pts、dts** ,表示音视频数据的解码时间和展示时间
 

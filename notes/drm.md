@@ -30,7 +30,7 @@
 
 整体流程图:
 
-![](./_img/drm_1.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/drm_1.png)
 
 DRM System,例如 widevine、fairplay、playReady(不同浏览器平台支持不同的 DRM System. chrome -> widevine safari-> fariplay playReady-> ie11+) 主要包括两方面内容:
 
@@ -40,11 +40,11 @@ DRM System,例如 widevine、fairplay、playReady(不同浏览器平台支持不
 
 **iso bmff 中 用于 drm encryption 相关的 box**
 
-![](./_img/drm_2.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/drm_2.png)
 
 **四种加密方案**
 
-![](./_img/drm_4.png)
+![](https://cdn.jsdelivr.net/npm/vod_img@latest/libs/drm_4.png)
 
 ## 相关链接
 

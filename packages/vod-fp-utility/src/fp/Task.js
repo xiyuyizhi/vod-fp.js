@@ -2,31 +2,43 @@ import { compose, map, trace } from './core';
 import { Fail, Success } from './Either';
 import { defer } from './_inner/defer';
 import CusError from './CusError';
-const STATE = {
-  PENDING: 'pending',
-  FULFILLED: 'fulfilled',
-  REJECTED: 'rejected'
+
+const STATUS = {
+  PENDING: 0,
+  FULLFILLED: 1,
+  REJECTED: 2,
 };
 
-let id = 0;
-class Task {
-  constructor(f) {
-    this.id = id++;
-    this._state = STATE.PENDING;
-    this._queueCall = [];
-    this._errorCall = [];
-    this._value = null;
+const NOOP = () => {};
+
+export default class Task {
+  constructor(execute) {
+    this._status = STATUS.PENDING;
+    this._onSuccess = NOOP;
+    this._onFail = NOOP;
+    this._nextResolve = NOOP;
+    this._nextReject = NOOP;
     this._retryCount = 0;
     this._retryInterval = 0;
-    this._filterRetry = x => x;
-    this._resolve = this._resolve.bind(this);
-    this._reject = this._reject.bind(this);
-    this._f = f;
-    try {
-      f.apply(this, [this._resolve, this._reject]);
-    } catch (e) {
-      this._reject(e);
-    }
+    this._filterRetry = (x) => x;
+    this._value = undefined;
+    execute.bind(
+      null,
+      this._deferResolve.bind(this),
+      this._deferReject.bind(this)
+    )();
+  }
+
+  static resolve(arg) {
+    return new Task((resolve) => {
+      resolve(arg);
+    });
+  }
+
+  static reject(arg) {
+    return new Task((_, reject) => {
+      reject(arg);
+    });
   }
 
   static of(f) {
@@ -36,121 +48,93 @@ class Task {
     return Task.resolve(f);
   }
 
-  static resolve(x) {
-    return Task.of(resolve => resolve(x));
-  }
-
-  static reject(x) {
-    return Task.of((resolve, reject) => reject(x));
-  }
-
-  value() {
-    return this._value;
-  }
-
-  _removeQueue() {
-    this._queueCall = [];
-  }
-
-  _reMount(target, mapList, errorCall) {
-    target._removeQueue();
-    while (mapList.length) {
-      target.map(mapList.shift());
-    }
-    target._errorCall = errorCall;
-  }
-
-  _deferRun(result) {
-    while (this._queueCall.length) {
-      if (result instanceof Task) {
-        // map 中 return new Task,将剩余未执行的map function 挂到新生成的Task
-        this._reMount(
-          result,
-          [...result._queueCall, ...this._queueCall.slice(0)],
-          this._errorCall
-        );
-        this._queueCall = [];
-        this._errorCall = [];
-        continue;
-      }
-
-      let current = this._queueCall.shift();
-      try {
-        if (result instanceof Fail) {
-          if (this._errorCall.length) {
-            let errorHandle = this._errorCall.shift();
-            let ret = errorHandle(result.value());
-            result = ret instanceof Task ? ret : Fail.of(ret);
-            continue;
-          }
-        }
-        result = map(current, result); // return Success
-        if (
-          typeof result.value === 'function' &&
-          result.value() instanceof Task
-        ) {
-          result = result.value();
-        }
-      } catch (e) {
-        result = Fail.of(CusError.of(e));
-      }
-    }
-    if (
-      !this._queueCall.length &&
-      result instanceof Fail &&
-      this._errorCall.length
-    ) {
-      this._errorCall.shift()(result.value());
-      return;
-    }
-    this._value = result;
-  }
-
-  _resolve(result) {
-    if (this._state != STATE.PENDING) return;
-    defer(() => {
-      this._deferRun(Success.of(result));
-      this._state = STATE.FULFILLED;
+  _deferResolve(data) {
+    setTimeout(() => {
+      this._onResolve(data);
     });
   }
 
-  _reject(result) {
-    if (this._state != STATE.PENDING) return;
-    if (this._retryCount && this._retryInterval && this._filterRetry(result)) {
-      defer(() => {
-        this._f.apply(this, [this._resolve, this._reject]);
-      }, this._retryInterval);
-      this._retryCount--;
-      return;
-    }
-    defer(() => {
-      this._deferRun(Fail.of(result));
-      this._state = STATE.REJECTED;
+  _deferReject(data) {
+    setTimeout(() => {
+      this._onReject(data);
     });
   }
 
-  map(f) {
-    this._queueCall.push(f);
-    return this;
+  _onResolve(data) {
+    if (this._status !== STATUS.PENDING) return;
+
+    this._status = STATUS.FULLFILLED;
+    this._value = Success.of(data);
+
+    if (this._onSuccess === NOOP) return;
+
+    try {
+      let ret = this._onSuccess(data);
+      if (ret instanceof Task) {
+        ret.map(this._nextResolve).error(this._nextReject);
+      } else {
+        this._nextResolve(ret);
+      }
+    } catch (e) {
+      this._nextReject(e);
+    }
   }
 
-  // f return another Task,this._value is a function
-  chain(f) {
+  _onReject(data) {
+    if (this._status !== STATUS.PENDING) return;
+
+    this._status = STATUS.REJECTED;
+    this._value = Fail.of(data);
+
+    if (this._onFail === NOOP) {
+      this._nextReject(data);
+      return;
+    }
+
+    try {
+      let ret = this._onFail(data);
+      if (ret instanceof Task) {
+        ret.map(this._nextResolve).error(this._nextReject);
+      } else {
+        this._nextResolve(ret);
+      }
+    } catch (e) {
+      this._nextReject(e);
+    }
+  }
+
+  map(successFn) {
+    this._onSuccess = successFn;
+    return new Task((resolve, reject) => {
+      this._nextResolve = resolve;
+      this._nextReject = reject;
+    });
+  }
+
+  error(failFn) {
+    this._onFail = failFn;
+    let ret = new Task((resolve, reject) => {
+      this._nextResolve = resolve;
+      this._nextReject = reject;
+      return this;
+    });
+    return ret;
+  }
+
+  chain(fn) {
     return Task.of((resolve, reject) =>
-      this.map(x => {
-        f(x)
-          .map(resolve)
-          .error(reject);
+      this.map((x) => {
+        fn(x).map(resolve).error(reject);
       }).error(reject)
     );
   }
 
   ap(another) {
-    return this.chain(fn => {
+    return this.chain((fn) => {
       if (typeof fn !== 'function') {
         console.warn(`call ap(),${fn} is not a function`);
       }
-      if (another._state !== STATE.PENDING) {
+      if (another._status !== STATUS.PENDING) {
         //这个task先于其他任务完成
         return another._value // Success or Fail
           .map(fn);
@@ -160,11 +144,6 @@ class Task {
   }
 
   getOrElse() {
-    return this;
-  }
-
-  error(f) {
-    this._errorCall.push(f);
     return this;
   }
 
@@ -180,10 +159,6 @@ class Task {
   }
 
   cancel() {
-    if (this._state !== STATE.PENDING) return;
-    this._queueCall = [];
-    this._state = STATE.FULFILLED;
+    this._status = STATUS.FULFILLED;
   }
 }
-
-export default Task;
