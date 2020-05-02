@@ -22,6 +22,7 @@ export default class Task {
     this._retryInterval = 0;
     this._filterRetry = (x) => x;
     this._value = undefined;
+    this._execute = execute;
     execute.bind(
       null,
       this._deferResolve.bind(this),
@@ -82,6 +83,15 @@ export default class Task {
 
   _onReject(data) {
     if (this._status !== STATUS.PENDING) return;
+
+    if (this._retryCount && this._retryInterval && this._filterRetry(data)) {
+      setTimeout(() => {
+        this._execute.apply(this, [this._resolve, this._reject]);
+      }, this._retryInterval);
+
+      this._retryCount--;
+      return;
+    }
 
     this._status = STATUS.REJECTED;
     this._value = Fail.of(data);

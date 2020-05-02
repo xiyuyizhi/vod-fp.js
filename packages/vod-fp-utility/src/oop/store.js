@@ -6,7 +6,7 @@ function combineActions(...actions) {
     if (!module && !ACTION) {
       return { ...all, ...action };
     }
-    Object.keys(ACTION).forEach(action => {
+    Object.keys(ACTION).forEach((action) => {
       if (action !== module) {
         ACTION[action] = `${module.toLowerCase()}.${ACTION[action]}`;
       }
@@ -14,8 +14,8 @@ function combineActions(...actions) {
     return {
       ...all,
       ...{
-        [module]: ACTION
-      }
+        [module]: ACTION,
+      },
     };
   }, {});
 }
@@ -33,16 +33,16 @@ function combineStates(...states) {
       let derive = {
         ...all.derive,
         ...{
-          [module]: state.derive || {}
-        }
+          [module]: state.derive || {},
+        },
       };
       delete state.derive;
       return {
         ...all,
         ...{
-          [module]: state
+          [module]: state,
         },
-        derive
+        derive,
       };
     },
     { derive: {} }
@@ -56,7 +56,7 @@ function createStore(initState, actions = {}) {
   }
   let state = initState;
   let events = {
-    all: []
+    all: [],
   };
   let _store = {
     ACTION: actions,
@@ -69,65 +69,69 @@ function createStore(initState, actions = {}) {
         return actions[path.toUpperCase()];
       }
     },
-    connect: fn => {
+    connect: (fn) => {
       return fn(_store);
     },
     dispatch: (path, payload) => {
       if (!state || !path) return;
       let props = path.split('.');
-      let prop = props[0];
-      let currentState = null;
-      let currentDerive = null;
-      if (props.length === 1) {
-        let deriveProp = state.derive[prop];
-        if (deriveProp) {
+      let [modu, prop] = props;
+      let currentModule = null;
+      let currentDerived = null;
+
+      if (!prop) {
+        prop = modu;
+        modu = null;
+        let derived = state.derive[prop];
+        if (derived) {
           //只是一个更新已有的某个属性的方法
-          let s = deriveProp(Maybe.of(state), payload, _store);
+          let s = derived(Maybe.of(state), payload, _store);
           if (s) {
             state = s.join();
           }
         } else if (state[prop] !== undefined) {
           state[prop] = payload;
         }
-      } else {
-        let parentProp = prop;
+      }
 
-        currentState = state[prop];
-        currentDerive = state.derive[prop];
-        prop = props.slice(1)[0];
-        if (!currentDerive || !currentDerive[prop]) {
-          if (currentState[prop] !== undefined) {
-            currentState[prop] = payload;
+      if (modu) {
+        currentModule = state[modu];
+        currentDerived = state.derive[modu];
+        if (!currentDerived || !currentDerived[prop]) {
+          if (currentModule[prop] !== undefined) {
+            currentModule[prop] = payload;
           } else if (state[prop] !== undefined) {
             state[prop] = payload;
           }
-        } else if (currentDerive[prop]) {
-          // create the copy of currentState //shadow copy
-          const newState = currentDerive[prop](
-            Maybe.of(currentState),
+        } else if (currentDerived[prop]) {
+          // create the copy of currentModule //shadow copy
+          const newState = currentDerived[prop](
+            Maybe.of(currentModule),
             payload,
             _store
           );
           if (newState) {
-            newState.map(x => {
-              state[parentProp] = x;
+            newState.map((x) => {
+              state[preProp] = x;
             });
           }
         }
       }
+
       if (events[path]) {
-        events[path].forEach(listener => {
+        events[path].forEach((listener) => {
           listener(Maybe.of(_store.getState(path).getOrElse(payload)));
         });
       }
+
       // if current update a parent prop,all it's child props listener should be called
       let childs = _store._findAction(path);
       if (!childs) return;
-      Object.keys(childs).forEach(child => {
+      Object.keys(childs).forEach((child) => {
         if (child === path) return;
         child = childs[child];
         if (child !== path && events[child]) {
-          events[child].forEach(listener =>
+          events[child].forEach((listener) =>
             listener(Maybe.of(_store.getState(child).getOrElse(payload)))
           );
         }
@@ -171,29 +175,32 @@ function createStore(initState, actions = {}) {
       if (typeof path !== 'string') {
         throw new Error('invalid path');
       }
-      let props = path.split('.');
-      let prop = props[0];
-      if (props.length === 1) {
+
+      let [modu, prop] = path.split('.');
+
+      if (!prop) {
+        prop = modu;
+        modu = null;
         if (state[prop] !== undefined) return Maybe.of(state[prop]);
         if (state.derive[prop] !== undefined) {
           return state.derive[prop](Maybe.of(state), payload, _store);
         }
         return Maybe.of();
       }
-      let currentState = state[prop];
-      let currentDerive = state.derive[prop];
-      prop = props.slice(1)[0];
-      if (!currentDerive[prop]) {
-        if (currentState[prop] !== undefined) {
-          return Maybe.of(currentState[prop], payload);
-        } else {
+
+      if (modu) {
+        let currentModule = state[modu];
+        let currentDerive = state.derive[prop];
+        if (!currentDerive[prop]) {
+          if (currentModule[prop] !== undefined) {
+            return Maybe.of(currentModule[prop], payload);
+          }
           return Maybe.of(state[prop]);
         }
-      } else {
-        return currentDerive[prop](Maybe.of(currentState), payload, _store);
+        return currentDerive[prop](Maybe.of(currentModule), payload, _store);
       }
     },
-    getConfig: path => {
+    getConfig: (path) => {
       if (!state) return;
       if (!state.config) {
         throw new Error('config not exist in state');
@@ -205,10 +212,10 @@ function createStore(initState, actions = {}) {
     },
     destroy() {
       events = {
-        all: []
+        all: [],
       };
       state = null;
-    }
+    },
   };
   return _store;
 }

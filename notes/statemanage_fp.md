@@ -34,7 +34,7 @@
 
 #### curry+compose
 
-小函数组合成大功能,面临的第一个问题是`参数的数量`, y=f(x) z=f1(t,y) n=f2(z),把 f,f1,f2 组合在一起由参数 x 得到结果 n,中间过程是匹配不上的,那就规定组合的函数都只接受一个参数吧!(对于接受多个参数的函数,通过 curry,暂存前面的参数,转换成只接受最后一个参数的部分函数)
+小函数组合成大功能,面临的第一个问题是`参数的数量`, y=f(x) z=f1(t,y) n=f2(z),把 f,f1,f2 组合在一起由参数 x 得到结果 n,中间过程是匹配不上的,那就规定组合的函数都只接受一个参数(对于接受多个参数的函数,通过 curry,暂存前面的参数,转换成只接受最后一个参数的部分函数)
 
 ```javascript
 const curry = fn => {
@@ -69,9 +69,51 @@ let getN = compose(
 getN(x) = n
 ```
 
+curry + compose 实现中间件
+
+```js
+function compose(...fns) {
+  return fns.reduce((a, b) => (...args) => a(b(...args)));
+}
+
+function curry(fn) {
+  let argLen = fn.length;
+  return function _curry(...args) {
+    if (args.length === argLen) {
+      return fn(...args);
+    }
+    return _curry.bind(null, ...args);
+  };
+}
+
+const midware1 = curry((next, action) => {
+  next(action);
+  console.log('do in midware1', action);
+  return action;
+});
+
+const midware2 = curry((next, action) => {
+  next(action);
+  console.log('do in midware2');
+  return action;
+});
+
+function entryMidware(action) {
+  console.log('do in entry');
+}
+
+let dispatch = compose(midware2(), midware1())(entryMidware);
+dispatch({ name: 1 });
+
+// log:
+// do in entry
+// do in midware1
+// do in midware2
+```
+
 ### container
 
-对控制流的处理才是函数式的优雅所在,单纯的函数组合并不能处理复杂的流程,能将控制流与操作抽象在同一水平面,需要借助`容器`的概念,`容器作为输入值的载体,容器上定义一些统一的接口,对输入值应用某些操作,并且数据可以从一种容器进入另一种容器进行进一步操作`
+对控制流的处理才是函数式的优雅所在,单纯的函数组合并不能处理复杂的流程,能将控制流与操作抽象在同一水平面,需要借助`容器`的概念,`容器作为输入值的载体,容器上定义一些统一的接口,对输入值应用某些操作,并且数据可以从一种容器进入另一种容器进行进一步操作`,类似一节一节的水管拼借在一起,水管里面流动数据,水管之间对接就是大家提供相同的口径(API),有的水管加糖、有的水管加盐、有的水管等 10s 再输出,不妨碍水的流动
 
 `针对不同的场景,容器又可细分为不同的子类,子类提供统一的接口不同的实现,根据存储值的不同状态,调用相同的API却执行不同操作`
 
@@ -102,13 +144,13 @@ Container.of(1).map(x=>x+1) --> Container(2)
 
 Container 的衍生 Maybe、Either、Task、IO 等
 
-Maybe: 专注处理空值监测,可以很好的处理 a.b.c 的问题
+- Maybe: 专注处理空值监测,可以很好的处理 a.b.c 的问题
 
-Either: 专注处理异常
+- Either: 专注处理异常
 
-Task: 异步处理,类似 Promise, [参见实现](https://github.com/xiyuyizhi/vod-fp.js/blob/master/packages/vod-fp-utility/src/fp/Task.js),[单元测试](https://github.com/xiyuyizhi/vod-fp.js/blob/master/packages/vod-fp-utility/test/fp/Task.js)
+- Task: 异步处理,类似 Promise, [参见实现](https://github.com/xiyuyizhi/vod-fp.js/blob/master/packages/vod-fp-utility/src/fp/Task.js),[单元测试](https://github.com/xiyuyizhi/vod-fp.js/blob/master/packages/vod-fp-utility/test/fp/Task.js)
 
-IO: 专注对副作用的处理
+- IO: 专注对副作用的处理
 
 ### Maybe 的实现
 
@@ -269,7 +311,7 @@ hls 点播播放有标清、高清等档位,切换档位时,1. 先检查档位�
 可能存在异常的场景: 1. http 请求失败 2. m3u8 解析失败
 
 ```javascript
-it('# test transform Task -> Either -> Task', done => {
+it('# test transform Task -> Either -> Task', (done) => {
   let store = {};
   let loadSuccessSpy = chai.spy();
   let changeSuccessSpy = chai.spy();
@@ -278,15 +320,15 @@ it('# test transform Task -> Either -> Task', done => {
   let parseM3u8ErrorFlag = 'parseM3u8Error';
   let parsedM3u8Data = 'parsedM3u8Data';
 
-  let getState = key => Maybe.of(store).map(prop(key));
+  let getState = (key) => Maybe.of(store).map(prop(key));
   let setState = (key, v) => (store[key] = v);
 
-  let _doStoreLevels = text => {
+  let _doStoreLevels = (text) => {
     store['levels'] = text;
     return text;
   };
 
-  let _loader = flag => {
+  let _loader = (flag) => {
     return Task.of((resolve, reject) => {
       setTimeout(
         () => (flag === loadErrorFlag ? reject(flag) : resolve(flag)),
@@ -295,7 +337,7 @@ it('# test transform Task -> Either -> Task', done => {
     });
   };
 
-  let parseM3u8 = flag => {
+  let parseM3u8 = (flag) => {
     if (flag === parseM3u8ErrorFlag) {
       return Fail.of(flag);
     }
@@ -303,21 +345,21 @@ it('# test transform Task -> Either -> Task', done => {
   };
 
   // loadSource :: boolean -> (Task(error) | Either(success|error))
-  let loadSource = flag => {
+  let loadSource = (flag) => {
     return _loader(flag)
       .chain(parseM3u8)
       .map(_doStoreLevels)
-      .map(x => {
+      .map((x) => {
         loadSuccessSpy();
         return x;
       });
   };
 
   // changePlaylist :: boolean -> (Either(success) | loadSource)
-  let changePlaylist = flag => {
+  let changePlaylist = (flag) => {
     return maybe(
       () => loadSource(flag),
-      levels => {
+      (levels) => {
         changeSuccessSpy();
         return Success.of(levels);
       },
@@ -325,14 +367,14 @@ it('# test transform Task -> Either -> Task', done => {
     );
   };
 
-  changePlaylist(loadErrorFlag).error(e => {
+  changePlaylist(loadErrorFlag).error((e) => {
     e.should.be.equal(loadErrorFlag);
     loadSuccessSpy.should.not.be.called();
     changeSuccessSpy.should.not.be.called();
   });
 
   setTimeout(() => {
-    changePlaylist(parseM3u8ErrorFlag).error(e => {
+    changePlaylist(parseM3u8ErrorFlag).error((e) => {
       e.should.be.equal(parseM3u8ErrorFlag);
       changeSuccessSpy.should.not.be.called();
       loadSuccessSpy.should.not.be.called();
@@ -340,7 +382,7 @@ it('# test transform Task -> Either -> Task', done => {
   }, 350);
 
   setTimeout(() => {
-    changePlaylist(parsedM3u8Data).map(x => {
+    changePlaylist(parsedM3u8Data).map((x) => {
       x.should.be.equal(parsedM3u8Data);
       loadSuccessSpy.should.be.called.once;
       changeSuccessSpy.should.not.be.called();
@@ -348,7 +390,7 @@ it('# test transform Task -> Either -> Task', done => {
   }, 700);
 
   setTimeout(() => {
-    changePlaylist(parsedM3u8Data).map(x => {
+    changePlaylist(parsedM3u8Data).map((x) => {
       x.should.be.equal(parsedM3u8Data);
       loadSuccessSpy.should.be.called.once;
       changeSuccessSpy.should.be.called();
